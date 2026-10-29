@@ -1,0 +1,72 @@
+.mini-player-preview-page {
+  animation: mini-player-preview-scroll 4.5s linear infinite;
+}
+
+.mini-player-preview-floating {
+  opacity: 0;
+  animation: mini-player-preview-appear 4.5s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+
+.mini-player-preview-scrollbar {
+  animation: mini-player-preview-scroll-thumb 4.5s linear infinite;
+}
+
+/* The original frame ends at 102px; reveal the mini player only once it is gone. */
+@keyframes mini-player-preview-scroll {
+  0%,
+  16%,
+  90%,
+  100% {
+    transform: translateY(0);
+  }
+  38%,
+  68% {
+    transform: translateY(-104px);
+  }
+}
+
+@keyframes mini-player-preview-appear {
+  0%,
+  38%,
+  70%,
+  100% {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  40%,
+  68% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes mini-player-preview-scroll-thumb {
+  0%,
+  16%,
+  90%,
+  100% {
+    transform: translateY(0);
+  }
+  38%,
+  68% {
+    transform: translateY(52px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mini-player-preview-page {
+    animation: none;
+    transform: translateY(-104px);
+  }
+
+  .mini-player-preview-floating {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .mini-player-preview-scrollbar {
+    animation: none;
+    transform: translateY(52px);
+  }
+}

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { YouTubeSettings } from './youtube-settings';
@@ -80,12 +81,33 @@ describe('YouTubeSettings', () => {
         .getAttribute('aria-disabled')
     ).toBe('true');
     const entry = screen.getByRole('button', {
-      name: /Saved bookmarks & loops/,
+      name: /^Saved bookmarks & loops/,
     });
     expect((entry as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(entry, { detail: 1 });
     expect(onOpenSavedLibrary).toHaveBeenLastCalledWith(true);
     fireEvent.click(entry, { detail: 0 });
     expect(onOpenSavedLibrary).toHaveBeenLastCalledWith(false);
+  });
+
+  it('previews the saved library without navigating or nesting buttons', async () => {
+    const user = userEvent.setup();
+    const onOpenSavedLibrary = vi.fn();
+    const { container } = render(
+      <YouTubeSettings
+        chapteredTimelineEnabled
+        extensionEnabled
+        onChapteredTimelineEnabledChange={vi.fn()}
+        onOpenSavedLibrary={onOpenSavedLibrary}
+      />
+    );
+    expect(container.querySelector('button button')).toBeNull();
+    await user.hover(
+      screen.getByRole('button', { name: 'Preview Saved bookmarks & loops' })
+    );
+    expect(
+      await screen.findByLabelText('Saved bookmarks & loops preview')
+    ).toBeTruthy();
+    expect(onOpenSavedLibrary).not.toHaveBeenCalled();
   });
 });

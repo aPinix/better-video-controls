@@ -1,3 +1,4 @@
+import { setupInstagramAudioControl } from '@/helpers/instagram-audio-control';
 import { normalizeInstagramSpeed } from '@/helpers/instagram-settings';
 import { isVideoBlockedByDialog } from '@/helpers/page-dialogs';
 import {
@@ -11,7 +12,9 @@ type AudioState = {
   preference?: AudioPreference;
   revision: number;
   loaded: boolean;
+  ready: boolean;
   pendingWrites: number;
+  autoplayBlocked?: boolean;
 };
 const audioStates = new WeakMap<Document, AudioState>();
 const validAudio = (value: unknown): value is AudioPreference => {
@@ -48,13 +51,16 @@ export function setupSocialVideo(
   const key = `mfs-${site}-audio`;
   let state = audioStates.get(doc);
   if (!state) {
-    state = { revision: 0, loaded: false, pendingWrites: 0 };
+    state = { revision: 0, loaded: false, ready: false, pendingWrites: 0 };
     audioStates.set(doc, state);
   }
   const shared = state;
   let disposed = false;
   let applyingAudio = false;
   let nativeIntentUntil = 0;
+  let audioAttempt: Promise<void> | undefined;
+  let recoverMutedPlayback = false;
+  let resumingMuted = false;
   const originalRate = video.playbackRate;
   const originalLoop = video.loop;
   let ownsRate = false;
@@ -78,32 +84,112 @@ export function setupSocialVideo(
     return (
       area > 0 &&
       !Array.from(doc.querySelectorAll('video')).some(
-        (other) => other !== video && !isVideoBlockedByDialog(other) && visibleArea(other) > area
+        (other) =>
+          other !== video &&
+          !isVideoBlockedByDialog(other) &&
+          visibleArea(other) > area
       )
     );
   };
   const isReels = () =>
     site === 'instagram' && /^\/reels?(\/|$)/.test(win.location.pathname);
   const restoreAudio = () => {
-    const preference = shared.preference;
+    const preference =
+      shared.preference ??
+      (site === 'instagram' && shared.ready
+        ? { volume: 1, muted: false }
+        : undefined);
     if (disposed || !preference || applyingAudio) return;
     applyingAudio = true;
     try {
       if (video.volume !== preference.volume) video.volume = preference.volume;
-      // Offscreen/preloaded players retain the site's mute policy. Respect
-      // browser autoplay restrictions until the user has interacted.
+      // Preloaded/background players keep the site's mute policy.
       if (
-        !video.paused &&
         isActive() &&
-        (preference.muted ||
-          win.navigator.userActivation?.hasBeenActive !== false)
+        doc.visibilityState !== 'hidden' &&
+        !isVideoBlockedByDialog(video)
       ) {
-        if (video.muted !== preference.muted) video.muted = preference.muted;
+        const activated = win.navigator.userActivation?.hasBeenActive !== false;
+        if (site === 'instagram') {
+          const wasPlaying = !video.paused;
+          const wasMuted = video.muted;
+          const blocked = shared.autoplayBlocked === true && !activated;
+          const muted =
+            blocked ||
+            (wasPlaying
+              ? preference.muted || preference.volume === 0
+              : video.muted);
+          instagramControl?.sync(muted || preference.volume === 0);
+          if (video.muted !== muted) video.muted = muted;
+          // Instagram's native toggle may also restore its own saved volume.
+          if (video.volume !== preference.volume)
+            video.volume = preference.volume;
+          // A delayed Instagram render can unmute (and pause) the player again
+          // after Chrome rejected the first attempt. Repair that reset too.
+          if (
+            !wasPlaying &&
+            blocked &&
+            recoverMutedPlayback &&
+            !resumingMuted
+          ) {
+            resumingMuted = true;
+            void Promise.resolve(video.play())
+              .catch(() => {})
+              .finally(() => {
+                resumingMuted = false;
+              });
+          }
+          if (wasPlaying && wasMuted && !muted && !activated && !audioAttempt) {
+            const source = video.currentSrc || video.src;
+            audioAttempt = Promise.resolve(video.play())
+              .catch((error: unknown) => {
+                if (
+                  disposed ||
+                  (video.currentSrc || video.src) !== source ||
+                  !isActive() ||
+                  shared.preference?.muted ||
+                  win.navigator.userActivation?.hasBeenActive
+                )
+                  return;
+                if (
+                  (error as { name?: string } | null)?.name !==
+                  'NotAllowedError'
+                )
+                  return;
+                shared.autoplayBlocked = true;
+                recoverMutedPlayback = true;
+                applyingAudio = true;
+                try {
+                  instagramControl?.sync(true);
+                  video.muted = true;
+                  video.volume = preference.volume;
+                } finally {
+                  applyingAudio = false;
+                }
+                // Chrome can pause a muted autoplaying video when it is unmuted.
+                // Resume that playback silently, keeping the audible preference.
+                if (
+                  doc.visibilityState !== 'hidden' &&
+                  !isVideoBlockedByDialog(video)
+                )
+                  return video.play().catch(() => {});
+              })
+              .finally(() => {
+                audioAttempt = undefined;
+              });
+          }
+        } else if (!video.paused && (preference.muted || activated)) {
+          if (video.muted !== preference.muted) video.muted = preference.muted;
+        }
       }
     } finally {
       applyingAudio = false;
     }
   };
+  const instagramControl =
+    site === 'instagram'
+      ? setupInstagramAudioControl(video, restoreAudio)
+      : undefined;
   const autoSkipEnabled = () =>
     site === 'instagram'
       ? isReels() && getSettings().instagramAutoSkip
@@ -129,6 +215,10 @@ export function setupSocialVideo(
     skipped = false;
     restoreAudio();
     syncSettings();
+  };
+  const onPause = () => {
+    if (video.paused && video.muted && !audioAttempt && !resumingMuted)
+      recoverMutedPlayback = false;
   };
   const onEnded = () => {
     if (
@@ -202,6 +292,7 @@ export function setupSocialVideo(
     shared.loaded = true;
     const revision = shared.revision;
     chrome.storage.local.get(key, (result) => {
+      shared.ready = true;
       if (revision === shared.revision && validAudio(result[key]))
         shared.preference = result[key];
       doc.dispatchEvent(new Event('mfs-audio-loaded'));
@@ -232,13 +323,15 @@ export function setupSocialVideo(
   });
   const onFirstActivation = (event: Event) => {
     if (win.navigator.userActivation?.hasBeenActive === false) return;
+    shared.autoplayBlocked = false;
     doc.removeEventListener('pointerdown', onFirstActivation, true);
     doc.removeEventListener('keydown', onFirstActivation, true);
     // Let our mute/slider controls apply the action the user actually chose.
     // Unmuting here first would turn a subsequent Unmute click into Mute.
     if (
       event.target instanceof Element &&
-      event.target.closest('[data-mfs-action]')
+      (event.target.closest('[data-mfs-action]') ||
+        nativeAudioTarget(event.target))
     )
       return;
     restoreAudio();
@@ -249,26 +342,33 @@ export function setupSocialVideo(
   video.addEventListener('playing', restoreAudio);
   video.addEventListener('ratechange', syncSettings);
   video.addEventListener('play', onPlay);
+  video.addEventListener('pause', onPause);
   video.addEventListener('loadedmetadata', onMetadata);
   const onNativeAudioIntent = (event: Event) => {
     if (event.type === 'pointermove' && (event as PointerEvent).buttons === 0)
       return;
     const target = event.target instanceof Element ? event.target : null;
     if (!target || target.closest('[data-mfs-action]')) return;
+    if (nativeAudioTarget(target) && isActive()) {
+      nativeIntentUntil = Date.now() + 1500;
+    }
+  };
+  function nativeAudioTarget(target: Element) {
     const control = target.closest(
       'button, [role="button"], [role="slider"], input[type="range"]'
     );
-    if (!control) return;
+    if (!control) return false;
+    const icon = control.querySelector('svg[aria-label], svg title');
+    const ownIcon =
+      icon?.closest('button, [role="button"]') === control ? icon : null;
     const label = [
       control.getAttribute('aria-label'),
       control.getAttribute('title'),
       control.getAttribute('data-e2e'),
-      control.querySelector('svg title')?.textContent,
+      ownIcon?.getAttribute('aria-label') ?? ownIcon?.textContent,
     ].join(' ');
-    if (/volume|mute|sound|audio|som|silenciar/i.test(label) && isActive()) {
-      nativeIntentUntil = Date.now() + 1500;
-    }
-  };
+    return /volume|mute|sound|audio|som|silenciar/i.test(label);
+  }
   const onVolumeChange = () => {
     if (applyingAudio) return;
     // Site initialization/autoplay also fires volumechange. Only deliberate
@@ -309,6 +409,7 @@ export function setupSocialVideo(
     remember,
     cleanup: () => {
       disposed = true;
+      instagramControl?.cleanup();
       pageControls.cleanup();
       loopObserver.disconnect();
       video.removeEventListener('ratechange', syncSettings);
@@ -321,6 +422,7 @@ export function setupSocialVideo(
       doc.removeEventListener('keydown', onNativeAudioIntent, true);
       doc.removeEventListener('wheel', onNativeAudioIntent, true);
       video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
       video.removeEventListener('loadedmetadata', onMetadata);
       video.removeEventListener('volumechange', onVolumeChange);
       video.removeEventListener('ended', onEnded);

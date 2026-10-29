@@ -1,0 +1,48 @@
+.cinema-preview-shade,
+.cinema-preview-on {
+  opacity: 0;
+  animation: cinema-preview-enable 5s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+.cinema-preview-off {
+  animation: cinema-preview-disable 5s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+}
+
+@keyframes cinema-preview-enable {
+  0%,
+  18%,
+  88%,
+  100% {
+    opacity: 0;
+  }
+  30%,
+  76% {
+    opacity: 1;
+  }
+}
+
+@keyframes cinema-preview-disable {
+  0%,
+  18%,
+  88%,
+  100% {
+    opacity: 1;
+  }
+  30%,
+  76% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cinema-preview-shade,
+  .cinema-preview-on {
+    animation: none;
+    opacity: 1;
+  }
+
+  .cinema-preview-off {
+    animation: none;
+    opacity: 0;
+  }
+}

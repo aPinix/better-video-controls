@@ -109,6 +109,7 @@ const SITE_INTERACTIVE_SELECTOR = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 const PLAYER_SINGLE_CLICK_DELAY_MS = 220;
+const PLAYER_LONG_PRESS_DELAY_MS = 350;
 const WHEEL_HOVER_LEASE_MS = 1500;
 const SEEK_SPEED_LABEL_DISMISS_DELAY_MS = 700;
 const PLAY_PAUSE_WHEEL_GESTURE_END_MS = 500;
@@ -3081,6 +3082,12 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const syncPausedFeedback = (): void => {
+      // A pause event must not remove the transient confirmation we just drew.
+      if (
+        video.paused &&
+        feedbackElement?.dataset.mfsPlaybackFeedback === 'pause' &&
+        feedbackTimeout !== null
+      ) return;
       const shouldShowPause =
         getIsHovering() && this.shouldShowPausedPlaybackUi(video);
 
@@ -3102,7 +3109,10 @@ ${MEDIA_OVERLAY_STYLES}
       this.settingsManager.shouldHideVideoControls() &&
       getMediaSeekRange(video) !== null;
 
-    const setPlayback = (shouldPlay: boolean): void => {
+    const setPlayback = (
+      shouldPlay: boolean,
+      persistentPause = getIsHovering()
+    ): void => {
       if (shouldPlay) {
         if (!video.paused) return;
         showFeedback('play');
@@ -3115,7 +3125,7 @@ ${MEDIA_OVERLAY_STYLES}
       }
 
       if (video.paused) return;
-      showFeedback('pause', getIsHovering());
+      showFeedback('pause', persistentPause);
       video.pause();
     };
 
@@ -3218,7 +3228,79 @@ ${MEDIA_OVERLAY_STYLES}
             !target.closest(EXTENSION_UI_SELECTOR)
         );
 
+    let middlePress: { x: number; y: number; startedAt: number } | null = null;
+    const canUseVideoSurface = (event: MouseEvent): boolean => {
+      if (
+        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
+        this.isKeyboardSuspended || this.isMinimalPlayerBypassActive ||
+        !video.isConnected || video.readyState < 1 ||
+        DOMUtils.isYouTubeHoverPreview(video) ||
+        isExtensionControlEvent(event) ||
+        isModalEvent(event) ||
+        event.composedPath().some((target) =>
+          target instanceof ownerWindow.Element && target !== video &&
+          target.matches('a[href], button, input, select, textarea, summary, [role="link"], [role="slider"], [contenteditable="true"]')
+        )
+      ) return false;
+      const path = event.composedPath();
+      if (path.some((target) => target instanceof ownerWindow.HTMLVideoElement && target !== video)) return false;
+      if (!path.includes(video) && !path.includes(scrubOverlay) && !isOwnedByPlayer(event)) return false;
+      const rect = video.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 &&
+        event.clientX >= rect.left && event.clientX <= rect.right &&
+        event.clientY >= rect.top && event.clientY <= rect.bottom;
+    };
+    const handleMiddleDown = (event: MouseEvent): void => {
+      middlePress = null;
+      if (event.button !== 1 || !canUseVideoSurface(event)) return;
+      // Cancel browser autoscroll without changing left-button gestures.
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      middlePress = { x: event.clientX, y: event.clientY, startedAt: ownerWindow.performance.now() };
+    };
+    const handleMiddleClick = (event: MouseEvent): void => {
+      const press = middlePress;
+      middlePress = null;
+      if (!press || event.button !== 1 || !canUseVideoSurface(event)) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) return;
+      if (ownerWindow.performance.now() - press.startedAt >= PLAYER_LONG_PRESS_DELAY_MS) return;
+      clearScheduledPlaybackToggle();
+      setPlayback(video.paused, false);
+    };
+
+    let primaryPressStartedAt: number | null = null;
+    let primaryPressWasLong = false;
+    const startPrimaryPress = (event: MouseEvent): void => {
+      if (event.button !== 0) return;
+      if (event.type === 'pointerdown' || primaryPressStartedAt === null) {
+        primaryPressWasLong = false;
+        primaryPressStartedAt = canUseVideoSurface(event) ? ownerWindow.performance.now() : null;
+      }
+      if (primaryPressStartedAt !== null) clearScheduledPlaybackToggle();
+    };
+    const finishPrimaryPress = (event: MouseEvent): void => {
+      if (event.button !== 0 || primaryPressStartedAt === null) return;
+      primaryPressWasLong = ownerWindow.performance.now() - primaryPressStartedAt >= PLAYER_LONG_PRESS_DELAY_MS;
+      primaryPressStartedAt = null;
+    };
+    const cancelPrimaryPress = (): void => {
+      primaryPressStartedAt = null;
+      primaryPressWasLong = false;
+    };
+    const suppressLongPressClick = (event: MouseEvent): boolean => {
+      const longPress = primaryPressWasLong || (primaryPressStartedAt !== null && ownerWindow.performance.now() - primaryPressStartedAt >= PLAYER_LONG_PRESS_DELAY_MS);
+      if (!longPress || event.button !== 0 || event.detail === 0 || !canUseVideoSurface(event)) return false;
+      cancelPrimaryPress();
+      clearScheduledPlaybackToggle();
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      return true;
+    };
+
     const handleClick = (event: MouseEvent): void => {
+      if (suppressLongPressClick(event)) return;
       if (!canTogglePlayback(event)) return;
 
       event.preventDefault();
@@ -3227,6 +3309,7 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const handlePlayerLayerClick = (event: MouseEvent): void => {
+      if (suppressLongPressClick(event)) return;
       if (!canTogglePlayback(event)) return;
 
       const path = event.composedPath();
@@ -3278,6 +3361,14 @@ ${MEDIA_OVERLAY_STYLES}
 
     scrubOverlay.addEventListener('click', handleClick);
     scrubOverlay.addEventListener('dblclick', handleDoubleClick);
+    ownerDocument.addEventListener('mousedown', handleMiddleDown, true);
+    ownerDocument.addEventListener('auxclick', handleMiddleClick, true);
+    ownerDocument.addEventListener('pointerdown', startPrimaryPress, true);
+    ownerDocument.addEventListener('mousedown', startPrimaryPress, true);
+    ownerDocument.addEventListener('pointerup', finishPrimaryPress, true);
+    ownerDocument.addEventListener('mouseup', finishPrimaryPress, true);
+    ownerDocument.addEventListener('pointercancel', cancelPrimaryPress, true);
+    ownerWindow.addEventListener('blur', cancelPrimaryPress);
     ownerDocument.addEventListener('click', handlePlayerLayerClick, true);
     ownerDocument.addEventListener(
       'dblclick',
@@ -3293,6 +3384,14 @@ ${MEDIA_OVERLAY_STYLES}
         clearScheduledPlaybackToggle();
         scrubOverlay.removeEventListener('click', handleClick);
         scrubOverlay.removeEventListener('dblclick', handleDoubleClick);
+        ownerDocument.removeEventListener('mousedown', handleMiddleDown, true);
+        ownerDocument.removeEventListener('auxclick', handleMiddleClick, true);
+        ownerDocument.removeEventListener('pointerdown', startPrimaryPress, true);
+        ownerDocument.removeEventListener('mousedown', startPrimaryPress, true);
+        ownerDocument.removeEventListener('pointerup', finishPrimaryPress, true);
+        ownerDocument.removeEventListener('mouseup', finishPrimaryPress, true);
+        ownerDocument.removeEventListener('pointercancel', cancelPrimaryPress, true);
+        ownerWindow.removeEventListener('blur', cancelPrimaryPress);
         ownerDocument.removeEventListener(
           'click',
           handlePlayerLayerClick,

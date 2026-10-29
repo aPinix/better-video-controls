@@ -456,8 +456,23 @@ describe('saved library browsing', () => {
     render(<LibraryFixture onBackToSettings={vi.fn()} />);
     await screen.findByText('No saved YouTube bookmarks or loops yet');
     expect(
-      screen.getByRole('button', { name: 'Import a library' })
-    ).toBeTruthy();
+      screen.queryByRole('button', { name: 'Import a library' })
+    ).toBeNull();
+    expect(screen.getByRole('button', { name: 'Import library' })).toBeTruthy();
+    expect(
+      (screen.getByRole('button', { name: 'All 0' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+    for (const name of ['Bookmarks 0', 'Loops 0']) {
+      const filter = screen.getByRole('button', { name }) as HTMLButtonElement;
+      expect(filter.disabled).toBe(true);
+      await user.click(filter);
+      expect(
+        screen
+          .getByRole('button', { name: 'All 0' })
+          .getAttribute('aria-pressed')
+      ).toBe('true');
+    }
     act(() =>
       storageChanged(
         { [LIBRARY_KEY]: { newValue: { version: 1, items: [moment] } } },
@@ -467,6 +482,10 @@ describe('saved library browsing', () => {
     await screen.findByRole('button', {
       name: 'Open saves for Blender animation',
     });
+    expect(
+      (screen.getByRole('button', { name: 'Bookmarks 1' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
     await user.click(
       screen.getByRole('button', { name: 'Open saves for Blender animation' })
     );
@@ -478,7 +497,23 @@ describe('saved library browsing', () => {
     ).toBeTruthy();
     await user.click(screen.getByRole('button', { name: 'Loops 0' }));
     expect(
-      screen.getByRole('heading', { name: 'No saved loops yet' })
+      (screen.getByRole('button', { name: 'Loops 0' }) as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    expect(
+      screen.getByRole('link', { name: 'Play bookmark: Butterfly scene' })
+    ).toBeTruthy();
+    act(() =>
+      storageChanged(
+        { [LIBRARY_KEY]: { newValue: { version: 1, items: [moment, loop] } } },
+        'local'
+      )
+    );
+    const loopsFilter = await screen.findByRole('button', { name: 'Loops 1' });
+    expect((loopsFilter as HTMLButtonElement).disabled).toBe(false);
+    await user.click(loopsFilter);
+    expect(
+      screen.getByRole('link', { name: 'Play loop: Practice section' })
     ).toBeTruthy();
   });
 

@@ -1,12 +1,17 @@
 import { PictureInPicture2Icon, RotateCcwIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AppButton } from '@/components/app/app-button';
 import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
+import { FeaturePreviewTooltip } from '@/components/popup/feature-preview-tooltip';
 import {
   DEFAULT_MINI_PLAYER_GEOMETRY,
   MINI_PLAYER_GEOMETRY_KEY,
+  type MiniPlayerGeometry,
+  normalizeMiniPlayerGeometry,
 } from '@/helpers/mini-player-settings';
+import { SettingsExpansion } from './settings-expansion';
+import { SubOptionsCard } from './sub-options-card';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
 
 export function YouTubeMiniPlayerSetting({
@@ -18,6 +23,46 @@ export function YouTubeMiniPlayerSetting({
     usePlayerToolsPreferences('Mini Player');
   const [resetting, setResetting] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [geometry, setGeometry] = useState<MiniPlayerGeometry | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    let changedSinceLoad = false;
+    const changed = (
+      changes: Record<string, chrome.storage.StorageChange>,
+      area: string
+    ) => {
+      if (area === 'local' && changes[MINI_PLAYER_GEOMETRY_KEY]) {
+        changedSinceLoad = true;
+        setGeometry(
+          normalizeMiniPlayerGeometry(
+            changes[MINI_PLAYER_GEOMETRY_KEY].newValue
+          )
+        );
+      }
+    };
+    chrome.storage.onChanged.addListener(changed);
+    void chrome.storage.local
+      .get(MINI_PLAYER_GEOMETRY_KEY)
+      .then((data) => {
+        if (mounted && !changedSinceLoad)
+          setGeometry(
+            normalizeMiniPlayerGeometry(data[MINI_PLAYER_GEOMETRY_KEY])
+          );
+      })
+      .catch(() => {
+        if (mounted && !changedSinceLoad)
+          setResetError('Could not load Mini Player position and size.');
+      });
+    return () => {
+      mounted = false;
+      chrome.storage.onChanged.removeListener(changed);
+    };
+  }, []);
+  const canReset =
+    geometry !== null &&
+    (geometry.x !== DEFAULT_MINI_PLAYER_GEOMETRY.x ||
+      geometry.y !== DEFAULT_MINI_PLAYER_GEOMETRY.y ||
+      geometry.width !== DEFAULT_MINI_PLAYER_GEOMETRY.width);
   const unavailable = disabled || !ready || saving || resetting;
   const reset = async () => {
     setResetting(true);
@@ -26,6 +71,7 @@ export function YouTubeMiniPlayerSetting({
       await chrome.storage.local.set({
         [MINI_PLAYER_GEOMETRY_KEY]: { ...DEFAULT_MINI_PLAYER_GEOMETRY },
       });
+      setGeometry({ ...DEFAULT_MINI_PLAYER_GEOMETRY });
     } catch {
       setResetError('Could not reset Mini Player position and size.');
     } finally {
@@ -34,6 +80,7 @@ export function YouTubeMiniPlayerSetting({
   };
   return (
     <CardListItem
+      classNameContentBottom="mt-0"
       components={{
         RightSlot: (
           <AppSwitch
@@ -43,37 +90,37 @@ export function YouTubeMiniPlayerSetting({
             onCheckedChange={(next) => save({ miniPlayer: next })}
           />
         ),
-        BottomSlot:
-          settings.miniPlayer || error || resetError ? (
-            <div className="space-y-2">
-              {settings.miniPlayer && (
-                <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900/40">
-                  <p className="mb-2 text-slate-500 text-xs dark:text-slate-400">
-                    Drag to move and resize from the corner. Your layout is
-                    saved on this device.
-                  </p>
-                  <AppButton
-                    disabled={unavailable}
-                    onClick={() => void reset()}
-                    size="sm"
-                  >
-                    <RotateCcwIcon className="size-3.5" />
-                    Reset position and size
-                  </AppButton>
-                </div>
-              )}
-              {(error || resetError) && (
-                <p className="text-red-600 text-xs" role="alert">
-                  {error || resetError}
-                </p>
-              )}
-            </div>
-          ) : undefined,
+        BottomSlot: (
+          <SettingsExpansion
+            open={settings.miniPlayer}
+            error={error || resetError}
+          >
+            <SubOptionsCard>
+              <p className="mb-2 text-slate-500 text-xs dark:text-slate-400">
+                Drag to move and resize from the corner. Your layout is saved on
+                this device.
+              </p>
+              <AppButton
+                disabled={unavailable || !canReset}
+                onClick={() => void reset()}
+                size="sm"
+              >
+                <RotateCcwIcon className="size-3.5" />
+                Reset position and size
+              </AppButton>
+            </SubOptionsCard>
+          </SettingsExpansion>
+        ),
       }}
       description="Keep playing videos visible when you scroll down."
       icon={PictureInPicture2Icon}
       iconIsToggled={settings.miniPlayer}
-      title="Mini Player"
+      title={
+        <span className="inline-flex items-center gap-1.5">
+          Mini Player
+          <FeaturePreviewTooltip feature="miniPlayer" />
+        </span>
+      }
     />
   );
 }

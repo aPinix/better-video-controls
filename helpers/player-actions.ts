@@ -1,5 +1,10 @@
 import { DeferredMediaSeek, getMediaSeekRange } from './media';
-import { clamp, type VideoFilters } from './player-tools-settings';
+import {
+  clamp,
+  MAX_VOLUME_BOOST,
+  type ScreenshotFormat,
+  type VideoFilters,
+} from './player-tools-settings';
 
 export type LoopRange = { start: number; end: number };
 export function remainingSeconds(
@@ -81,7 +86,8 @@ export function downloadBlob(
 }
 export async function screenshotVideo(
   video: HTMLVideoElement,
-  filters?: VideoFilters
+  filters?: VideoFilters,
+  format: ScreenshotFormat = 'jpeg'
 ): Promise<void> {
   if (
     !video.videoWidth ||
@@ -104,7 +110,8 @@ export async function screenshotVideo(
           result
             ? resolve(result)
             : reject(new Error('Screenshot blocked by this video source.')),
-        'image/png'
+        `image/${format}`,
+        format === 'jpeg' ? 0.92 : undefined
       );
     } catch {
       reject(new Error('Screenshot blocked by this video source.'));
@@ -117,7 +124,7 @@ export async function screenshotVideo(
   downloadBlob(
     video.ownerDocument,
     blob,
-    `${title}-${formatTime(video.currentTime).replaceAll(':', '-')}.png`
+    `${title}-${formatTime(video.currentTime).replaceAll(':', '-')}.${format === 'jpeg' ? 'jpg' : 'png'}`
   );
 }
 
@@ -175,7 +182,7 @@ export async function boostVideo(
   chain.gain.disconnect();
   chain.gain.connect(chain.context.destination);
   chain.gain.gain.setValueAtTime(
-    clamp(percent, 100, 1000) / 100,
+    clamp(percent, 100, MAX_VOLUME_BOOST * 100) / 100,
     chain.context.currentTime
   );
 }

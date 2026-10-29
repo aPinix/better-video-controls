@@ -72,7 +72,7 @@ it('resets both directions to five seconds from the single input', async () => {
   expect(preferences.forward).toBe(5);
 });
 
-it('persists the toggle without losing the interval or other preferences', async () => {
+it('hides the interval when disabled and restores its value when enabled', async () => {
   render(<ArrowSeekSettings />);
   const toggle = screen.getByRole('switch', {
     name: 'Enable Arrow Key Seeking',
@@ -83,21 +83,22 @@ it('persists the toggle without losing the interval or other preferences', async
   await waitFor(() => expect(interval.value).toBe('3'));
   fireEvent.click(toggle);
   await waitFor(() => expect(preferences.arrowKeySeekingEnabled).toBe(false));
-  expect(interval.disabled).toBe(true);
-  expect(interval.value).toBe('3');
+  await waitFor(() => expect(interval.isConnected).toBe(false));
+  expect(screen.queryByRole('spinbutton')).toBeNull();
   expect(preferences.backward).toBe(3);
   expect(preferences.miniPlayer).toBe(true);
   expect(
-    (
-      screen.getByRole('button', {
-        name: 'Reset seek interval to 5 seconds',
-      }) as HTMLButtonElement
-    ).disabled
-  ).toBe(true);
+    screen.queryByRole('button', {
+      name: 'Reset seek interval to 5 seconds',
+    })
+  ).toBeNull();
   fireEvent.click(toggle);
   await waitFor(() => expect(preferences.arrowKeySeekingEnabled).toBe(true));
-  expect(interval.disabled).toBe(false);
-  expect(interval.value).toBe('3');
+  const restoredInterval = (await screen.findByRole('spinbutton', {
+    name: 'Seek interval (secs)',
+  })) as HTMLInputElement;
+  expect(restoredInterval.disabled).toBe(false);
+  expect(restoredInterval.value).toBe('3');
 });
 
 it('loads a saved disabled preference and respects the extension state', async () => {
@@ -109,9 +110,26 @@ it('loads a saved disabled preference and respects the extension state', async (
   await waitFor(() =>
     expect(toggle.getAttribute('aria-checked')).toBe('false')
   );
-  expect(
-    (screen.getByLabelText('Seek interval (secs)') as HTMLInputElement).disabled
-  ).toBe(true);
+  await waitFor(() =>
+    expect(screen.queryByLabelText('Seek interval (secs)')).toBeNull()
+  );
+  expect(screen.queryByRole('spinbutton')).toBeNull();
   rerender(<ArrowSeekSettings disabled />);
   expect(toggle.getAttribute('aria-disabled')).toBe('true');
+});
+
+it('keeps storage errors visible when the interval is collapsed', async () => {
+  set.mockRejectedValueOnce(new Error('Storage unavailable'));
+  render(<ArrowSeekSettings />);
+  const toggle = screen.getByRole('switch', {
+    name: 'Enable Arrow Key Seeking',
+  });
+  await waitFor(() =>
+    expect(toggle.getAttribute('aria-disabled')).not.toBe('true')
+  );
+  fireEvent.click(toggle);
+  await waitFor(() => expect(screen.queryByRole('spinbutton')).toBeNull());
+  expect((await screen.findByRole('alert')).textContent).toBe(
+    'Could not save arrow key settings.'
+  );
 });

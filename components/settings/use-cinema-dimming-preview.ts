@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CINEMA_PREVIEW_KEY } from '@/helpers/player-cinema-preview';
+import { DEFAULT_PLAYER_TOOLS } from '@/helpers/player-tools-settings';
 
 let queue = Promise.resolve();
 
 export function useCinemaDimmingPreview() {
   const owner = useRef(crypto.randomUUID());
-  const dimming = useRef(80);
+  const dimming = useRef(DEFAULT_PLAYER_TOOLS.dimming);
   const active = useRef(false);
   const heartbeat = useRef<ReturnType<typeof setInterval> | undefined>(
     undefined

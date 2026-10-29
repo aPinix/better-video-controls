@@ -244,6 +244,53 @@ describe('lazy generic video thumbnails', () => {
 });
 
 describe('seekbar thumbnail preview controller', () => {
+  it.each(['ad-showing', 'ad-interrupting'])(
+    'hides main-video previews during %s and restores them after the ad',
+    (adClass) => {
+      const player = document.createElement('div');
+      player.id = 'movie_player';
+      const video = document.createElement('video');
+      video.src = 'blob:https://example.com/media';
+      Object.defineProperty(video, 'duration', { value: 100 });
+      const wrapper = document.createElement('div');
+      const timeline = document.createElement('div');
+      timeline.style.opacity = '1';
+      const preview = createSeekbarThumbnailPreviewElement(document);
+      preview.querySelector('video')!.load = vi.fn();
+      wrapper.append(timeline, preview);
+      player.append(video, wrapper);
+      document.body.append(player);
+      wrapper.getBoundingClientRect = () => rect(0, 0, 300, 200);
+      timeline.getBoundingClientRect = () => rect(0, 190, 300, 6);
+      const controller = new SeekbarThumbnailPreviewController({
+        video,
+        wrapper,
+        timeline,
+        preview,
+        isEnabled: () => true,
+        isScrubbing: () => false,
+        getTimelinePosition: () => 'bottom',
+        getYouTubeChapters: () => undefined,
+      });
+      controller.updateAtPoint(150, 192);
+      expect(preview.dataset.mfsVisible).toBe('true');
+      player.classList.add(adClass);
+      controller.updateEnabled();
+      expect(preview.dataset.mfsVisible).toBe('false');
+      controller.updateAtPoint(150, 192);
+      expect(preview.dataset.mfsVisible).toBe('false');
+      controller.updateAtPoint(150, 192, 25);
+      expect(preview.dataset.mfsVisible).toBe('false');
+      player.classList.remove(adClass);
+      controller.updateAtPoint(150, 192);
+      expect(preview.dataset.mfsVisible).toBe('true');
+      expect(preview.querySelector('.mfs-thumbnail-time')?.textContent).toBe(
+        '0:50'
+      );
+      controller.cleanup();
+    }
+  );
+
   it('holds the loaded frame while the next image loads, keeps time visible, and clears recycled media', () => {
     const video = document.createElement('video');
     video.src = 'blob:https://example.com/first';

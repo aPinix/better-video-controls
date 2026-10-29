@@ -25,6 +25,7 @@ import {
 import { getPrimaryModifierLabel } from '@/helpers/wheel-actions';
 import { cn } from '@/lib/utils';
 import type { ActionAreaT } from '@/types/content';
+import { SubOptionsCard } from './sub-options-card';
 
 const scrollHotkeyItems = [
   { label: 'Alt', value: ScrollHotkeyE.Alt },
@@ -80,7 +81,7 @@ function SeekMethodCard({
   return (
     <section
       className={cn(
-        'overflow-hidden rounded-xl border border-slate-200 bg-white transition-[border-color,box-shadow,background-color] dark:border-slate-800 dark:bg-slate-900',
+        'overflow-hidden rounded-xl border border-slate-200 bg-white transition-[border-color,box-shadow,background-color] dark:border-slate-800 dark:bg-slate-800/70',
         focused && 'border-brand-500 dark:border-brand-400'
       )}
       data-method={id}
@@ -133,9 +134,7 @@ function SeekMethodCard({
 
       {children ? (
         <div className="px-4 pb-4">
-          <div className="border-slate-200 border-t pt-4 dark:border-slate-800">
-            {children}
-          </div>
+          <SubOptionsCard className="ml-10">{children}</SubOptionsCard>
         </div>
       ) : null}
     </section>
@@ -287,6 +286,7 @@ export function SeekControlsSettings({
                 aria-label="Inverse scroll direction"
                 checked={scrollInverted}
                 onCheckedChange={onScrollInversionChange}
+                size="sm"
               />
             </div>
 
@@ -349,6 +349,7 @@ export function SeekControlsSettings({
                 aria-label="Enable directional play pause wheel actions"
                 checked={isPlayPauseWheelEnabled}
                 onCheckedChange={onPlayPauseWheelEnabledChange}
+                size="sm"
               />
             </div>
           </fieldset>
@@ -398,7 +399,7 @@ export function SeekControlsSettings({
         />
       </div>
 
-      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-800/70">
         <div className="mb-4 flex items-start gap-3">
           <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-950 dark:text-brand-400">
             <LayoutTemplateIcon className="size-4" />

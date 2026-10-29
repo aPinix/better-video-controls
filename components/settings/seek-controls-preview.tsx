@@ -778,7 +778,7 @@ export function SeekControlsPreview({
           top: seekbarCursorTop,
         }}
       >
-        <MousePointer2Icon className="size-full translate-x-[-3.333px] translate-y-[-3.333px] overflow-visible fill-white text-white drop-shadow-lg" />
+        <MousePointer2Icon className="size-full translate-x-[-3.333px] translate-y-[-3.333px] overflow-visible fill-brand-500 text-brand-500 drop-shadow-lg" />
       </span>
 
       {focusedMethod === 'scroll' ? (

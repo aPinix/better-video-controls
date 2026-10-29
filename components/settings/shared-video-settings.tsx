@@ -3,6 +3,7 @@ import { type ElementType, useId } from 'react';
 import { AppSelect } from '@/components/app/app-select';
 import { AppSlider } from '@/components/app/app-slider';
 import { AppSwitch } from '@/components/app/app-switch';
+import { SliderResetButton } from '@/components/app/slider-reset-button';
 import {
   InstagramBrandIcon,
   TikTokBrandIcon,
@@ -10,9 +11,11 @@ import {
 } from '@/components/icons/icons';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { CardListItemWrapper } from '@/components/popup/card-list-item-wrapper';
-import { ExtraFeaturePreviewTooltip } from '@/components/popup/extra-feature-preview-tooltip';
+import { FeaturePreviewTooltip } from '@/components/popup/feature-preview-tooltip';
 import { INSTAGRAM_SPEEDS } from '@/helpers/instagram-settings';
 import type { ThumbnailTimeDisplay } from '@/helpers/thumbnail-time';
+import { cn } from '@/lib/utils';
+import { SubOptionsCard } from './sub-options-card';
 
 export interface SocialVideoPreferences {
   thumbnailPreviewEnabled: boolean;
@@ -43,9 +46,9 @@ function PlatformLabel({
 }
 
 const controlsClassName =
-  'divide-y divide-slate-200/70 rounded-lg bg-slate-50 px-3 text-xs dark:divide-slate-700 dark:bg-slate-900/40';
+  'divide-y divide-slate-200/70 py-0 text-xs dark:divide-slate-700';
 const visibilityClassName =
-  'flex cursor-pointer items-center justify-between gap-3 pr-2 pl-6 text-slate-500 dark:text-slate-400';
+  'flex items-center justify-between gap-3 pr-2 pl-6 text-slate-500 dark:text-slate-400';
 
 export function SharedVideoSettings({
   extensionEnabled,
@@ -85,11 +88,10 @@ export function SharedVideoSettings({
           <CardListItem
             components={{
               BottomSlot: (
-                <div className={controlsClassName}>
+                <SubOptionsCard className={controlsClassName}>
                   {thumbnailPlatforms.map(({ name, icon, preferences }) => (
-                    <label
-                      className="flex cursor-pointer items-center justify-between gap-3 py-3"
-                      htmlFor={`${settingsId}-thumbnails-${name}`}
+                    <div
+                      className="flex items-center justify-between gap-3 py-3"
                       key={name}
                     >
                       <span aria-hidden="true">
@@ -103,8 +105,9 @@ export function SharedVideoSettings({
                         onCheckedChange={
                           preferences.onThumbnailPreviewEnabledChange
                         }
+                        size="sm"
                       />
-                    </label>
+                    </div>
                   ))}
                   <div className="flex items-center justify-between gap-3 py-3">
                     <span className="text-slate-500 dark:text-slate-400">
@@ -124,7 +127,7 @@ export function SharedVideoSettings({
                       value={thumbnailTimeDisplay}
                     />
                   </div>
-                </div>
+                </SubOptionsCard>
               ),
             }}
             description="Hover over the timeline to preview a frame and its time. Enable for each site."
@@ -132,8 +135,8 @@ export function SharedVideoSettings({
             title={
               <span className="inline-flex items-center gap-1.5">
                 Hover Thumbnails
-                <ExtraFeaturePreviewTooltip
-                  featureName="Hover Thumbnails"
+                <FeaturePreviewTooltip
+                  feature="thumbnails"
                   thumbnailTimeDisplay={thumbnailTimeDisplay}
                 />
               </span>
@@ -144,7 +147,7 @@ export function SharedVideoSettings({
           <CardListItem
             components={{
               BottomSlot: (
-                <div className={controlsClassName}>
+                <SubOptionsCard className={controlsClassName}>
                   {socialPlatforms.map(({ name, icon, preferences }) => (
                     <fieldset
                       aria-label={`${name} playback speed settings`}
@@ -153,7 +156,17 @@ export function SharedVideoSettings({
                       key={name}
                     >
                       <div className="flex items-center justify-between gap-3">
-                        <PlatformLabel icon={icon} name={name} />
+                        <div className="flex items-center gap-1.5">
+                          <PlatformLabel icon={icon} name={name} />
+                          <SliderResetButton
+                            disabled={
+                              !extensionEnabled ||
+                              preferences.playbackSpeed === 1
+                            }
+                            label={`Reset ${name} playback speed to 1×`}
+                            onClick={() => preferences.onPlaybackSpeedChange(1)}
+                          />
+                        </div>
                         <span className="font-semibold text-brand tabular-nums dark:text-brand-300">
                           {preferences.playbackSpeed}×
                         </span>
@@ -184,9 +197,8 @@ export function SharedVideoSettings({
                         <span>0.25×</span>
                         <span>2×</span>
                       </div>
-                      <label
+                      <div
                         className={visibilityClassName}
-                        htmlFor={`${settingsId}-speed-button-${name}`}
                       >
                         <span aria-hidden="true">Show on videos</span>
                         <AppSwitch
@@ -199,22 +211,27 @@ export function SharedVideoSettings({
                           }
                           size="sm"
                         />
-                      </label>
+                      </div>
                     </fieldset>
                   ))}
-                </div>
+                </SubOptionsCard>
               ),
             }}
             description="Start videos at your preferred speed for each site. 1× is normal playback."
             icon={GaugeIcon}
-            title="Playback Speed"
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                Playback Speed
+                <FeaturePreviewTooltip feature="speed" />
+              </span>
+            }
           />
         </section>
         <section aria-label="Auto-Skip">
           <CardListItem
             components={{
               BottomSlot: (
-                <div className={controlsClassName}>
+                <SubOptionsCard className={controlsClassName}>
                   {socialPlatforms.map(({ name, icon, preferences }) => (
                     <fieldset
                       aria-label={`${name} auto-skip settings`}
@@ -222,9 +239,8 @@ export function SharedVideoSettings({
                       disabled={!extensionEnabled}
                       key={name}
                     >
-                      <label
-                        className="flex cursor-pointer items-center justify-between gap-3"
-                        htmlFor={`${settingsId}-auto-skip-${name}`}
+                      <div
+                        className="flex items-center justify-between gap-3"
                       >
                         <span aria-hidden="true">
                           <PlatformLabel icon={icon} name={name} />
@@ -235,30 +251,39 @@ export function SharedVideoSettings({
                           disabled={!extensionEnabled}
                           id={`${settingsId}-auto-skip-${name}`}
                           onCheckedChange={preferences.onAutoSkipChange}
+                          size="sm"
                         />
-                      </label>
-                      <label
-                        className={visibilityClassName}
-                        htmlFor={`${settingsId}-auto-skip-button-${name}`}
+                      </div>
+                      <div
+                        className={cn(
+                          visibilityClassName,
+                          !preferences.autoSkip &&
+                            'cursor-not-allowed opacity-50'
+                        )}
                       >
                         <span aria-hidden="true">Show on videos</span>
                         <AppSwitch
                           aria-label={`Show ${name} auto-skip on page`}
                           checked={preferences.showAutoSkip}
-                          disabled={!extensionEnabled}
+                          disabled={!extensionEnabled || !preferences.autoSkip}
                           id={`${settingsId}-auto-skip-button-${name}`}
                           onCheckedChange={preferences.onShowAutoSkipChange}
                           size="sm"
                         />
-                      </label>
+                      </div>
                     </fieldset>
                   ))}
-                </div>
+                </SubOptionsCard>
               ),
             }}
             description="Play the next video when the current one ends"
             icon={SkipForwardIcon}
-            title="Auto-Skip"
+            title={
+              <span className="inline-flex items-center gap-1.5">
+                Auto-Skip
+                <FeaturePreviewTooltip feature="autoSkip" />
+              </span>
+            }
           />
         </section>
       </CardListItemWrapper>

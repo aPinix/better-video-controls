@@ -1,7 +1,10 @@
-import { useId } from 'react';
 import { AppSwitch } from '@/components/app/app-switch';
+import { AppSegment } from '@/components/app/app-segment';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeScreenshotIcon } from '@/components/youtube-screenshot-icon';
+import { cn } from '@/lib/utils';
+import { SettingsExpansion } from './settings-expansion';
+import { SUB_OPTIONS_CARD_CLASS_NAME } from './sub-options-card';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
 import { YouTubeFeatureTitle } from './youtube-feature-title';
 
@@ -12,10 +15,10 @@ export function YouTubeScreenshotSetting({
 }) {
   const { settings, ready, saving, error, save } =
     usePlayerToolsPreferences('Screenshot');
-  const effectsId = useId();
   const unavailable = disabled || !ready || saving;
   return (
     <CardListItem
+      classNameContentBottom="mt-0"
       components={{
         RightSlot: (
           <AppSwitch
@@ -26,40 +29,58 @@ export function YouTubeScreenshotSetting({
             onCheckedChange={(next) => save({ youtubeScreenshotEnabled: next })}
           />
         ),
-        BottomSlot:
-          settings.youtubeScreenshotEnabled || error ? (
-            <div className="space-y-3">
-              {settings.youtubeScreenshotEnabled && (
-                <label
-                  className="flex cursor-pointer items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-3 text-slate-600 text-xs dark:bg-slate-900/40 dark:text-slate-300"
-                  htmlFor={effectsId}
-                >
-                  <span aria-hidden="true">Include video filter effects</span>
-                  <AppSwitch
-                    aria-label="Include video filter effects in screenshots"
-                    checked={settings.youtubeScreenshotIncludeFilters}
-                    disabled={unavailable}
-                    id={effectsId}
-                    onCheckedChange={(next) =>
-                      save({ youtubeScreenshotIncludeFilters: next })
-                    }
-                    size="sm"
-                  />
-                </label>
+        BottomSlot: (
+          <SettingsExpansion
+            open={settings.youtubeScreenshotEnabled}
+            error={error}
+          >
+            <div
+              className={cn(
+                SUB_OPTIONS_CARD_CLASS_NAME,
+                'space-y-3 text-slate-600 text-xs dark:text-slate-300'
               )}
-              {error && (
-                <p className="text-red-600 text-xs" role="alert">
-                  {error}
-                </p>
-              )}
+              data-slot="settings-sub-options"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span>Format</span>
+                <AppSegment
+                  className="w-32"
+                  disabled={unavailable}
+                  label="Screenshot format"
+                  onValueChange={(format) =>
+                    save({ youtubeScreenshotFormat: format })
+                  }
+                  options={[
+                    { label: 'JPEG', value: 'jpeg' },
+                    { label: 'PNG', value: 'png' },
+                  ]}
+                  value={settings.youtubeScreenshotFormat}
+                />
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <span aria-hidden="true">Include video filter effects</span>
+                <AppSwitch
+                  aria-label="Include video filter effects in screenshots"
+                  checked={settings.youtubeScreenshotIncludeFilters}
+                  disabled={unavailable}
+                  onCheckedChange={(next) =>
+                    save({ youtubeScreenshotIncludeFilters: next })
+                  }
+                  size="sm"
+                />
+              </div>
             </div>
-          ) : undefined,
+          </SettingsExpansion>
+        ),
       }}
-      description="Add a button to save the current video frame as a PNG"
+      description="Add a button to save the current video frame as JPEG or PNG"
       icon={YouTubeScreenshotIcon}
       iconIsToggled={settings.youtubeScreenshotEnabled}
       title={
-        <YouTubeFeatureTitle feature="screenshot">
+        <YouTubeFeatureTitle
+          feature="screenshot"
+          screenshotFormat={settings.youtubeScreenshotFormat}
+        >
           Screenshot
         </YouTubeFeatureTitle>
       }

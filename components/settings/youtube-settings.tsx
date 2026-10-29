@@ -1,11 +1,11 @@
-import { BookmarkIcon, ListVideoIcon } from 'lucide-react';
+import { BookmarkIcon, ChevronRight, ListVideoIcon } from 'lucide-react';
 import { type RefObject, useState } from 'react';
 
 import { AppBetaBadge } from '@/components/app/app-beta-badge';
 import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { CardListItemWrapper } from '@/components/popup/card-list-item-wrapper';
-import { ExtraFeaturePreviewTooltip } from '@/components/popup/extra-feature-preview-tooltip';
+import { FeaturePreviewTooltip } from '@/components/popup/feature-preview-tooltip';
 import {
   YOUTUBE_CONTROL_ORDER,
   type YouTubeControl,
@@ -98,7 +98,7 @@ export function YouTubeSettings({
             title={
               <span className="inline-flex items-center gap-2">
                 Chaptered Timeline
-                <ExtraFeaturePreviewTooltip featureName="Chaptered Timeline" />
+                <FeaturePreviewTooltip feature="chapters" />
                 <AppBetaBadge
                   featureName="Chaptered Timeline"
                   tooltip={
@@ -113,12 +113,29 @@ export function YouTubeSettings({
           />
         </CardListItemWrapper>
       </section>
-      <div className="mt-3" ref={savedLibraryEntryRef}>
+      <div className="relative mt-3" ref={savedLibraryEntryRef}>
+        <button
+          aria-label="Saved bookmarks & loops"
+          className="absolute inset-0 w-full cursor-pointer rounded-xl"
+          onClick={(event) => onOpenSavedLibrary(event.detail > 0)}
+          type="button"
+        />
         <CardListItem
+          components={{
+            RightSlot: (
+              <ChevronRight className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+            ),
+          }}
           description="Browse your saved YouTube videos, bookmarks, and loop sections."
           icon={BookmarkIcon}
-          onClick={(event) => onOpenSavedLibrary(event.detail > 0)}
-          title="Saved bookmarks & loops"
+          title={
+            <span className="inline-flex max-w-full items-center gap-1.5">
+              Saved bookmarks &amp; loops
+              <span className="relative">
+                <FeaturePreviewTooltip feature="library" />
+              </span>
+            </span>
+          }
         />
       </div>
     </>

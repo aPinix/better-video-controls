@@ -11,65 +11,16 @@ export const getDefaultDomainRules = () =>
     enabled: config.enabled,
   }));
 
-const hasExactPresetDomainSet = (rules: DomainConfigT[]): boolean => {
-  const knownDomains = new Set(DOMAIN_CONFIGS.map(({ domain }) => domain));
-  return (
-    rules.length === knownDomains.size &&
-    new Set(rules.map(({ domain }) => domain)).size === knownDomains.size &&
-    rules.every(({ domain }) => knownDomains.has(domain))
-  );
-};
-
-const isUntouchedLegacyDefaults = (rules: DomainConfigT[]): boolean => {
-  if (!hasExactPresetDomainSet(rules)) return false;
-
-  const globalRule = rules.find(({ domain }) => domain === '*');
-  const youtubeRule = rules.find(({ domain }) => domain === 'youtube.com');
-  const otherRules = rules.filter(
-    ({ domain }) => domain !== '*' && domain !== 'youtube.com'
-  );
-
-  return Boolean(
-    globalRule?.enabled &&
-      (globalRule.type === DomainRuleTypeE.Blacklist ||
-        globalRule.type === DomainRuleTypeE.Whitelist) &&
-      youtubeRule?.enabled &&
-      youtubeRule.type === DomainRuleTypeE.Whitelist &&
-      otherRules.every((rule) => {
-        const preset = DOMAIN_CONFIGS.find(
-          ({ domain }) => domain === rule.domain
-        );
-        return (
-          preset && rule.enabled === preset.enabled && rule.type === preset.type
-        );
-      })
-  );
-};
-
-/** Preserve custom rules while upgrading former untouched preset policies. */
+/** Preserve saved policies independently of new-install defaults. */
 export const mergeAndMigrateDomainRules = (
   existingRules: DomainConfigT[]
 ): DomainConfigT[] => {
-  if (isUntouchedLegacyDefaults(existingRules)) {
-    return existingRules.map((rule) => {
-      const preset = DOMAIN_CONFIGS.find(
-        ({ domain }) => domain === rule.domain
-      );
-      return {
-        ...rule,
-        enabled: preset?.enabled ?? false,
-        type: preset?.type ?? DomainRuleTypeE.Whitelist,
-      };
-    });
-  }
-
   if (existingRules.some(({ domain }) => domain === '*')) {
     return existingRules;
   }
 
-  const globalDefault = getDefaultDomainRules().find(
-    ({ domain }) => domain === '*'
-  ) ?? {
+  // Older saved lists without a wildcard used an allow-all fallback.
+  const globalDefault: DomainConfigT = {
     domain: '*',
     enabled: true,
     type: DomainRuleTypeE.Whitelist,

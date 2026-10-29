@@ -69,7 +69,7 @@ export function SavedLibraryToolbar({
             aria-label={`${label} ${count}`}
             aria-pressed={filter === id}
             className={cn(
-              'focus-visible:ring-brand/40 h-7 cursor-pointer rounded-full px-2 text-[10px] font-medium transition-colors outline-none focus-visible:ring-2 motion-reduce:transition-none',
+              'focus-visible:ring-brand/40 h-7 cursor-pointer rounded-full px-2 text-[10px] font-medium transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none',
               filter === id
                 ? id === 'moments'
                   ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-300 dark:bg-sky-900/60 dark:text-sky-300 dark:ring-sky-600'
@@ -85,6 +85,7 @@ export function SavedLibraryToolbar({
                         : 'text-slate-500 dark:text-slate-300'
                   )
             )}
+            disabled={id !== 'all' && count === 0}
             key={id}
             onClick={() => setFilter(id)}
             title={`${label} · ${count}`}

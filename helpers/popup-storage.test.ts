@@ -63,6 +63,17 @@ describe('timeline seeking storage', () => {
       expect(DEFAULT_SETTINGS.isScrollSeekingEnabled).toBe(true);
       expect(settings.isScrollSeekingEnabled).toBe(true);
       expect(settings.settingsSchemaVersion).toBe(SETTINGS_SCHEMA_VERSION);
+      expect(
+        settings.domainRules.find(({ domain }) => domain === '*')?.type
+      ).toBe('blacklist');
+      expect(
+        settings.domainRules
+          .filter(
+            (rule) =>
+              rule.domain !== '*' && rule.enabled && rule.type === 'whitelist'
+          )
+          .map(({ domain }) => domain)
+      ).toEqual(['instagram.com', 'tiktok.com', 'vimeo.com', 'youtube.com']);
       expect(DEFAULT_SETTINGS.dragVideoToSeek).toBe(false);
       expect(settings.dragVideoToSeek).toBe(false);
       expect(DEFAULT_SETTINGS.hideVideoControls).toBe(false);

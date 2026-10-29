@@ -127,7 +127,7 @@ Hover over a video and open **Tools**. The compact menu includes:
 
 - Set the shared **Seek interval (secs)** in **Settings → Basic Features → Arrow Key Seeking** (5 seconds by default). The left/right arrow keys seek the active video and ignore text fields and modifier shortcuts.
 - YouTube speed presets and precise 0.25–4× controls. Selecting a speed remembers it for YouTube. Remaining time accounts for the actual playback speed.
-- Extra volume up to 300%, video filters, and PNG screenshots. Boost is explicit; screenshots can optionally include filters. Source restrictions can make boost or screenshots unavailable.
+- Volume boost up to 5×, video filters, and JPEG or PNG screenshots (JPEG by default). Boost is explicit; screenshots can optionally include filters. Source restrictions can make boost or screenshots unavailable.
 - Cinema Mode, which dims the surrounding page. Press Escape or click the dimmed background to leave.
 
 Loop is YouTube-only and off by default. Enable **Settings → YouTube → Loop** to add its button before autoplay and captions in the native player controls. The button opens a dedicated editor, separate from Tools. Draw an A–B range on the timeline while the editor is open. Drag its handles to adjust the boundaries, drag its middle to move it, or enter times in seconds. Focus a handle and use the arrow keys for 0.1-second adjustments (Shift for one second). Enable the loop to repeat it. Name it and choose **Save loop**; editing a saved range uses **Save changes**. Normal timeline dragging continues to seek outside editing mode. Turning the feature off removes its native button and stops the active loop.

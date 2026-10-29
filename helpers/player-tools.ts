@@ -856,17 +856,21 @@ export class PlayerTools {
     );
     const includeFilters = this.check(
       'Include filters in screenshot',
-      false,
-      () => {}
+      this.settings.youtubeScreenshotIncludeFilters,
+      (enabled) => this.preference('youtubeScreenshotIncludeFilters', enabled)
     );
+    this.uiSync.push(() => {
+      includeFilters.checked = this.settings.youtubeScreenshotIncludeFilters;
+    });
     button(
       this.doc,
-      'Screenshot PNG',
+      'Screenshot',
       () =>
         this.perform(async () => {
           await screenshotVideo(
             this.video,
-            includeFilters.checked ? this.filters : undefined
+            includeFilters.checked ? this.filters : undefined,
+            this.settings.youtubeScreenshotFormat
           );
           this.report('Screenshot saved.');
         }),
@@ -918,6 +922,11 @@ export class PlayerTools {
       }
     }
   }
+  private get endScreenCardsVisible(): boolean {
+    return (
+      !this.settings.youtubeInfoCardsEnabled || !this.settings.hideEndScreens
+    );
+  }
   private applyPreferences(): void {
     if (this.youtube && !this.settings.youtubeCinemaEnabled) {
       this.cinema = false;
@@ -947,7 +956,7 @@ export class PlayerTools {
     if (this.cardPlayer) {
       this.cardPlayer.dataset.mfsHideCards = String(this.settings.hideCards);
       this.cardPlayer.dataset.mfsHideEndScreens = String(
-        this.settings.hideEndScreens
+        !this.endScreenCardsVisible
       );
       this.cardPlayer.dataset.mfsAutoChapters = String(
         this.settings.autoChapters
@@ -2261,9 +2270,13 @@ export class PlayerTools {
     this.screenshotBusy = true;
     this.updateYouTubeButtons();
     try {
-      if (this.settings.youtubeScreenshotIncludeFilters)
-        await screenshotVideo(this.video, { ...this.filters });
-      else await screenshotVideo(this.video);
+      await screenshotVideo(
+        this.video,
+        this.settings.youtubeScreenshotIncludeFilters
+          ? { ...this.filters }
+          : undefined,
+        this.settings.youtubeScreenshotFormat
+      );
       this.youtubeButtons?.reportScreenshot('Screenshot saved.');
       this.report('Screenshot saved.');
     } catch (error) {
@@ -2328,7 +2341,7 @@ export class PlayerTools {
       },
       infoCards: {
         enabled: this.settings.youtubeInfoCardsEnabled,
-        visible: !this.settings.hideEndScreens,
+        visible: this.endScreenCardsVisible,
         available: !this.isAd(),
       },
       screenshot: {

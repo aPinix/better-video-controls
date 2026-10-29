@@ -47,7 +47,7 @@ const controlStyles = `
   .mfs-youtube-buttons[data-split=true]::before{content:"";position:absolute;left:0;right:0;top:50%;height:32px;transform:translateY(-50%);border-radius:999px;background:rgba(255,255,255,.1);pointer-events:none}
   .mfs-loop-tooltip{position:absolute;z-index:1003;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);display:flex;align-items:center;padding:5px 9px;border-radius:8px;backdrop-filter:var(--yt-frosted-glass-backdrop-filter-override,blur(16px));background:var(--yt-sys-color-baseline--overlay-background-medium-light,rgba(0,0,0,.3));color:#fff;font-size:118%;font-weight:500;line-height:15px;text-shadow:0 0 2px #000;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;transition:opacity 100ms ease}
   .mfs-loop-tooltip .ytp-tooltip-keyboard-shortcut{display:flex;justify-content:center;align-items:center;border:1px solid rgba(255,255,255,.3);min-width:11px;border-radius:4px;margin-left:4px;color:#fff;padding:0 2px;font:inherit}
-  .mfs-loop-tooltip[data-advanced=true]{flex-direction:column;gap:4px;padding:7px 9px}
+  .mfs-loop-tooltip[data-advanced=true],.mfs-loop-tooltip[data-multiline=true]{flex-direction:column;gap:4px;padding:7px 9px}
   .mfs-tooltip-heading{display:flex;align-items:center;max-width:100%}.mfs-tooltip-label{min-width:0;overflow-wrap:anywhere}
   .mfs-tooltip-hint{font-size:85%;font-weight:400;line-height:1.25;color:rgba(255,255,255,.65)}
   .mfs-loop-tooltip[hidden]{display:none!important}
@@ -372,14 +372,15 @@ export class YouTubePlayerButtons {
     button: HTMLButtonElement,
     active: boolean,
     available: boolean,
-    tooltip: string
+    tooltip: string,
+    actionHint?: string
   ) {
     button.disabled = !available;
     button.setAttribute('aria-pressed', String(active));
     button.style.opacity = !available ? '.3' : '1';
     button.style.transition = 'opacity 180ms ease';
     const tip = this.tips.get(button);
-    if (tip) this.tooltip(button, tooltip);
+    if (tip) this.tooltip(button, tooltip, actionHint);
   }
 
   private watchLayout(controls: HTMLElement): void {
@@ -648,7 +649,11 @@ export class YouTubePlayerButtons {
     this.toolbar.style.width = `${Math.min(customWidth + 8, chrome.clientWidth)}px`;
   }
 
-  private tooltip(button: HTMLButtonElement, label: string): void {
+  private tooltip(
+    button: HTMLButtonElement,
+    label: string,
+    actionHint?: string
+  ): void {
     const tip = this.tips.get(button);
     if (!tip) return;
     let text = tip.querySelector('.mfs-tooltip-label');
@@ -667,13 +672,24 @@ export class YouTubePlayerButtons {
       }
       if (button.dataset.advanced === 'true') {
         tip.dataset.advanced = 'true';
-        const hint = this.video.ownerDocument.createElement('span');
-        hint.className = 'mfs-tooltip-hint';
-        hint.textContent = button.dataset.advancedHint ?? 'Hold for options';
-        tip.append(hint);
       }
     }
     text.textContent = label;
+    const hintText =
+      button.dataset.advanced === 'true'
+        ? button.dataset.advancedHint ?? 'Hold for options'
+        : actionHint;
+    let hint = tip.querySelector<HTMLElement>('.mfs-tooltip-hint');
+    if (hintText && !hint) {
+      hint = this.video.ownerDocument.createElement('span');
+      hint.className = 'mfs-tooltip-hint';
+      tip.append(hint);
+    }
+    if (hint) {
+      hint.textContent = hintText ?? '';
+      hint.hidden = !hintText;
+    }
+    tip.dataset.multiline = String(!!hintText);
   }
 
   update({
@@ -769,8 +785,17 @@ export class YouTubePlayerButtons {
       infoCards.visible,
       infoCards.available,
       infoCards.available
-        ? `${infoCards.visible ? 'Hide' : 'Show'} Info Cards`
-        : 'Info Cards unavailable during ads'
+        ? `End-screen cards: ${infoCards.visible ? 'visible' : 'hidden'}`
+        : 'End-screen cards unavailable during ads',
+      infoCards.available
+        ? `Click to ${infoCards.visible ? 'hide' : 'show'} recommendations`
+        : undefined
+    );
+    this.infoCardsButton.setAttribute(
+      'aria-description',
+      infoCards.available
+        ? `Recommendations are ${infoCards.visible ? 'visible' : 'hidden'}. Activate to ${infoCards.visible ? 'hide' : 'show'} them.`
+        : 'Unavailable during ads.'
     );
     this.state(
       this.loopButton,

@@ -5,6 +5,7 @@ import { TimelineHeightControl } from '@/components/timeline-height-control';
 import { DEFAULT_SETTINGS } from '@/helpers/popup-storage';
 import { cn } from '@/lib/utils';
 import { ActionAreaE, type ActionAreaT } from '@/types/content';
+import { SUB_OPTIONS_CARD_CLASS_NAME } from './sub-options-card';
 
 type TimelinePositionT = 'top' | 'bottom';
 type TimelineUnitT = 'px' | '%';
@@ -59,7 +60,8 @@ export function VideoLayoutSettings({
     <div className="flex w-full flex-col gap-4">
       <section
         aria-labelledby="active-video-area-heading"
-        className="space-y-3"
+        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'space-y-3 ml-11')}
+        data-slot="settings-sub-options"
       >
         <div>
           <div className="flex items-center gap-1.5">
@@ -124,11 +126,10 @@ export function VideoLayoutSettings({
         </div>
       </section>
 
-      <div className="h-px w-full bg-slate-100/70 dark:bg-white/5" />
-
       <section
         aria-labelledby="timeline-appearance-heading"
-        className="space-y-3"
+        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'space-y-3 ml-11')}
+        data-slot="settings-sub-options"
       >
         <h4
           className="font-semibold text-slate-800 text-sm dark:text-slate-100"

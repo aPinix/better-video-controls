@@ -2,7 +2,7 @@ import type { DomainConfigT } from '@/types/domains';
 import { DomainRuleTypeE } from '@/types/domains';
 
 export const DOMAIN_CONFIGS: DomainConfigT[] = [
-  { domain: '*', type: DomainRuleTypeE.Whitelist, enabled: true },
+  { domain: '*', type: DomainRuleTypeE.Blacklist, enabled: true },
   {
     domain: 'apinix.com',
     type: DomainRuleTypeE.Blacklist,
@@ -26,7 +26,7 @@ export const DOMAIN_CONFIGS: DomainConfigT[] = [
   {
     domain: 'instagram.com',
     type: DomainRuleTypeE.Whitelist,
-    enabled: false,
+    enabled: true,
   },
   {
     domain: 'netflix.com',
@@ -41,7 +41,7 @@ export const DOMAIN_CONFIGS: DomainConfigT[] = [
   {
     domain: 'tiktok.com',
     type: DomainRuleTypeE.Whitelist,
-    enabled: false,
+    enabled: true,
   },
   {
     domain: 'twitch.tv',
@@ -51,7 +51,7 @@ export const DOMAIN_CONFIGS: DomainConfigT[] = [
   {
     domain: 'vimeo.com',
     type: DomainRuleTypeE.Whitelist,
-    enabled: false,
+    enabled: true,
   },
   {
     domain: 'x.com',
@@ -61,6 +61,6 @@ export const DOMAIN_CONFIGS: DomainConfigT[] = [
   {
     domain: 'youtube.com',
     type: DomainRuleTypeE.Whitelist,
-    enabled: false,
+    enabled: true,
   },
 ];

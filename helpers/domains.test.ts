@@ -14,13 +14,13 @@ import {
 } from '@/helpers/domains';
 import { DomainModeE, DomainRuleTypeE } from '@/types/domains';
 
-describe('universal domain defaults', () => {
-  it('enables the extension globally by default', () => {
+describe('domain defaults', () => {
+  it('disables unlisted websites by default', () => {
     expect(
       getDefaultDomainRules().find(({ domain }) => domain === '*')
     ).toEqual({
       domain: '*',
-      type: DomainRuleTypeE.Whitelist,
+      type: DomainRuleTypeE.Blacklist,
       enabled: true,
     });
   });
@@ -38,31 +38,46 @@ describe('universal domain defaults', () => {
     });
     expect(
       rules
-        .filter(({ domain }) => domain !== '*' && domain !== 'apinix.com')
-        .every(({ enabled }) => !enabled)
-    ).toBe(true);
+        .filter(
+          (rule) =>
+            rule.domain !== '*' &&
+            rule.enabled &&
+            rule.type === DomainRuleTypeE.Whitelist
+        )
+        .map(({ domain }) => domain)
+    ).toEqual(['instagram.com', 'tiktok.com', 'vimeo.com', 'youtube.com']);
     expect(siteDomains).toEqual(
       [...siteDomains].sort((first, second) => first.localeCompare(second))
     );
   });
 
   it.each([DomainRuleTypeE.Whitelist, DomainRuleTypeE.Blacklist])(
-    'normalizes untouched legacy defaults with a %s wildcard',
+    'preserves saved legacy choices with a %s wildcard',
     (globalType) => {
       const legacyRules = getDefaultDomainRules().map((rule) => {
         if (rule.domain === '*') return { ...rule, type: globalType };
         if (rule.domain === 'youtube.com') return { ...rule, enabled: true };
+        if (['instagram.com', 'tiktok.com', 'vimeo.com'].includes(rule.domain))
+          return { ...rule, enabled: false };
         return rule;
       });
 
       const migrated = mergeAndMigrateDomainRules(legacyRules);
-      expect(isGlobalDefaultOn(migrated)).toBe(true);
+      expect(migrated).toEqual(legacyRules);
+      expect(isGlobalDefaultOn(migrated)).toBe(
+        globalType === DomainRuleTypeE.Whitelist
+      );
       expect(
         getDomainMode(migrated.find(({ domain }) => domain === 'apinix.com'))
       ).toBe(DomainModeE.Off);
       expect(
         migrated
-          .filter(({ domain }) => domain !== '*' && domain !== 'apinix.com')
+          .filter(
+            ({ domain }) =>
+              domain !== '*' &&
+              domain !== 'apinix.com' &&
+              domain !== 'youtube.com'
+          )
           .every(({ enabled }) => !enabled)
       ).toBe(true);
     }
@@ -93,6 +108,12 @@ describe('universal domain defaults', () => {
     ];
 
     expect(mergeAndMigrateDomainRules(customRules)).toEqual(customRules);
+  });
+  it('preserves the former allow-all fallback for saved rules without a wildcard', () => {
+    const saved = [createDomainRule('example.com', DomainModeE.Off)];
+    const merged = mergeAndMigrateDomainRules(saved);
+    expect(isGlobalDefaultOn(merged)).toBe(true);
+    expect(merged.slice(1)).toEqual(saved);
   });
 
   it('does not restore a deleted preset website', () => {

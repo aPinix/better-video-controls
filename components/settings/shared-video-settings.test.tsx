@@ -40,8 +40,7 @@ it('places the thumbnail time selector inside Hover Thumbnails and selects Time 
   );
   expect(selector.textContent).toContain('Both');
   await user.click(selector);
-  expect(screen.getByRole('option', { name: 'None' })).toBeTruthy();
-  await user.click(screen.getByRole('option', { name: 'None' }));
+  await user.click(await screen.findByRole('option', { name: 'None' }));
   expect(onChange).toHaveBeenCalledWith('none');
 });
 
@@ -60,6 +59,31 @@ function preferences() {
   };
 }
 
+it('changes switches only when the toggle is clicked, not its text', async () => {
+  const user = userEvent.setup();
+  const platforms = {
+    youtube: preferences(),
+    instagram: { ...preferences(), autoSkip: true },
+    tiktok: { ...preferences(), autoSkip: true },
+  };
+  render(<SharedVideoSettings extensionEnabled {...platforms} />);
+  for (const toggle of screen.getAllByRole('switch')) {
+    const text = toggle.parentElement?.querySelector('span');
+    expect(text).toBeTruthy();
+    if (text) await user.click(text);
+  }
+  for (const platform of Object.values(platforms)) {
+    expect(platform.onThumbnailPreviewEnabledChange).not.toHaveBeenCalled();
+    expect(platform.onShowPlaybackSpeedChange).not.toHaveBeenCalled();
+    expect(platform.onAutoSkipChange).not.toHaveBeenCalled();
+    expect(platform.onShowAutoSkipChange).not.toHaveBeenCalled();
+  }
+  await user.click(
+    screen.getByRole('switch', { name: 'Hover Thumbnails on YouTube' })
+  );
+  expect(platforms.youtube.onThumbnailPreviewEnabledChange).toHaveBeenCalled();
+});
+
 it('shows each feature once and keeps all three thumbnail preferences independent', () => {
   const platforms = {
     youtube: preferences(),
@@ -73,6 +97,9 @@ it('shows each feature once and keeps all three thumbnail preferences independen
   expect(container.querySelectorAll('.card-list-item')).toHaveLength(3);
   for (const title of ['Hover Thumbnails', 'Playback Speed', 'Auto-Skip']) {
     expect(screen.getAllByText(title)).toHaveLength(1);
+    expect(
+      screen.getByRole('button', { name: `Preview ${title}` })
+    ).toBeTruthy();
   }
   expect(
     screen
@@ -98,7 +125,7 @@ it.each(['Instagram', 'TikTok'])(
   (name) => {
     const instagram = preferences();
     const tiktok = preferences();
-    render(
+    const { rerender } = render(
       <SharedVideoSettings
         extensionEnabled
         instagram={instagram}
@@ -108,6 +135,29 @@ it.each(['Instagram', 'TikTok'])(
     );
     const selected = name === 'Instagram' ? instagram : tiktok;
     const other = name === 'Instagram' ? tiktok : instagram;
+    const visibility = screen.getByRole('switch', {
+      name: `Show ${name} auto-skip on page`,
+    });
+    expect(visibility.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(visibility);
+    expect(selected.onShowAutoSkipChange).not.toHaveBeenCalled();
+    selected.autoSkip = true;
+    rerender(
+      <SharedVideoSettings
+        extensionEnabled
+        instagram={instagram}
+        tiktok={tiktok}
+        youtube={preferences()}
+      />
+    );
+    expect(visibility.getAttribute('aria-disabled')).not.toBe('true');
+    expect(
+      screen
+        .getByRole('switch', {
+          name: `Show ${name === 'Instagram' ? 'TikTok' : 'Instagram'} auto-skip on page`,
+        })
+        .getAttribute('aria-disabled')
+    ).toBe('true');
     fireEvent.click(
       screen.getByRole('switch', {
         name: `Show ${name} playback speed on page`,
@@ -127,9 +177,23 @@ it.each(['Instagram', 'TikTok'])(
     expect(selected.onAutoSkipChange).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('switch', { name: `${name} auto-skip` }));
     expect(selected.onAutoSkipChange).toHaveBeenCalledWith(
-      true,
+      false,
       expect.anything()
     );
+    selected.autoSkip = false;
+    selected.showAutoSkip = true;
+    rerender(
+      <SharedVideoSettings
+        extensionEnabled
+        instagram={instagram}
+        tiktok={tiktok}
+        youtube={preferences()}
+      />
+    );
+    expect(visibility.getAttribute('aria-disabled')).toBe('true');
+    expect(visibility.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(visibility);
+    expect(selected.onShowAutoSkipChange).toHaveBeenCalledTimes(1);
     expect(other.onAutoSkipChange).not.toHaveBeenCalled();
     expect(other.onShowPlaybackSpeedChange).not.toHaveBeenCalled();
     expect(other.onShowAutoSkipChange).not.toHaveBeenCalled();
@@ -160,7 +224,7 @@ it.each(['Instagram', 'TikTok'])(
   (name) => {
     const instagram = preferences();
     const tiktok = preferences();
-    render(
+    const { rerender } = render(
       <SharedVideoSettings
         extensionEnabled
         instagram={instagram}
@@ -172,11 +236,28 @@ it.each(['Instagram', 'TikTok'])(
       name: `${name} playback speed`,
     });
     expect(slider.getAttribute('aria-valuetext')).toBe('1×');
+    const reset = screen.getByRole('button', {
+      name: `Reset ${name} playback speed to 1×`,
+    }) as HTMLButtonElement;
+    expect(reset.disabled).toBe(true);
     fireEvent.keyDown(slider, { key: 'ArrowRight' });
     const selected = name === 'Instagram' ? instagram : tiktok;
     const other = name === 'Instagram' ? tiktok : instagram;
     expect(selected.onPlaybackSpeedChange).toHaveBeenCalledWith(1.25);
     expect(other.onPlaybackSpeedChange).not.toHaveBeenCalled();
     expect(selected.onShowPlaybackSpeedChange).not.toHaveBeenCalled();
+    selected.playbackSpeed = 1.5;
+    rerender(
+      <SharedVideoSettings
+        extensionEnabled
+        instagram={instagram}
+        tiktok={tiktok}
+        youtube={preferences()}
+      />
+    );
+    expect(reset.disabled).toBe(false);
+    fireEvent.click(reset);
+    expect(selected.onPlaybackSpeedChange).toHaveBeenLastCalledWith(1);
+    expect(other.onPlaybackSpeedChange).not.toHaveBeenCalled();
   }
 );

@@ -4,6 +4,7 @@ export type VideoFilters = {
   saturation: number;
   grayscale: number;
 };
+export type ScreenshotFormat = 'jpeg' | 'png';
 export const DEFAULT_FILTERS: VideoFilters = {
   brightness: 100,
   contrast: 100,
@@ -26,6 +27,7 @@ export type PlayerToolsSettings = {
   youtubeInfoCardsEnabled: boolean;
   youtubeScreenshotEnabled: boolean;
   youtubeScreenshotIncludeFilters: boolean;
+  youtubeScreenshotFormat: ScreenshotFormat;
   youtubeFiltersEnabled: boolean;
   youtubeAutoBoost: boolean;
   rememberYoutubeLoops: boolean;
@@ -43,6 +45,10 @@ export type PlayerToolsSettings = {
   siteFilters: Record<string, VideoFilters>;
 };
 export const PLAYER_TOOLS_KEY = 'playerTools';
+export const MAX_VOLUME_BOOST = 5;
+export const BOOST_DISTORTION_WARNING_LEVEL = 3;
+export const BOOST_DISTORTION_WARNING =
+  'High boost may distort the sound. Lower the boost if you hear crackling.';
 export const DEFAULT_PLAYER_TOOLS: PlayerToolsSettings = {
   version: 1,
   arrowKeySeekingEnabled: true,
@@ -58,7 +64,8 @@ export const DEFAULT_PLAYER_TOOLS: PlayerToolsSettings = {
   youtubeCinemaEnabled: true,
   youtubeInfoCardsEnabled: true,
   youtubeScreenshotEnabled: true,
-  youtubeScreenshotIncludeFilters: false,
+  youtubeScreenshotIncludeFilters: true,
+  youtubeScreenshotFormat: 'jpeg',
   youtubeFiltersEnabled: true,
   youtubeAutoBoost: false,
   rememberYoutubeLoops: true,
@@ -70,7 +77,7 @@ export const DEFAULT_PLAYER_TOOLS: PlayerToolsSettings = {
   youtubePipMode: 'mini-player',
   youtubePipAutoOnTabChange: true,
   autoChapters: false,
-  dimming: 80,
+  dimming: 90,
   cinemaColor: '#000000',
   cinemaColorCustom: false,
   siteFilters: {},
@@ -113,18 +120,18 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
     youtubeCinemaEnabled: v.youtubeCinemaEnabled !== false,
     youtubeInfoCardsEnabled: v.youtubeInfoCardsEnabled !== false,
     youtubeScreenshotEnabled: v.youtubeScreenshotEnabled !== false,
-    youtubeScreenshotIncludeFilters: v.youtubeScreenshotIncludeFilters === true,
+    youtubeScreenshotIncludeFilters:
+      v.youtubeScreenshotIncludeFilters !== false,
+    youtubeScreenshotFormat:
+      v.youtubeScreenshotFormat === 'png' ? 'png' : 'jpeg',
     youtubeFiltersEnabled: v.youtubeFiltersEnabled !== false,
     youtubeLoop: v.youtubeLoop !== false,
     youtubeBookmarksEnabled: v.youtubeBookmarksEnabled !== false,
     youtubeAutoBoost: v.youtubeAutoBoost === true,
     youtubeBoostEnabled: v.youtubeBoostEnabled !== false,
-    youtubeBoost:
-      Number.isInteger(v.youtubeBoost) &&
-      v.youtubeBoost! >= 2 &&
-      v.youtubeBoost! <= 10
-        ? v.youtubeBoost!
-        : 2,
+    youtubeBoost: Number.isInteger(v.youtubeBoost)
+      ? clamp(v.youtubeBoost!, 2, MAX_VOLUME_BOOST)
+      : 2,
     rememberYoutubeLoops: v.rememberYoutubeLoops !== false,
     backward: seekInterval,
     // Migrate independent intervals to the existing rewind value for both keys.
@@ -141,7 +148,7 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
       v.youtubePipMode === 'chrome-video' ? 'chrome-video' : 'mini-player',
     youtubePipAutoOnTabChange: v.youtubePipAutoOnTabChange !== false,
     autoChapters: v.autoChapters === true,
-    dimming: numeric(v.dimming, 80, 0, 100),
+    dimming: numeric(v.dimming, DEFAULT_PLAYER_TOOLS.dimming, 0, 100),
     cinemaColor:
       typeof v.cinemaColor === 'string' && /^#[0-9a-f]{6}$/i.test(v.cinemaColor)
         ? v.cinemaColor.toLowerCase()

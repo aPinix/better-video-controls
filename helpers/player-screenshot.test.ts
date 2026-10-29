@@ -106,25 +106,36 @@ afterEach(() => {
 });
 
 describe('YouTube Screenshot button', () => {
+  it('uses the saved PNG format for captures', async () => {
+    preferencesChanged({ youtubeScreenshotFormat: 'png' });
+    screenshot.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(capture).toHaveBeenLastCalledWith(video, DEFAULT_FILTERS, 'png');
+  });
   it('includes the current filters only when the saved screenshot option is on', async () => {
+    preferencesChanged({ youtubeScreenshotIncludeFilters: false });
     const brightness = filterInput('Brightness');
     brightness.value = '145';
     brightness.dispatchEvent(new Event('input'));
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(capture).toHaveBeenLastCalledWith(video);
+    expect(capture).toHaveBeenLastCalledWith(video, undefined, 'jpeg');
     preferencesChanged({ youtubeScreenshotIncludeFilters: true });
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(capture).toHaveBeenLastCalledWith(video, {
-      ...DEFAULT_FILTERS,
-      brightness: 145,
-    });
+    expect(capture).toHaveBeenLastCalledWith(
+      video,
+      {
+        ...DEFAULT_FILTERS,
+        brightness: 145,
+      },
+      'jpeg'
+    );
     expect(video.style.filter).toContain('brightness(145%)');
     preferencesChanged({ youtubeScreenshotIncludeFilters: false });
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(capture).toHaveBeenLastCalledWith(video);
+    expect(capture).toHaveBeenLastCalledWith(video, undefined, 'jpeg');
     expect(video.style.filter).toContain('brightness(145%)');
   });
   it('captures the same playing video once and provides visible success feedback', async () => {
@@ -137,7 +148,11 @@ describe('YouTube Screenshot button', () => {
     );
     screenshot.click();
     screenshot.click();
-    expect(capture).toHaveBeenCalledExactlyOnceWith(video);
+    expect(capture).toHaveBeenCalledExactlyOnceWith(
+      video,
+      DEFAULT_FILTERS,
+      'jpeg'
+    );
     expect(screenshot.disabled).toBe(true);
     expect(video.paused).toBe(false);
     expect(video.currentTime).toBe(25);
@@ -628,17 +643,17 @@ describe('YouTube advanced controls and shortcuts', () => {
     await hold('boost');
     expect(boost).not.toHaveBeenCalled();
     const input = advancedInput('Volume boost');
-    input.value = '7';
+    input.value = '5';
     input.dispatchEvent(new Event('input'));
     await vi.advanceTimersByTimeAsync(900);
-    expect(input.value).toBe('7');
+    expect(input.value).toBe('5');
     input.dispatchEvent(new Event('change'));
     await vi.advanceTimersByTimeAsync(0);
-    expect(saved().youtubeBoost).toBe(7);
-    expect(control('boost').nextElementSibling?.textContent).toContain('7×');
+    expect(saved().youtubeBoost).toBe(5);
+    expect(control('boost').nextElementSibling?.textContent).toContain('5×');
     control('boost').click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(boost).toHaveBeenLastCalledWith(video, 700);
+    expect(boost).toHaveBeenLastCalledWith(video, 500);
     expect(control('boost').getAttribute('aria-pressed')).toBe('true');
     preferencesChanged({ youtubeBoost: 4 });
     await vi.advanceTimersByTimeAsync(0);
@@ -646,20 +661,34 @@ describe('YouTube advanced controls and shortcuts', () => {
     expect(boost).toHaveBeenLastCalledWith(video, 400);
     expect(advancedHost().hidden).toBe(false);
   });
+  it('shows a distortion warning immediately at high boost and removes it below 3 times', async () => {
+    await hold('boost');
+    const input = advancedInput('Volume boost');
+    const warning = advancedHost().shadowRoot?.querySelector('.boost-warning');
+    expect(warning?.textContent).toBe('');
+    expect(input.max).toBe('5');
+    for (const level of [2, 3, 4, 5, 2]) {
+      input.value = String(level);
+      input.dispatchEvent(new Event('input'));
+      expect(warning?.textContent?.includes('High boost may distort the sound')).toBe(level >= 3);
+      expect(input.style.getPropertyValue('--track').includes('#fbbf24')).toBe(level >= 3);
+      expect(input.getAttribute('aria-valuetext')?.includes('may distort')).toBe(level >= 3);
+    }
+  });
   it('previews active boost and Cinema sliders before the drag is committed', async () => {
     const saved = liveStorage();
     control('boost').click();
     await vi.advanceTimersByTimeAsync(0);
     await hold('boost');
     const level = advancedInput('Volume boost');
-    level.value = '6';
+    level.value = '5';
     level.dispatchEvent(new Event('input'));
     await vi.advanceTimersByTimeAsync(0);
-    expect(boost).toHaveBeenLastCalledWith(video, 600);
+    expect(boost).toHaveBeenLastCalledWith(video, 500);
     expect(saved().youtubeBoost).toBe(DEFAULT_PLAYER_TOOLS.youtubeBoost);
     level.dispatchEvent(new Event('change'));
     await vi.advanceTimersByTimeAsync(0);
-    expect(saved().youtubeBoost).toBe(6);
+    expect(saved().youtubeBoost).toBe(5);
     expect(
       advancedHost().shadowRoot?.querySelector('header [role="status"]')
         ?.textContent
@@ -749,6 +778,7 @@ describe('YouTube advanced controls and shortcuts', () => {
     expect(advancedHost().hidden).toBe(false);
   });
   it('saves screenshot filter inclusion in the same preference and uses it on normal capture', async () => {
+    preferencesChanged({ youtubeScreenshotIncludeFilters: false });
     const saved = liveStorage();
     await hold('screenshot');
     expect(capture).not.toHaveBeenCalled();
@@ -757,7 +787,13 @@ describe('YouTube advanced controls and shortcuts', () => {
     expect(saved().youtubeScreenshotIncludeFilters).toBe(true);
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(capture).toHaveBeenLastCalledWith(video, DEFAULT_FILTERS);
+    expect(capture).toHaveBeenLastCalledWith(video, DEFAULT_FILTERS, 'jpeg');
+    preferencesChanged({ youtubeScreenshotIncludeFilters: false });
+    expect(advancedInput('Include video filters').checked).toBe(false);
+  });
+  it('starts the screenshot long-press menu with filters included by default', async () => {
+    await hold('screenshot');
+    expect(advancedInput('Include video filters').checked).toBe(true);
     preferencesChanged({ youtubeScreenshotIncludeFilters: false });
     expect(advancedInput('Include video filters').checked).toBe(false);
   });
@@ -775,12 +811,12 @@ describe('YouTube advanced controls and shortcuts', () => {
     ).toContain('Could not save');
     expect(input.value).toBe('2');
     expect(advancedHost().hidden).toBe(false);
-    input.value = '6';
+    input.value = '5';
     input.dispatchEvent(new Event('change'));
     advancedInput('Automatically boost new videos').click();
     await vi.advanceTimersByTimeAsync(0);
     expect(saved()).toMatchObject({
-      youtubeBoost: 6,
+      youtubeBoost: 5,
       youtubeAutoBoost: true,
       miniPlayer: true,
     });

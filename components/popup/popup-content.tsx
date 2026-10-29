@@ -24,6 +24,7 @@ import { SettingsSearch } from '@/components/popup/settings-search';
 import { ShowOnHoverSetting } from '@/components/popup/show-on-hover-setting';
 import { SiteAccessView } from '@/components/popup/site-access-view';
 import { usePopupViewState } from '@/components/popup/use-popup-view-memory';
+import { useCarouselIndicator } from '@/components/popup/use-carousel-indicator';
 import { useYouTubeLibraryPage } from '@/components/popup/use-youtube-library-page';
 import { ViewTitle } from '@/components/popup/view-title';
 import { ArrowSeekSettings } from '@/components/settings/arrow-seek-settings';
@@ -222,6 +223,7 @@ function PopupHeader() {
 export function PopupContent() {
   const { theme } = useTheme();
   const carouselRef = useRef<HTMLElement>(null);
+  const navigationIndicatorRef = useRef<HTMLSpanElement>(null);
   const settingsContentRef = useRef<HTMLDivElement>(null);
   const programmaticViewRef = useRef<PopupView | null>(null);
   const domainSortTouchedRef = useRef(false);
@@ -288,6 +290,7 @@ export function PopupContent() {
           ? carousel.clientWidth
           : 0;
   }, []);
+  useCarouselIndicator(carouselRef, navigationIndicatorRef);
   const [fastScrollHotkey, setFastScrollHotkey] = useState<ScrollHotkeyT>(
     DEFAULT_SETTINGS.fastScrollHotkey
   );
@@ -1156,7 +1159,10 @@ export function PopupContent() {
                           title={
                             <span className="inline-flex items-center gap-1.5">
                               Minimal Player
-                              <ExtraFeaturePreviewTooltip featureName="Minimal Player" />
+                              <ExtraFeaturePreviewTooltip
+                                featureName="Minimal Player"
+                                colorizedTimeline={colorizedTimeline}
+                              />
                               <AppBetaBadge
                                 featureName="Minimal Player"
                                 tooltip={
@@ -1375,10 +1381,8 @@ export function PopupContent() {
           >
             <span
               aria-hidden="true"
-              className={cn(
-                'pointer-events-none absolute inset-y-0 left-0 w-1/2 rounded-full bg-brand/20 shadow-sm ring-1 ring-brand/25 backdrop-blur-sm transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-brand-400/20 dark:ring-brand-300/25',
-                activeView === 'domains' ? 'translate-x-full' : 'translate-x-0'
-              )}
+              className="pointer-events-none absolute inset-y-0 left-0 w-1/2 rounded-full bg-brand/20 shadow-sm ring-1 ring-brand/25 backdrop-blur-sm dark:bg-brand-400/20 dark:ring-brand-300/25"
+              ref={navigationIndicatorRef}
             />
             {popupViews.map(({ id, label, icon: Icon }) => (
               <button

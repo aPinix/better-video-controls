@@ -13,6 +13,7 @@ import {
   YOUTUBE_PIP_OVERRIDE_SHORTCUT,
 } from '@/helpers/youtube-control-icons';
 import { YouTubeBookmarksSetting } from './youtube-bookmarks-setting';
+import { YouTubeBoostSetting } from './youtube-boost-setting';
 import { YouTubeCinemaSetting } from './youtube-cinema-setting';
 import { YouTubeFiltersSetting } from './youtube-filters-setting';
 import { YouTubeInfoCardsSetting } from './youtube-info-cards-setting';
@@ -42,7 +43,7 @@ beforeEach(() => {
   vi.stubGlobal('chrome', {
     storage: {
       sync: { get, set },
-      local: { set: localSet },
+      local: { get: async () => ({}), set: localSet },
       onChanged: changed,
     },
   });
@@ -60,6 +61,23 @@ const readySwitch = async (name: string) => {
 };
 
 describe('YouTube button settings', () => {
+  it('warns at 3 times boost and clears the warning when boost is lowered', async () => {
+    preferences.youtubeBoost = 2;
+    render(<YouTubeBoostSetting />);
+    await readySwitch('Show Boost Volume button on YouTube');
+    const slider = screen.getByRole('slider', { name: 'Volume boost multiplier' });
+    expect(slider.getAttribute('max') ?? slider.getAttribute('aria-valuemax')).toBe('5');
+    expect(screen.queryByText(/High boost may distort the sound/)).toBeNull();
+    fireEvent.keyDown(slider, { key: 'ArrowRight' });
+    await waitFor(() => expect(preferences.youtubeBoost).toBe(3));
+    expect(screen.getByRole('status').textContent).toContain('High boost may distort the sound');
+    expect(slider.getAttribute('aria-valuetext')).toContain('may distort');
+    await readySwitch('Show Boost Volume button on YouTube');
+    fireEvent.keyDown(slider, { key: 'Home' });
+    await waitFor(() => expect(preferences.youtubeBoost).toBe(2));
+    expect(screen.queryByText(/High boost may distort the sound/)).toBeNull();
+    expect(slider.getAttribute('aria-valuetext')).toBe('2 times');
+  });
   it('starts a tab-only preview on slider press and ends it on release even without changing the value', async () => {
     render(<YouTubeCinemaSetting />);
     await readySwitch('Show Cinema Mode button on YouTube');
@@ -225,6 +243,7 @@ describe('YouTube button settings', () => {
     expect(screen.getByText('(Sunset)')).toBeTruthy();
   });
   it('persists screenshot filter effects independently of both button choices', async () => {
+    preferences.youtubeScreenshotIncludeFilters = false;
     render(
       <>
         <YouTubeScreenshotSetting />
@@ -235,6 +254,8 @@ describe('YouTube button settings', () => {
       'Include video filter effects in screenshots'
     );
     expect(effects.getAttribute('aria-checked')).toBe('false');
+    fireEvent.click(screen.getByText('Include video filter effects'));
+    expect(set).not.toHaveBeenCalled();
     fireEvent.click(effects);
     await waitFor(() =>
       expect(preferences.youtubeScreenshotIncludeFilters).toBe(true)
@@ -272,7 +293,7 @@ describe('YouTube button settings', () => {
     await waitFor(() =>
       expect(effects.getAttribute('aria-disabled')).not.toBe('true')
     );
-    expect(effects.getAttribute('aria-checked')).toBe('false');
+    expect(effects.getAttribute('aria-checked')).toBe('true');
     expect(preferences.youtubeScreenshotIncludeFilters).toBeUndefined();
   });
   it('enables Screenshot by default and persists its availability without changing other preferences', async () => {
@@ -296,6 +317,24 @@ describe('YouTube button settings', () => {
       )
     ).toBe('false');
   });
+  it('defaults to JPEG and saves PNG independently of filter effects', async () => {
+    render(<YouTubeScreenshotSetting />);
+    const effects = await readySwitch(
+      'Include video filter effects in screenshots'
+    );
+    expect(effects.getAttribute('aria-checked')).toBe('true');
+    expect(
+      (screen.getByRole('radio', { name: 'JPEG' }) as HTMLInputElement).checked
+    ).toBe(true);
+    fireEvent.click(screen.getByRole('radio', { name: 'PNG' }));
+    await waitFor(() =>
+      expect(preferences.youtubeScreenshotFormat).toBe('png')
+    );
+    expect(preferences.youtubeScreenshotIncludeFilters).toBe(true);
+    expect(
+      (screen.getByRole('radio', { name: 'PNG' }) as HTMLInputElement).checked
+    ).toBe(true);
+  });
   it('reports Screenshot storage failures and restores the saved choice', async () => {
     set.mockRejectedValueOnce(new Error('Storage unavailable'));
     render(<YouTubeScreenshotSetting />);
@@ -317,7 +356,7 @@ describe('YouTube button settings', () => {
       </>
     );
     const cinema = await readySwitch('Show Cinema Mode button on YouTube');
-    const cards = await readySwitch('Show Info Cards button on YouTube');
+    const cards = await readySwitch('Show End-screen cards button on YouTube');
     expect(cinema.getAttribute('aria-checked')).toBe('true');
     expect(cards.getAttribute('aria-checked')).toBe('true');
     expect(
@@ -357,29 +396,29 @@ describe('YouTube button settings', () => {
       )
     ).toBe('false');
     expect(
-      (await readySwitch('Show Info Cards button on YouTube')).getAttribute(
+      (await readySwitch('Show End-screen cards button on YouTube')).getAttribute(
         'aria-checked'
       )
     ).toBe('false');
   });
-  it('resets saved dimming to 80 without changing card visibility or availability', async () => {
+  it('resets saved dimming to 90 without changing card visibility or availability', async () => {
     render(<YouTubeCinemaSetting />);
     await readySwitch('Show Cinema Mode button on YouTube');
     fireEvent.click(
-      screen.getByRole('button', { name: 'Reset cinema dimming to 80 percent' })
+      screen.getByRole('button', { name: 'Reset cinema dimming to 90 percent' })
     );
-    await waitFor(() => expect(preferences.dimming).toBe(80));
+    await waitFor(() => expect(preferences.dimming).toBe(90));
     expect(preferences.hideEndScreens).toBe(true);
     expect(preferences.youtubeCinemaEnabled).toBe(true);
-    expect((screen.getByRole('slider') as HTMLInputElement).value).toBe('80');
+    expect((screen.getByRole('slider') as HTMLInputElement).value).toBe('90');
   });
   it('reports failed writes and restores the saved availability', async () => {
     set.mockRejectedValueOnce(new Error('Storage quota exceeded'));
     render(<YouTubeInfoCardsSetting />);
-    const toggle = await readySwitch('Show Info Cards button on YouTube');
+    const toggle = await readySwitch('Show End-screen cards button on YouTube');
     fireEvent.click(toggle);
     expect((await screen.findByRole('alert')).textContent).toBe(
-      'Could not save Info Cards settings.'
+      'Could not save End-screen cards settings.'
     );
     await waitFor(() =>
       expect(toggle.getAttribute('aria-disabled')).not.toBe('true')
@@ -414,7 +453,7 @@ describe('YouTube button settings', () => {
         onOpenSavedLibrary={vi.fn()}
       />
     );
-    await readySwitch('Show Info Cards button on YouTube');
+    await readySwitch('Show End-screen cards button on YouTube');
     const featureSwitches = screen
       .getAllByRole('switch')
       .filter((node) => node.hasAttribute('data-youtube-control'));
@@ -425,13 +464,13 @@ describe('YouTube button settings', () => {
       'Show Cinema Mode button on YouTube',
       'Show Loop Sections button on YouTube',
       'Show Bookmarks button on YouTube',
-      'Show Info Cards button on YouTube',
+      'Show End-screen cards button on YouTube',
       'Show Screenshot button on YouTube',
       'Show Video Filters button on YouTube',
       'Use PiP Override on YouTube',
     ]);
     const preview = screen.getByRole('img', {
-      name: 'YouTube player controls: Boost Volume, Cinema Mode, Loop Sections, Bookmarks, Info Cards, Screenshot, Video Filters, Picture-in-Picture',
+      name: 'YouTube player controls: Boost Volume, Cinema Mode, Loop Sections, Bookmarks, End-screen cards, Screenshot, Video Filters, Picture-in-Picture',
     });
     expect(
       preview.querySelector('button, input, [tabindex]:not([tabindex="-1"])')
@@ -445,7 +484,7 @@ describe('YouTube button settings', () => {
       'Cinema Mode',
       'Loop Sections',
       'Bookmarks',
-      'Info Cards',
+      'End-screen cards',
       'Screenshot',
       'Video Filters',
     ]) {
@@ -465,15 +504,29 @@ describe('YouTube button settings', () => {
     );
     fireEvent.mouseOver(screen.getByText('Chaptered Timeline'));
     expect(preview.getAttribute('aria-label')).toBe(
-      'YouTube player controls: Boost Volume, Cinema Mode, Loop Sections, Bookmarks, Info Cards, Screenshot, Video Filters, Picture-in-Picture'
+      'YouTube player controls: Boost Volume, Cinema Mode, Loop Sections, Bookmarks, End-screen cards, Screenshot, Video Filters, Picture-in-Picture'
     );
     expect(
       screen.getByText(
         'Timeline feature: show YouTube chapter divisions and names'
       )
     ).toBeTruthy();
-    expect(
-      screen.getByRole('button', { name: 'Preview Loop Sections' })
-    ).toBeTruthy();
+    for (const feature of [
+      'Boost Volume',
+      'Cinema Mode',
+      'Loop Sections',
+      'Bookmarks',
+      'End-screen cards',
+      'Screenshot',
+      'Video Filters',
+      'Mini Player',
+      'PiP Override',
+      'Chaptered Timeline',
+      'Saved bookmarks & loops',
+    ]) {
+      expect(
+        screen.getAllByRole('button', { name: `Preview ${feature}` })
+      ).toHaveLength(1);
+    }
   });
 });

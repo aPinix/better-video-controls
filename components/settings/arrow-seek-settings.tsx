@@ -13,6 +13,8 @@ import {
   type PlayerToolsSettings,
   savePlayerTools,
 } from '@/helpers/player-tools-settings';
+import { SettingsExpansion } from './settings-expansion';
+import { SubOptionsCard } from './sub-options-card';
 
 export function ArrowSeekSettings({
   disabled = false,
@@ -80,6 +82,7 @@ export function ArrowSeekSettings({
   };
   return (
     <CardListItem
+      classNameContentBottom="mt-0"
       components={{
         RightSlot: (
           <AppSwitch
@@ -93,8 +96,8 @@ export function ArrowSeekSettings({
           />
         ),
         BottomSlot: (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
+          <SettingsExpansion open={enabled} error={error}>
+            <SubOptionsCard className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-1.5">
                 <label
                   className="text-slate-500 text-xs dark:text-slate-400"
@@ -125,13 +128,8 @@ export function ArrowSeekSettings({
                   value={value}
                 />
               </div>
-            </div>
-            {error ? (
-              <p className="text-red-600 text-xs" role="alert">
-                {error}
-              </p>
-            ) : null}
-          </div>
+            </SubOptionsCard>
+          </SettingsExpansion>
         ),
       }}
       description={

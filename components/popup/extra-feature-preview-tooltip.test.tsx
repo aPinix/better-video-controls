@@ -99,4 +99,13 @@ describe('ExtraFeaturePreviewTooltip', () => {
     expect(tooltip.className).not.toContain('ring-1');
     expect(document.querySelector('[data-slot="tooltip-arrow"]')).toBeNull();
   });
+  it('opens the off/on site comparison for Minimal Player', async () => {
+    const user = userEvent.setup();
+    render(<ExtraFeaturePreviewTooltip featureName="Minimal Player" />);
+    await user.hover(screen.getByRole('button', { name: 'Preview Minimal Player' }));
+    await screen.findByLabelText('Minimal Player preview');
+    expect(screen.getByText('Minimal Player off')).toBeTruthy();
+    expect(screen.getByText('Minimal Player on')).toBeTruthy();
+    expect(screen.getByText('YouTube')).toBeTruthy();
+  });
 });

@@ -164,7 +164,6 @@ export function SavedLibraryPage({
               groups={groups}
               hasQuery={!!browse.term}
               library={library}
-              onImport={() => importRef.current?.click()}
               onReset={() => {
                 browse.setQuery('');
                 browse.setFilter('all');

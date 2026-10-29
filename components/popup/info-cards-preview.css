@@ -1,0 +1,71 @@
+.info-cards-preview-recommendations {
+  opacity: 0;
+  animation: info-cards-preview-hide 4.8s cubic-bezier(0.23, 1, 0.32, 1)
+    infinite;
+}
+
+.info-cards-preview-visible {
+  animation: info-cards-preview-visible 4.8s cubic-bezier(0.23, 1, 0.32, 1)
+    infinite;
+}
+
+.info-cards-preview-hidden {
+  opacity: 0;
+  animation: info-cards-preview-hidden 4.8s cubic-bezier(0.23, 1, 0.32, 1)
+    infinite;
+}
+
+@keyframes info-cards-preview-hide {
+  0%,
+  38%,
+  95%,
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  45%,
+  88% {
+    opacity: 0;
+    transform: translateY(3px) scale(0.96);
+  }
+}
+
+@keyframes info-cards-preview-visible {
+  0%,
+  38%,
+  95%,
+  100% {
+    opacity: 1;
+  }
+  45%,
+  88% {
+    opacity: 0;
+  }
+}
+
+@keyframes info-cards-preview-hidden {
+  0%,
+  38%,
+  95%,
+  100% {
+    opacity: 0;
+  }
+  45%,
+  88% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .info-cards-preview-recommendations,
+  .info-cards-preview-visible {
+    animation: none;
+    opacity: 0;
+    transform: none;
+  }
+
+  .info-cards-preview-hidden {
+    animation: none;
+    opacity: 1;
+  }
+}

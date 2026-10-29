@@ -24,7 +24,7 @@ export const YOUTUBE_CONTROL_LABELS: Record<YouTubeControl, string> = {
   cinema: 'Cinema Mode',
   loop: 'Loop Sections',
   bookmarks: 'Bookmarks',
-  infoCards: 'Info Cards',
+  infoCards: 'End-screen cards',
   screenshot: 'Screenshot',
   filters: 'Video Filters',
   pip: 'Picture-in-Picture',

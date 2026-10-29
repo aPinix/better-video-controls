@@ -1,5 +1,11 @@
 import { cinemaPresets } from './player-cinema-presets';
-import type { PlayerToolsSettings } from './player-tools-settings';
+import {
+  DEFAULT_PLAYER_TOOLS,
+  BOOST_DISTORTION_WARNING,
+  BOOST_DISTORTION_WARNING_LEVEL,
+  MAX_VOLUME_BOOST,
+  type PlayerToolsSettings,
+} from './player-tools-settings';
 import { dismissPopoverOutside } from './popover-dismiss';
 import {
   createYouTubeControlIcon,
@@ -25,6 +31,7 @@ const styles = `
 :host{font:14px/1.4 Roboto,Arial,sans-serif;color:#fff;color-scheme:dark;pointer-events:auto;text-align:left}*{box-sizing:border-box}[hidden]{display:none!important}
 .menu{overflow:auto;max-height:inherit;background:rgba(15,15,15,.9);border-radius:12px;padding:8px 0;box-shadow:0 4px 20px #0005;scrollbar-width:thin}header{display:flex;align-items:center;gap:10px;padding:10px 20px;font-weight:500;border-bottom:1px solid #ffffff1a}header svg{display:block;flex:none;width:20px;height:20px}h2{font:inherit;line-height:20px;margin:0}
 .section{padding:12px 20px}.label{display:flex;justify-content:space-between;gap:12px;margin-bottom:8px}.value,.muted{color:#aaa;font-variant-numeric:tabular-nums}
+.boost-warning{margin:10px 0 0;color:#fbbf24;font-size:12px;line-height:1.4}.boost-warning:empty{display:none}
 input[type=range]{display:block;appearance:none;width:100%;height:16px;background:transparent;margin:0;cursor:pointer}input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:var(--track)}input[type=range]::-webkit-slider-thumb{appearance:none;width:12px;height:12px;margin-top:-4px;border-radius:50%;background:#fff}input[type=range]::-moz-range-track{height:4px;border-radius:999px;background:var(--track)}input[type=range]::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
 .switch{display:flex;align-items:center;justify-content:space-between;gap:18px;padding:12px 20px;cursor:pointer}.switch:hover{background:#ffffff1a}.switch input{appearance:none;width:36px;height:20px;border-radius:999px;background:#ffffff40;position:relative;flex:none;margin:0;cursor:pointer}.switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .15s}.switch input:checked{background:#3ea6ff}.switch input:checked::after{transform:translateX(16px)}
 fieldset{border:0;margin:0;padding:12px 20px}legend{padding:0;float:left;width:100%;margin-bottom:12px}.colors{display:flex;gap:12px;clear:both}.color{width:28px;height:28px;flex:none;border:1px solid #ffffff40;border-radius:50%;cursor:pointer;padding:0;position:relative}.color[aria-pressed=true]{outline:2px solid #fff;outline-offset:3px}.color:hover{box-shadow:0 0 0 2px #ffffff60}.custom{background:conic-gradient(#ff7070,#ffd766,#72e7ad,#74adff,#bd8aff,#ff7070)}.custom span{display:flex;align-items:center;justify-content:center;font-size:18px}.custom input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}
@@ -210,13 +217,30 @@ export class YouTubeAdvancedMenu {
       input.max = String(max);
       input.step = '1';
       input.setAttribute('aria-label', label);
+      const warning = key === 'youtubeBoost' ? doc.createElement('p') : null;
+      if (warning) {
+        warning.className = 'boost-warning';
+        warning.id = `${this.host.id}-boost-warning`;
+        warning.setAttribute('role', 'status');
+      }
       const render = (level: number) => {
+        const highBoost =
+          key === 'youtubeBoost' && level >= BOOST_DISTORTION_WARNING_LEVEL;
         value.textContent = `${level}${unit}`;
-        input.setAttribute('aria-valuetext', `${level}${unit}`);
+        value.style.color = highBoost ? '#fbbf24' : '';
+        input.setAttribute(
+          'aria-valuetext',
+          `${level}${unit}${highBoost ? '. High boost may distort audio.' : ''}`
+        );
+        if (warning) {
+          warning.textContent = highBoost ? BOOST_DISTORTION_WARNING : '';
+          if (highBoost) input.setAttribute('aria-describedby', warning.id);
+          else input.removeAttribute('aria-describedby');
+        }
         const progress = ((level - min) / (max - min)) * 100;
         input.style.setProperty(
           '--track',
-          `linear-gradient(to right,#fff ${progress}%,#ffffff55 ${progress}%)`
+          `linear-gradient(to right,${highBoost ? '#fbbf24' : '#fff'} ${progress}%,#ffffff55 ${progress}%)`
         );
       };
       input.addEventListener('input', () => {
@@ -238,6 +262,7 @@ export class YouTubeAdvancedMenu {
           input.addEventListener(type, () => this.actions.onPreviewEnd?.());
       }
       field.append(caption, input);
+      if (warning) field.append(warning);
       this.content.append(field);
       renders.push(() => {
         if (this.editingSlider === input) return;
@@ -279,7 +304,7 @@ export class YouTubeAdvancedMenu {
       });
     };
     if (kind === 'boost') {
-      range('Volume boost', 'youtubeBoost', 2, 10, '×');
+      range('Volume boost', 'youtubeBoost', 2, MAX_VOLUME_BOOST, '×');
       toggle('Automatically boost new videos', 'youtubeAutoBoost');
     } else if (kind === 'cinema') {
       range('Page dimming', 'dimming', 0, 100, '%');
@@ -378,7 +403,9 @@ export class YouTubeAdvancedMenu {
         kind === 'boost' ? 'Reset volume boost' : 'Reset page dimming';
       reset.addEventListener('click', () => {
         void this.save(
-          kind === 'boost' ? { youtubeBoost: 2 } : { dimming: 80 }
+          kind === 'boost'
+            ? { youtubeBoost: 2 }
+            : { dimming: DEFAULT_PLAYER_TOOLS.dimming }
         );
       });
       this.content.append(reset);

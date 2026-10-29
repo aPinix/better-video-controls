@@ -1,4 +1,4 @@
-import { BookmarkIcon, SearchIcon, UploadIcon } from 'lucide-react';
+import { BookmarkIcon, SearchIcon } from 'lucide-react';
 import type { RefObject } from 'react';
 import { SavedMediaItem } from '@/components/popup/saved-media-item';
 import { SavedVideoRow } from '@/components/popup/saved-video-row';
@@ -16,7 +16,6 @@ export function SavedLibraryResults({
   visibleItems,
   filter,
   hasQuery,
-  onImport,
   onReset,
   groups,
   selectedUrl,
@@ -27,7 +26,6 @@ export function SavedLibraryResults({
   visibleItems: SavedMoment[];
   filter: 'all' | 'moments' | 'loops';
   hasQuery: boolean;
-  onImport: () => void;
   onReset: () => void;
   groups: SavedMediaGroup[];
   selectedUrl: string | null;
@@ -80,15 +78,6 @@ export function SavedLibraryResults({
           Bookmark a moment or save a loop from the YouTube player controls.
           Your saves stay in this browser.
         </p>
-        <Button
-          className="mt-4 text-xs"
-          onClick={onImport}
-          size="sm"
-          variant="outline"
-        >
-          <UploadIcon />
-          Import a library
-        </Button>
       </div>
     );
   if (!visibleItems.length)

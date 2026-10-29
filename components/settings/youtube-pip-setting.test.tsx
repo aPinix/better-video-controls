@@ -73,28 +73,23 @@ it('defaults off and reveals the tab-change sub-option after enabling', async ()
   ).toBe('true');
   expect(screen.queryByRole('radio')).toBeNull();
   expect(
-    screen.getByRole('figure', { name: 'Custom PiP preview' })
-  ).toBeTruthy();
-  save.mockClear();
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Preview flick to a corner' })
-  );
-  fireEvent.click(
-    screen.getByRole('button', { name: 'Preview bringing video back' })
-  );
-  expect(
-    screen.getByRole('button', { name: 'Replay PiP preview' })
-  ).toBeTruthy();
-  expect(save).not.toHaveBeenCalled();
+    screen.queryByRole('figure', { name: 'Custom PiP preview' })
+  ).toBeNull();
 });
-it('always previews Custom PiP when overriding, including legacy Chrome mode preferences', async () => {
+it('keeps the tab-change option and info preview without an inline example', async () => {
   preferences.youtubePipOverride = true;
   preferences.youtubePipMode = 'chrome-video';
   render(<YouTubePipSetting />);
   await ready();
   expect(screen.queryByRole('radio')).toBeNull();
   expect(
-    screen.getByRole('figure', { name: 'Custom PiP preview' })
+    screen.queryByRole('figure', { name: 'Custom PiP preview' })
+  ).toBeNull();
+  expect(
+    screen.getByRole('switch', { name: 'Open PiP when switching tabs' })
+  ).toBeTruthy();
+  expect(
+    screen.getByRole('button', { name: 'Preview PiP Override' })
   ).toBeTruthy();
   expect(screen.getByLabelText('YouTube shortcut: O')).toBeTruthy();
   expect(screen.queryByLabelText('YouTube shortcut: P')).toBeNull();
@@ -104,6 +99,8 @@ it('saves the sub-option without changing PiP or Mini Player preferences', async
   preferences.youtubePipOverride = true;
   render(<YouTubePipSetting />);
   await ready();
+  fireEvent.click(screen.getByText('Open PiP when switching tabs'));
+  expect(save).not.toHaveBeenCalled();
   fireEvent.click(
     screen.getByRole('switch', { name: 'Open PiP when switching tabs' })
   );

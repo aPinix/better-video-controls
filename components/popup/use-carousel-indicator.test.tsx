@@ -1,0 +1,106 @@
+// @vitest-environment jsdom
+import { cleanup, fireEvent, render } from '@testing-library/react';
+import { useLayoutEffect, useRef } from 'react';
+import { afterEach, expect, it, vi } from 'vitest';
+import { useCarouselIndicator } from './use-carousel-indicator';
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+function Fixture({ initial = 0 }: { initial?: number }) {
+  const carousel = useRef<HTMLDivElement>(null);
+  const indicator = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    if (!carousel.current) return;
+    Object.defineProperty(carousel.current, 'clientWidth', { value: 400 });
+    carousel.current.scrollLeft = initial;
+  }, [initial]);
+  useCarouselIndicator(carousel, indicator);
+  return (
+    <>
+      <div ref={carousel} data-testid="carousel">
+        <div data-testid="nested" />
+      </div>
+      <span ref={indicator} data-testid="indicator" />
+    </>
+  );
+}
+
+it('tracks fractional drag positions in both directions, including before the halfway point', () => {
+  const { getByTestId } = render(<Fixture />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  for (const position of [0, 40, 100, 200, 300, 400, 300, 100, 0]) {
+    carousel.scrollLeft = position;
+    fireEvent.scroll(carousel);
+    expect(indicator.style.transform).toBe(`translateX(${position / 4}%)`);
+  }
+});
+
+it('restores the Domains highlight, ignores nested scrolling and follows native overscroll', () => {
+  const { getByTestId } = render(<Fixture initial={400} />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  expect(indicator.style.transform).toBe('translateX(100%)');
+  carousel.scrollLeft = 200;
+  fireEvent.scroll(getByTestId('nested'));
+  expect(indicator.style.transform).toBe('translateX(100%)');
+  carousel.scrollLeft = 450;
+  fireEvent.scroll(carousel);
+  expect(indicator.style.transform).toBe('translateX(112.5%)');
+  carousel.scrollLeft = -20;
+  fireEvent.scroll(carousel);
+  expect(indicator.style.transform).toBe('translateX(-5%)');
+});
+
+it('adds a settling spring and interrupts it immediately on a new drag', () => {
+  const { getByTestId } = render(<Fixture />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  const cancel = vi.fn();
+  const animate = vi.fn((_frames: Keyframe[]) => ({ cancel }));
+  Object.defineProperty(indicator, 'animate', { value: animate });
+  carousel.scrollLeft = 400;
+  fireEvent.scroll(carousel);
+  fireEvent(carousel, new Event('scrollend'));
+  expect(animate).toHaveBeenCalledOnce();
+  const frames = animate.mock.calls[0]?.[0] as unknown as Keyframe[];
+  expect(frames[0]?.transform).toBe('translateX(100%)');
+  expect(frames.at(-1)?.transform).toBe('translateX(100%)');
+  carousel.scrollLeft = 200;
+  fireEvent.scroll(carousel);
+  expect(cancel).toHaveBeenCalledOnce();
+  expect(indicator.style.transform).toBe('translateX(50%)');
+});
+
+it('skips the extra bounce with reduced motion', () => {
+  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+  const { getByTestId } = render(<Fixture />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  const animate = vi.fn();
+  Object.defineProperty(indicator, 'animate', { value: animate });
+  carousel.scrollLeft = 450;
+  fireEvent.scroll(carousel);
+  fireEvent(carousel, new Event('scrollend'));
+  expect(animate).not.toHaveBeenCalled();
+  expect(indicator.style.transform).toBe('translateX(100%)');
+});
+
+it('does not add another spring after a native overscroll bounce', () => {
+  const { getByTestId } = render(<Fixture />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  const animate = vi.fn();
+  Object.defineProperty(indicator, 'animate', { value: animate });
+  for (const position of [400, 440, 420, 400]) {
+    carousel.scrollLeft = position;
+    fireEvent.scroll(carousel);
+  }
+  fireEvent(carousel, new Event('scrollend'));
+  fireEvent(carousel, new Event('scrollend'));
+  expect(animate).not.toHaveBeenCalled();
+  expect(indicator.style.transform).toBe('translateX(100%)');
+});

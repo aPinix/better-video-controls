@@ -4,6 +4,16 @@ import {
   normalizePlayerTools,
 } from './player-tools-settings';
 
+it('caps saved boosts at 5 times while retaining the 2 times default', () => {
+  expect(DEFAULT_PLAYER_TOOLS.youtubeBoost).toBe(2);
+  for (const youtubeBoost of [2, 3, 4, 5])
+    expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(youtubeBoost);
+  for (const youtubeBoost of [6, 7, 10])
+    expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(5);
+  for (const youtubeBoost of [undefined, null, '5', 2.5, -1])
+    expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(2);
+});
+
 it('enables Boost Volume and Loop Sections by default without starting automatic boost', () => {
   for (const settings of [
     DEFAULT_PLAYER_TOOLS,
@@ -14,6 +24,8 @@ it('enables Boost Volume and Loop Sections by default without starting automatic
     expect(settings.youtubeLoop).toBe(true);
     expect(settings.rememberYoutubeLoops).toBe(true);
     expect(settings.youtubeBookmarksEnabled).toBe(true);
+    expect(settings.youtubeInfoCardsEnabled).toBe(true);
+    expect(settings.hideEndScreens).toBe(false);
     expect(settings.youtubeAutoBoost).toBe(false);
     expect(settings.miniPlayer).toBe(true);
     expect(settings.youtubePipOverride).toBe(false);
@@ -21,8 +33,21 @@ it('enables Boost Volume and Loop Sections by default without starting automatic
     expect(settings.youtubePipAutoOnTabChange).toBe(true);
     expect(settings.youtubeScreenshotEnabled).toBe(true);
     expect(settings.youtubeFiltersEnabled).toBe(true);
-    expect(settings.youtubeScreenshotIncludeFilters).toBe(false);
+    expect(settings.youtubeScreenshotIncludeFilters).toBe(true);
+    expect(settings.youtubeScreenshotFormat).toBe('jpeg');
   }
+});
+it('preserves PNG and disabled screenshot effects, and defaults unknown formats to JPEG', () => {
+  const settings = normalizePlayerTools({
+    youtubeScreenshotFormat: 'png',
+    youtubeScreenshotIncludeFilters: false,
+  });
+  expect(settings.youtubeScreenshotFormat).toBe('png');
+  expect(settings.youtubeScreenshotIncludeFilters).toBe(false);
+  expect(
+    normalizePlayerTools({ youtubeScreenshotFormat: 'webp' })
+      .youtubeScreenshotFormat
+  ).toBe('jpeg');
 });
 it('preserves an explicitly disabled loop saving preference', () => {
   expect(

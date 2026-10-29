@@ -401,11 +401,47 @@ describe('YouTube toolbar ownership', () => {
         tip.querySelector('.mfs-tooltip-heading .ytp-tooltip-keyboard-shortcut')
       ).not.toBeNull();
     }
-    for (const button of [buttons.infoCardsButton, buttons.filtersButton]) {
-      expect(
-        button.nextElementSibling?.querySelector('.mfs-tooltip-hint')
-      ).toBeNull();
+    expect(
+      buttons.filtersButton.nextElementSibling?.querySelector(
+        '.mfs-tooltip-hint'
+      )
+    ).toBeNull();
+  });
+  it('describes the current end-screen state separately from the click action', () => {
+    const next = state();
+    const button = buttons.infoCardsButton;
+    const tip = button.nextElementSibling as HTMLElement;
+    for (const visible of [true, false, true]) {
+      next.infoCards.visible = visible;
+      buttons.update(next);
+      expect(button.getAttribute('aria-label')).toBe('End-screen cards');
+      expect(button.getAttribute('aria-pressed')).toBe(String(visible));
+      expect(tip.querySelector('.mfs-tooltip-label')?.textContent).toBe(
+        `End-screen cards: ${visible ? 'visible' : 'hidden'}`
+      );
+      expect(tip.querySelectorAll('.mfs-tooltip-hint')).toHaveLength(1);
+      expect(tip.querySelector('.mfs-tooltip-hint')?.textContent).toBe(
+        `Click to ${visible ? 'hide' : 'show'} recommendations`
+      );
+      expect(button.getAttribute('aria-description')).toBe(
+        `Recommendations are ${visible ? 'visible' : 'hidden'}. Activate to ${visible ? 'hide' : 'show'} them.`
+      );
+      expect(tip.dataset.multiline).toBe('true');
+      expect(tip.dataset.advanced).toBeUndefined();
     }
+    next.infoCards.available = false;
+    buttons.update(next);
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-description')).toBe(
+      'Unavailable during ads.'
+    );
+    expect(tip.querySelector('.mfs-tooltip-label')?.textContent).toBe(
+      'End-screen cards unavailable during ads'
+    );
+    expect(tip.querySelector<HTMLElement>('.mfs-tooltip-hint')?.hidden).toBe(
+      true
+    );
+    expect(tip.dataset.multiline).toBe('false');
   });
   it('keeps inactive toggles clickable and exposes boxed native-style shortcut hints', () => {
     const next = state();
@@ -626,7 +662,7 @@ describe('YouTube toolbar ownership', () => {
         mask & 2 && 'Cinema Mode',
         mask & 4 && 'Loop Sections',
         mask & 128 && 'Bookmarks',
-        mask & 8 && 'Info Cards',
+        mask & 8 && 'End-screen cards',
         mask & 16 && 'Screenshot',
         mask & 32 && 'Video Filters',
         mask & 64 && 'Picture-in-Picture',
@@ -670,7 +706,10 @@ describe('YouTube toolbar ownership', () => {
     expect(buttons.infoCardsButton.getAttribute('aria-pressed')).toBe('false');
     expect(buttons.loopButton.getAttribute('aria-expanded')).toBe('true');
     expect(buttons.toolbar.textContent).toContain('Turn off Cinema Mode');
-    expect(buttons.toolbar.textContent).toContain('Show Info Cards');
+    expect(buttons.toolbar.textContent).toContain('End-screen cards: hidden');
+    expect(buttons.toolbar.textContent).toContain(
+      'Click to show recommendations'
+    );
     buttons.cinemaButton.click();
     buttons.infoCardsButton.click();
     buttons.loopButton.dispatchEvent(

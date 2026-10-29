@@ -34,6 +34,7 @@ describe('social video preferences', () => {
       cleanup();
     });
     document.body.replaceChildren();
+    Reflect.deleteProperty(navigator, 'userActivation');
     vi.unstubAllGlobals();
   });
   function createVideo() {
@@ -188,6 +189,13 @@ describe('social video preferences', () => {
       };
       const video = createVideo();
       video.muted = true;
+      vi.spyOn(video, 'play').mockImplementation(() =>
+        video.muted
+          ? Promise.resolve()
+          : Promise.reject(
+              new DOMException('Autoplay blocked', 'NotAllowedError')
+            )
+      );
       const controls = methods.createMediaControlsElement(document);
       document.body.append(controls);
       const controller = methods.setupMediaControls(controls, video, false);
@@ -196,8 +204,10 @@ describe('social video preferences', () => {
         resolve({ 'mfs-instagram-audio': { volume: 0.37, muted: false } });
         const slider = controls.querySelector<HTMLElement>('[role="slider"]');
         expect(video.volume).toBe(0.37);
-        expect(video.muted).toBe(true);
-        expect(slider?.style.getPropertyValue('--mfs-volume')).toBe('37%');
+        await vi.waitFor(() => expect(video.muted).toBe(true));
+        await vi.waitFor(() =>
+          expect(slider?.style.getPropertyValue('--mfs-volume')).toBe('37%')
+        );
         expect(slider?.getAttribute('aria-valuenow')).toBe('37');
         expect(
           controls
@@ -220,11 +230,13 @@ describe('social video preferences', () => {
         }
         expect(video.muted).toBe(false);
         expect(slider?.style.getPropertyValue('--mfs-volume')).toBe('37%');
-        expect(
-          controls
-            .querySelector('[data-mfs-action="mute"]')
-            ?.getAttribute('aria-label')
-        ).toBe('Mute');
+        await vi.waitFor(() =>
+          expect(
+            controls
+              .querySelector('[data-mfs-action="mute"]')
+              ?.getAttribute('aria-label')
+          ).toBe('Mute')
+        );
         if (activationTarget === 'page')
           expect(chrome.storage.local.set).not.toHaveBeenCalled();
       } finally {
@@ -246,6 +258,196 @@ describe('social video preferences', () => {
       ({ top: -600, bottom: -100, left: 0, right: 300 }) as DOMRect;
     attach(video);
     expect(video.muted).toBe(true);
+  });
+  it('tries audible Instagram playback before the first interaction without saving a default', async () => {
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: false, isActive: false },
+    });
+    const video = createVideo();
+    video.muted = true;
+    const play = vi.spyOn(video, 'play').mockResolvedValue();
+    attach(video);
+    expect(video.muted).toBe(false);
+    await vi.waitFor(() => expect(play).toHaveBeenCalledOnce());
+    expect(chrome.storage.local.set).not.toHaveBeenCalled();
+  });
+  it('keeps blocked autoplay playing muted and retries only after activation', async () => {
+    const activation = { hasBeenActive: false, isActive: false };
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      get: () => activation,
+    });
+    stored['mfs-instagram-audio'] = { volume: 0.37, muted: false };
+    const video = createVideo();
+    video.muted = true;
+    const play = vi
+      .spyOn(video, 'play')
+      .mockRejectedValueOnce(new DOMException('Blocked', 'NotAllowedError'))
+      .mockResolvedValue();
+    attach(video);
+    await vi.waitFor(() => expect(video.muted).toBe(true));
+    expect(play).toHaveBeenCalledTimes(2);
+    video.dispatchEvent(new Event('playing'));
+    video.dispatchEvent(new Event('volumechange'));
+    expect(play).toHaveBeenCalledTimes(2);
+    // Instagram may commit its original unmute after the rejected attempt.
+    Object.defineProperty(video, 'paused', { configurable: true, value: true });
+    video.muted = false;
+    video.dispatchEvent(new Event('volumechange'));
+    expect(video.muted).toBe(true);
+    expect(play).toHaveBeenCalledTimes(3);
+    Object.defineProperty(video, 'paused', {
+      configurable: true,
+      value: false,
+    });
+    expect(stored['mfs-instagram-audio']).toEqual({
+      volume: 0.37,
+      muted: false,
+    });
+    activation.hasBeenActive = true;
+    document.dispatchEvent(new Event('pointerdown'));
+    expect(video.muted).toBe(false);
+    expect(video.volume).toBe(0.37);
+    Reflect.deleteProperty(navigator, 'userActivation');
+  });
+  it('updates Instagram’s native icon when restoring audio and respects native mute choices', async () => {
+    stored['mfs-instagram-audio'] = { volume: 0.37, muted: false };
+    const video = createVideo();
+    video.muted = true;
+    const player = document.createElement('div');
+    const button = document.createElement('button');
+    button.innerHTML =
+      '<svg aria-label="Audio is muted"><title>Audio is muted</title></svg>';
+    const icon = button.querySelector('svg')!;
+    const click = vi.fn(() => {
+      video.muted = icon.getAttribute('aria-label') !== 'Audio is muted';
+      icon.setAttribute(
+        'aria-label',
+        video.muted ? 'Audio is muted' : 'Audio is playing'
+      );
+      icon.querySelector('title')!.textContent =
+        icon.getAttribute('aria-label');
+      video.dispatchEvent(new Event('volumechange'));
+    });
+    button.addEventListener('click', click);
+    document.body.append(player);
+    player.append(video);
+    attach(video);
+    // Native controls may mount after the video/content script.
+    player.append(button);
+    await vi.waitFor(() =>
+      expect(icon.getAttribute('aria-label')).toBe('Audio is playing')
+    );
+    expect(video.muted).toBe(false);
+    expect(video.volume).toBe(0.37);
+    expect(click).toHaveBeenCalledOnce();
+    button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    button.click();
+    await vi.waitFor(() => expect(video.muted).toBe(true));
+    expect(icon.getAttribute('aria-label')).toBe('Audio is muted');
+    expect(stored['mfs-instagram-audio']).toEqual({
+      volume: 0.37,
+      muted: true,
+    });
+    expect(click).toHaveBeenCalledTimes(2);
+  });
+  it('does not restart a deliberately paused video or apply a late autoplay rejection after cleanup', async () => {
+    const activation = { hasBeenActive: false, isActive: false };
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      get: () => activation,
+    });
+    const paused = createVideo();
+    paused.muted = true;
+    Object.defineProperty(paused, 'paused', { value: true });
+    const pausedPlay = vi.spyOn(paused, 'play').mockResolvedValue();
+    attach(paused);
+    expect(paused.muted).toBe(true);
+    expect(pausedPlay).not.toHaveBeenCalled();
+    const video = createVideo();
+    video.muted = true;
+    let reject!: (reason: unknown) => void;
+    const play = vi.spyOn(video, 'play').mockImplementation(
+      () =>
+        new Promise((_resolve, fail) => {
+          reject = fail;
+        })
+    );
+    const controller = attach(video);
+    controller.cleanup();
+    reject(new DOMException('Blocked', 'NotAllowedError'));
+    await Promise.resolve();
+    expect(play).toHaveBeenCalledOnce();
+    expect(video.muted).toBe(false);
+    Reflect.deleteProperty(navigator, 'userActivation');
+  });
+  it('lets the first click on Instagram’s native sound button unmute exactly once', async () => {
+    const activation = { hasBeenActive: false };
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: activation,
+    });
+    stored['mfs-instagram-audio'] = { volume: 0.37, muted: false };
+    const player = document.createElement('div');
+    const video = createVideo();
+    video.muted = true;
+    const button = document.createElement('button');
+    button.innerHTML =
+      '<svg aria-label="Audio is muted"><title>Audio is muted</title></svg>';
+    const icon = button.querySelector('svg')!;
+    const click = vi.fn(() => {
+      video.muted = icon.getAttribute('aria-label') !== 'Audio is muted';
+      icon.setAttribute(
+        'aria-label',
+        video.muted ? 'Audio is muted' : 'Audio is playing'
+      );
+      icon.querySelector('title')!.textContent =
+        icon.getAttribute('aria-label');
+      video.dispatchEvent(new Event('volumechange'));
+    });
+    button.addEventListener('click', click);
+    document.body.append(player);
+    player.append(video, button);
+    vi.spyOn(video, 'play')
+      .mockRejectedValueOnce(new DOMException('Blocked', 'NotAllowedError'))
+      .mockResolvedValue();
+    attach(video);
+    await vi.waitFor(() => expect(video.muted).toBe(true));
+    const before = click.mock.calls.length;
+    activation.hasBeenActive = true;
+    button.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true }));
+    button.click();
+    await vi.waitFor(() =>
+      expect(icon.getAttribute('aria-label')).toBe('Audio is playing')
+    );
+    expect(video.muted).toBe(false);
+    expect(click).toHaveBeenCalledTimes(before + 1);
+    expect(stored['mfs-instagram-audio']).toEqual({
+      volume: 0.37,
+      muted: false,
+    });
+  });
+  it('respects a saved mute choice before activation and leaves players behind dialogs muted', () => {
+    Object.defineProperty(navigator, 'userActivation', {
+      configurable: true,
+      value: { hasBeenActive: false },
+    });
+    stored['mfs-instagram-audio'] = { volume: 0.37, muted: true };
+    const video = createVideo();
+    video.muted = true;
+    const play = vi.spyOn(video, 'play').mockResolvedValue();
+    const controller = attach(video);
+    expect(video.muted).toBe(true);
+    expect(play).not.toHaveBeenCalled();
+    controller.remember({ volume: 0.37, muted: false });
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.getBoundingClientRect = () => new DOMRect(100, 100, 300, 300);
+    document.body.append(dialog);
+    video.dispatchEvent(new Event('playing'));
+    expect(video.muted).toBe(true);
+    expect(play).not.toHaveBeenCalled();
   });
   it('updates speed immediately and restores playback behavior on cleanup', () => {
     const video = createVideo();

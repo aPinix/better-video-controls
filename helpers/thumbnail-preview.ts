@@ -472,6 +472,10 @@ export class SeekbarThumbnailPreviewController {
 
   updateAtPoint(clientX: number, clientY: number, loopTime?: number): void {
     const { timeline, video, wrapper } = this.options;
+    if (this.isYouTubeAd()) {
+      this.hide(true);
+      return;
+    }
     const ownerWindow = video.ownerDocument.defaultView;
     const canHoverWithFinePointer =
       !ownerWindow?.matchMedia ||
@@ -548,7 +552,7 @@ export class SeekbarThumbnailPreviewController {
   }
 
   updateEnabled(): void {
-    if (!this.options.isEnabled()) this.hide(true);
+    if (!this.options.isEnabled() || this.isYouTubeAd()) this.hide(true);
     else if (this.previewTime !== null) {
       const range = getMediaSeekRange(this.options.video);
       if (range)
@@ -574,6 +578,14 @@ export class SeekbarThumbnailPreviewController {
   cleanup(): void {
     this.resetSources();
     this.genericSource.cleanup();
+  }
+
+  private isYouTubeAd(): boolean {
+    return Boolean(
+      this.options.video
+        .closest('#movie_player, #shorts-player')
+        ?.matches('.ad-showing, .ad-interrupting')
+    );
   }
 
   private updateFrame(time: number): void {

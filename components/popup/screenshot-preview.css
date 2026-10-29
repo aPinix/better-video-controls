@@ -1,0 +1,97 @@
+.screenshot-preview-flash {
+  opacity: 0;
+  animation: screenshot-preview-flash 4.5s linear 1.2s infinite;
+}
+
+.screenshot-preview-frame {
+  opacity: 0;
+  animation:
+    screenshot-preview-frame 4.5s cubic-bezier(0.23, 1, 0.32, 1) 1.2s infinite,
+    screenshot-preview-drop 4.5s linear 1.2s infinite;
+}
+
+.screenshot-preview-saved {
+  opacity: 0;
+  animation: screenshot-preview-saved 4.5s cubic-bezier(0.23, 1, 0.32, 1) 1.2s
+    infinite;
+}
+
+@keyframes screenshot-preview-flash {
+  0% {
+    opacity: 0.8;
+  }
+  5%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes screenshot-preview-frame {
+  0% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+  5% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  46% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    animation-timing-function: cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  58% {
+    opacity: 1;
+    transform: translateX(72px) scale(0.24);
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: translateX(72px) scale(0.24);
+  }
+}
+
+/* The vertical anticipation curves the continuous rightward glide into an arc. */
+@keyframes screenshot-preview-drop {
+  0%,
+  46% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.36, 0, 0.66, -0.56);
+  }
+  58%,
+  100% {
+    translate: 0 100px;
+  }
+}
+
+@keyframes screenshot-preview-saved {
+  0%,
+  7% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  11%,
+  46% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  50%,
+  100% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .screenshot-preview-flash,
+  .screenshot-preview-frame {
+    animation: none;
+    opacity: 0;
+  }
+
+  .screenshot-preview-saved {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

@@ -10,13 +10,13 @@ export function YouTubeInfoCardsSetting({
   disabled?: boolean;
 }) {
   const { settings, ready, saving, error, save } =
-    usePlayerToolsPreferences('Info Cards');
+    usePlayerToolsPreferences('End-screen cards');
   return (
     <CardListItem
       components={{
         RightSlot: (
           <AppSwitch
-            aria-label="Show Info Cards button on YouTube"
+            aria-label="Show End-screen cards button on YouTube"
             checked={settings.youtubeInfoCardsEnabled}
             data-youtube-control="infoCards"
             disabled={disabled || !ready || saving}
@@ -29,12 +29,12 @@ export function YouTubeInfoCardsSetting({
           </p>
         ) : undefined,
       }}
-      description="Add a button to show or hide end-of-video recommendations"
+      description="Add a player button to hide or show recommendations. Off restores YouTube’s normal behavior."
       icon={YouTubeInfoCardsIcon}
       iconIsToggled={settings.youtubeInfoCardsEnabled}
       title={
         <YouTubeFeatureTitle feature="infoCards">
-          Info Cards
+          End-screen cards
         </YouTubeFeatureTitle>
       }
     />

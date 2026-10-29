@@ -86,7 +86,7 @@ describe('player actions', () => {
       youtubeBoostEnabled: true,
       youtubeLoop: true,
       hideEndScreens: false,
-      dimming: 80,
+      dimming: 90,
     });
     expect(
       normalizePlayerTools({ hideEndScreens: true, dimming: 65 })
@@ -168,4 +168,55 @@ describe('player actions', () => {
       screenshotVideo(document.createElement('video'))
     ).rejects.toThrow('unavailable');
   });
+  it.each([
+    [undefined, 'image/jpeg', 'jpg', 0.92],
+    ['jpeg', 'image/jpeg', 'jpg', 0.92],
+    ['png', 'image/png', 'png', undefined],
+  ] as const)(
+    'encodes a %s screenshot with a matching filename',
+    async (format, mime, extension, quality) => {
+      vi.useFakeTimers();
+      const video = document.createElement('video');
+      Object.defineProperties(video, {
+        videoWidth: { value: 1920 },
+        videoHeight: { value: 1080 },
+        readyState: { value: 2 },
+      });
+      const drawImage = vi.fn();
+      vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+        drawImage,
+      } as unknown as CanvasRenderingContext2D);
+      const encode = vi
+        .spyOn(HTMLCanvasElement.prototype, 'toBlob')
+        .mockImplementation((callback, type) =>
+          callback(new Blob(['frame'], { type }))
+        );
+      const download = vi
+        .spyOn(HTMLAnchorElement.prototype, 'click')
+        .mockImplementation(() => {});
+      vi.stubGlobal('URL', {
+        createObjectURL: () => 'blob:test',
+        revokeObjectURL: vi.fn(),
+      });
+      try {
+        await screenshotVideo(video, undefined, format);
+        expect(drawImage).toHaveBeenCalledWith(video, 0, 0);
+        expect(encode).toHaveBeenCalledWith(
+          expect.any(Function),
+          mime,
+          quality
+        );
+        expect(
+          (download.mock.contexts[0] as HTMLAnchorElement | undefined)?.download
+        ).toMatch(
+          new RegExp(`\\.${extension}$`)
+        );
+      } finally {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+        vi.restoreAllMocks();
+        vi.unstubAllGlobals();
+      }
+    }
+  );
 });

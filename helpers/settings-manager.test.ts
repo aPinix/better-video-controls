@@ -9,6 +9,19 @@ import { DomainModeE } from '@/types/domains';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('SettingsManager seek mode gates', () => {
+  it.each([
+    ['https://www.youtube.com/watch?v=example', true],
+    ['https://m.youtube.com/watch?v=example', true],
+    ['https://www.instagram.com/reels/example', true],
+    ['https://www.tiktok.com/@example/video/1', true],
+    ['https://player.vimeo.com/video/1', true],
+    ['https://example.com/video', false],
+    ['https://youtube.com.example.com/video', false],
+    ['https://twitch.tv/example', false],
+  ])('uses the new domain defaults on %s: %s', (url, active) => {
+    vi.stubGlobal('window', { location: new URL(url) });
+    expect(new SettingsManager().shouldRun()).toBe(active);
+  });
   it('defaults YouTube chaptered timelines to on and updates them independently', () => {
     const settings = new SettingsManager();
 
@@ -94,6 +107,9 @@ describe('SettingsManager seek mode gates', () => {
 
   it('gates wheel actions and overlay activation with the Scroll parent', () => {
     const settings = new SettingsManager();
+    settings.updateSetting('domainRules', [
+      createDomainRule('*', DomainModeE.On),
+    ]);
     settings.updateSetting('isScrollSeekingEnabled', false);
     settings.updateSetting('isPlayPauseWheelEnabled', true);
     settings.updateSetting('isTimelineSeekingEnabled', false);

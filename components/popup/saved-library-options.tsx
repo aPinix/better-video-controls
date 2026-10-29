@@ -28,7 +28,7 @@ export function SavedLibraryOptions({
           size="sm"
           variant="ghost"
         >
-          <UploadIcon />
+          <DownloadIcon />
           Import
         </Button>
         <Button
@@ -48,7 +48,7 @@ export function SavedLibraryOptions({
           size="sm"
           variant="ghost"
         >
-          <DownloadIcon />
+          <UploadIcon />
           Export
         </Button>
       </fieldset>

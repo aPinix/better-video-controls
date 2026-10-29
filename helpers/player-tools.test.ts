@@ -118,6 +118,27 @@ afterEach(() => {
 });
 
 describe('player tools integration', () => {
+  it('defaults screenshot filters on and keeps the older screenshot control in sync with the saved choice', async () => {
+    tools?.cleanup();
+    const hostname = vi.spyOn(youtubeChapters, 'isYouTubeHostname').mockReturnValue(false);
+    try {
+      tools = new PlayerTools(video, document.querySelector('#timeline') as HTMLElement);
+      root = (document.querySelector('.mfs-player-tools') as HTMLElement).shadowRoot as ShadowRoot;
+      await vi.advanceTimersByTimeAsync(0);
+      const filters = inputFor('Include filters in screenshot');
+      expect(filters.checked).toBe(true);
+      filters.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(chrome.storage.sync.set).toHaveBeenCalledWith({
+        playerTools: expect.objectContaining({ youtubeScreenshotIncludeFilters: false }),
+      });
+      const storage = changed.addListener.mock.calls.at(-1)?.[0];
+      storage({ playerTools: { newValue: DEFAULT_PLAYER_TOOLS } }, 'sync');
+      expect(filters.checked).toBe(true);
+    } finally {
+      hostname.mockRestore();
+    }
+  });
   it('omits the floating Tools launcher on other websites', async () => {
     tools?.cleanup();
     const hostname = vi.spyOn(youtubeChapters, 'isYouTubeHostname').mockReturnValue(false);
@@ -938,7 +959,7 @@ describe('player tools integration', () => {
     expect(root.querySelector('.shade')).toBeNull();
     expect(cinema.getAttribute('aria-pressed')).toBe('false');
     cinema.click();
-    expect(root.querySelector<HTMLElement>('.shade')?.style.opacity).toBe('0.8');
+    expect(root.querySelector<HTMLElement>('.shade')?.style.opacity).toBe('0.9');
   });
   it('recovers an abandoned Settings slider preview and ignores invalid preview messages', async () => {
     const listener = changed.addListener.mock.calls.at(-1)?.[0];
@@ -958,7 +979,7 @@ describe('player tools integration', () => {
     await vi.advanceTimersByTimeAsync(1000);
     update('#abcdef');
     await vi.advanceTimersByTimeAsync(1000);
-    expect((root.querySelector('.shade') as HTMLElement)?.style.opacity).toBe('0.8');
+    expect((root.querySelector('.shade') as HTMLElement)?.style.opacity).toBe('0.9');
     await vi.advanceTimersByTimeAsync(1100);
     expect(root.querySelector('.shade')).toBeNull();
     cinema.click();
@@ -982,7 +1003,7 @@ describe('player tools integration', () => {
     expect(cinema.getAttribute('aria-pressed')).toBe('true');
     expect(root.querySelectorAll('.shade')).toHaveLength(1);
     expect((root.querySelector('.shade') as HTMLElement).style.opacity).toBe(
-      '0.8'
+      '0.9'
     );
     cinema.click();
     expect((root.querySelector('.shade') as HTMLElement).style.opacity).toBe('0');
@@ -1039,18 +1060,19 @@ describe('player tools integration', () => {
     storage({ playerTools: { newValue: DEFAULT_PLAYER_TOOLS } }, 'sync');
     expect(cinema.getAttribute('aria-pressed')).toBe('false');
   });
-  it('toggles only end-of-video recommendations and preserves visibility when its button is removed', async () => {
+  it('restores YouTube recommendations when disabled and remembers the player choice when re-enabled', async () => {
     const cards = document.querySelector(
       '.mfs-info-cards-button'
     ) as HTMLButtonElement;
     const player = video.closest('#movie_player') as HTMLElement;
+    expect(player.dataset.mfsHideEndScreens).toBe('false');
     expect(cards.getAttribute('aria-pressed')).toBe('true');
     cards.click();
     await vi.advanceTimersByTimeAsync(0);
     expect(player.dataset.mfsHideEndScreens).toBe('true');
     expect(player.dataset.mfsHideCards).toBe('false');
     expect(cards.getAttribute('aria-pressed')).toBe('false');
-    expect(cards.nextElementSibling?.querySelector('.mfs-tooltip-label')?.textContent).toBe('Show Info Cards');
+    expect(cards.nextElementSibling?.querySelector('.mfs-tooltip-label')?.textContent).toBe('End-screen cards: hidden');
     expect(cards.nextElementSibling?.querySelector('.ytp-tooltip-keyboard-shortcut')?.textContent).toBe('E');
     expect(chrome.storage.sync.set).toHaveBeenCalledWith({
       playerTools: expect.objectContaining({
@@ -1072,7 +1094,12 @@ describe('player tools integration', () => {
       'sync'
     );
     expect(document.querySelector('.mfs-info-cards-button')).toBeNull();
-    expect(player.dataset.mfsHideEndScreens).toBe('true');
+    expect(player.dataset.mfsHideEndScreens).toBe('false');
+    const writes = vi.mocked(chrome.storage.sync.set).mock.calls.length;
+    cards.click();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(chrome.storage.sync.set).toHaveBeenCalledTimes(writes);
+    expect(player.dataset.mfsHideEndScreens).toBe('false');
     storage(
       {
         playerTools: {
@@ -1081,10 +1108,40 @@ describe('player tools integration', () => {
       },
       'sync'
     );
+    expect(player.dataset.mfsHideEndScreens).toBe('true');
     expect(cards.getAttribute('aria-pressed')).toBe('false');
     cards.click();
     expect(player.dataset.mfsHideEndScreens).toBe('false');
     expect(cards.getAttribute('aria-pressed')).toBe('true');
+  });
+  it.each([
+    { enabled: false, hidden: false },
+    { enabled: false, hidden: true },
+    { enabled: true, hidden: false },
+    { enabled: true, hidden: true },
+  ])('loads the saved end-screen choice without hiding cards when disabled (enabled: $enabled, hidden: $hidden)', async ({ enabled, hidden }) => {
+    tools?.cleanup();
+    vi.mocked(chrome.storage.sync.get).mockImplementationOnce(async () => ({
+      playerTools: {
+        ...DEFAULT_PLAYER_TOOLS,
+        youtubeInfoCardsEnabled: enabled,
+        hideEndScreens: hidden,
+      },
+    }));
+    tools = new PlayerTools(
+      video,
+      document.querySelector('#timeline') as HTMLElement
+    );
+    await vi.advanceTimersByTimeAsync(0);
+    const player = video.closest('#movie_player') as HTMLElement;
+    expect(player.dataset.mfsHideEndScreens).toBe(String(enabled && hidden));
+    const button = document.querySelector('.mfs-info-cards-button');
+    if (enabled) {
+      expect(button?.getAttribute('aria-pressed')).toBe(String(!hidden));
+    } else {
+      expect(button).toBeNull();
+    }
+    expect(chrome.storage.sync.set).not.toHaveBeenCalled();
   });
   it('keeps both new buttons unavailable during ads and removes them and shades on cleanup', async () => {
     const cinema = document.querySelector(
@@ -1113,7 +1170,7 @@ describe('player tools integration', () => {
       video.parentElement?.getAttribute('data-mfs-hide-end-screens')
     ).toBeNull();
   });
-  it('reports storage errors from the Info Cards player action', async () => {
+  it('reports storage errors from the End-screen cards player action', async () => {
     vi.mocked(chrome.storage.sync.set).mockRejectedValueOnce(
       new Error('Storage unavailable')
     );
@@ -1299,7 +1356,7 @@ describe('player tools integration', () => {
     expect(root.textContent).not.toContain('Extra volume (%)');
     storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, youtubeLoop: false, youtubeBoostEnabled: true, youtubeBoost: 10 } } }, 'sync');
     expect(document.querySelector('.mfs-youtube-buttons')).toBeNull();
-    expect(document.querySelector('.mfs-youtube-boost')?.textContent).toContain('10×');
+    expect(document.querySelector('.mfs-youtube-boost')?.textContent).toContain('5×');
     storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, youtubeBoostEnabled: false } } }, 'sync');
     expect(document.querySelector('.mfs-youtube-boost')).toBeNull();
   });
