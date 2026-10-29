@@ -36,13 +36,19 @@ const control = (text: string) => {
   if (!node) throw new Error(`Missing control: ${text}`);
   return node;
 };
-const pointer = (target: EventTarget, type: string, x: number) => {
+const pointer = (
+  target: EventTarget,
+  type: string,
+  x: number,
+  altKey = false
+) => {
   const event = new MouseEvent(type, {
     bubbles: true,
     composed: true,
     cancelable: true,
     button: 0,
     clientX: x,
+    altKey,
   });
   Object.defineProperty(event, 'pointerId', { value: 1 });
   target.dispatchEvent(event);
@@ -53,7 +59,17 @@ beforeEach(() => {
   document.body.innerHTML =
     '<video></video><div id="timeline"></div><button id="anchor"></button>';
   video = document.querySelector('video') as HTMLVideoElement;
-  Object.defineProperty(video, 'duration', { value: 100 });
+  Object.defineProperty(video, 'duration', { value: 100, configurable: true });
+  Object.defineProperty(video, 'paused', { value: true, configurable: true });
+  video.play = vi.fn(async () => {
+    Object.defineProperty(video, 'paused', {
+      value: false,
+      configurable: true,
+    });
+  });
+  video.pause = vi.fn(() => {
+    Object.defineProperty(video, 'paused', { value: true, configurable: true });
+  });
   video.currentTime = 40;
   const timeline = document.querySelector('#timeline') as HTMLElement;
   timeline.getBoundingClientRect = () => ({ width: 500, left: 0 }) as DOMRect;
@@ -92,6 +108,166 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
+it.each([
+  ['button', true],
+  ['button', false],
+  ['Alt', true],
+  ['Alt', false],
+] as const)(
+  'previews bookmark dragging using %s and restores playback on close (playing: %s)',
+  async (activation, playing) => {
+    Object.defineProperty(video, 'paused', {
+      value: !playing,
+      configurable: true,
+    });
+    if (activation === 'button') control('Live tune').click();
+    else
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', {
+          key: 'Alt',
+          altKey: true,
+          bubbles: true,
+        })
+      );
+    expect(control('Live tune').getAttribute('aria-pressed')).toBe('true');
+    pointer(point(), 'pointerdown', 125, activation === 'Alt');
+    expect(video.currentTime).toBe(25);
+    expect(video.paused).toBe(false);
+    pointer(document, 'pointermove', 225, activation === 'Alt');
+    expect(video.currentTime).toBe(45);
+    expect(saved).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(180);
+    expect(video.paused).toBe(true);
+    expect(video.currentTime).toBe(45);
+    pointer(document, 'pointerup', 225, activation === 'Alt');
+    await vi.advanceTimersByTimeAsync(0);
+    expect(video.currentTime).toBe(40);
+    expect(saved).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ id: 'a', start: 45 })
+    );
+    if (activation === 'Alt') {
+      document.dispatchEvent(
+        new KeyboardEvent('keyup', { key: 'Alt', bubbles: true })
+      );
+      expect(control('Live tune').getAttribute('aria-pressed')).toBe('false');
+    }
+    pointer(control('Done editing'), 'pointerdown', 0);
+    control('Done editing').click();
+    expect(editor.isOpen).toBe(false);
+    expect(video.paused).toBe(!playing);
+  }
+);
+it('opens a specific saved bookmark selected and ready to edit', () => {
+  editor.close(false, false);
+  editor.open(document.querySelector('#anchor') as HTMLButtonElement, 'b');
+  expect(editor.isOpen).toBe(true);
+  expect(input('Bookmark name').value).toBe('Moment b');
+  expect(input('Bookmark time').value).toBe('00:01:15');
+  expect(
+    root.querySelector<HTMLButtonElement>('.point[aria-pressed="true"]')
+      ?.dataset.bookmarkId
+  ).toBe('b');
+  expect(root.activeElement).toBe(input('Bookmark name'));
+  expect(saved).not.toHaveBeenCalled();
+});
+
+it('can enter Live tune in the middle of a drag and leave on Alt release or focus loss', async () => {
+  pointer(point(), 'pointerdown', 125);
+  pointer(document, 'pointermove', 225);
+  document.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'Alt', altKey: true, bubbles: true })
+  );
+  expect(video.currentTime).toBe(45);
+  window.dispatchEvent(new Event('blur'));
+  expect(video.currentTime).toBe(40);
+  expect(video.paused).toBe(true);
+  expect(control('Live tune').getAttribute('aria-pressed')).toBe('false');
+  vi.mocked(video.pause).mockClear();
+  await vi.advanceTimersByTimeAsync(180);
+  expect(video.pause).not.toHaveBeenCalled();
+  pointer(document, 'pointermove', 250);
+  expect(video.currentTime).toBe(40);
+  pointer(document, 'pointerup', 250);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(saved).toHaveBeenCalledWith(expect.objectContaining({ start: 50 }));
+});
+it('previews new bookmarks without saving drafts until release', async () => {
+  control('Live tune').click();
+  const lane = root.querySelector('.lane') as HTMLElement;
+  pointer(lane, 'pointerdown', 100);
+  expect(video.currentTime).toBe(20);
+  pointer(document, 'pointermove', 300);
+  expect(video.currentTime).toBe(60);
+  expect(added).not.toHaveBeenCalled();
+  pointer(document, 'pointercancel', 300);
+  expect(video.currentTime).toBe(40);
+  expect(added).not.toHaveBeenCalled();
+  expect(root.querySelectorAll('.point')).toHaveLength(2);
+  await vi.advanceTimersByTimeAsync(180);
+  expect(video.currentTime).toBe(40);
+});
+it('does not seek or resume the previous video during navigation or ads', async () => {
+  pointer(point(), 'pointerdown', 125, true);
+  expect(video.currentTime).toBe(25);
+  video.currentTime = 3;
+  editor.update(items, true, false);
+  expect(video.currentTime).toBe(3);
+  editor.reset();
+  await vi.advanceTimersByTimeAsync(180);
+  expect(video.currentTime).toBe(3);
+  expect(saved).not.toHaveBeenCalled();
+  expect(control('Live tune').getAttribute('aria-pressed')).toBe('false');
+});
+it('reports failed preview playback while keeping editing usable', async () => {
+  vi.mocked(video.play).mockRejectedValueOnce(
+    new Error('Playback unavailable')
+  );
+  control('Live tune').click();
+  pointer(point(), 'pointerdown', 125);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(root.querySelector('[role=status]')?.textContent).toBe(
+    'Preview could not start.'
+  );
+  pointer(document, 'pointermove', 225);
+  pointer(document, 'pointerup', 225);
+  await vi.advanceTimersByTimeAsync(0);
+  expect(saved).toHaveBeenCalledWith(expect.objectContaining({ start: 45 }));
+});
+it('navigates bookmarks in time order without changing or saving them', () => {
+  items = [moment('b', 75), moment('a', 25), moment('c', 50)];
+  editor.update(items, true, true);
+  expect(input('Bookmark name').value).toBe('Moment a');
+  expect(control('Previous bookmark').disabled).toBe(true);
+  control('Next bookmark').click();
+  expect(seek).toHaveBeenLastCalledWith(50);
+  expect(input('Bookmark name').value).toBe('Moment c');
+  expect(
+    root.querySelector('[data-bookmark-id="c"]')?.getAttribute('aria-pressed')
+  ).toBe('true');
+  control('Next bookmark').click();
+  expect(seek).toHaveBeenLastCalledWith(75);
+  expect(control('Next bookmark').disabled).toBe(true);
+  control('Previous bookmark').click();
+  expect(seek).toHaveBeenLastCalledWith(50);
+  expect(input('Bookmark time').value).toBe('00:00:50');
+  expect(saved).not.toHaveBeenCalled();
+  expect(restored).not.toHaveBeenCalled();
+});
+it('disables bookmark navigation for an empty list and while saving', async () => {
+  saved.mockReturnValueOnce(new Promise(() => {}));
+  input('Bookmark name').value = 'Saving';
+  input('Bookmark name').dispatchEvent(new Event('change'));
+  expect(control('Previous bookmark').disabled).toBe(true);
+  expect(control('Next bookmark').disabled).toBe(true);
+  expect(control('Live tune').disabled).toBe(true);
+  editor.reset();
+  editor.update([], true, true);
+  editor.open(document.querySelector('#anchor') as HTMLButtonElement);
+  expect(control('Previous bookmark').disabled).toBe(true);
+  expect(control('Next bookmark').disabled).toBe(true);
+  expect(seek).not.toHaveBeenCalled();
+});
+
 it('edits existing names and times without changing identity, creation date, or playback', async () => {
   const name = input('Bookmark name');
   name.value = 'Introduction';
@@ -105,8 +281,8 @@ it('edits existing names and times without changing identity, creation date, or 
       createdAt: 1,
     })
   );
-  const time = input('Bookmark time in seconds');
-  time.value = '35.125';
+  const time = input('Bookmark time');
+  time.value = '00:00:35.125';
   time.dispatchEvent(new Event('change'));
   await vi.advanceTimersByTimeAsync(0);
   expect(items[0]).toMatchObject({
@@ -116,6 +292,81 @@ it('edits existing names and times without changing identity, creation date, or 
   });
   expect(video.currentTime).toBe(40);
   expect(seek).not.toHaveBeenCalled();
+});
+it('edits hour:minute:second timestamps with milliseconds and keeps the selected bookmark identifiable after reordering', async () => {
+  Object.defineProperty(video, 'duration', { value: 7200 });
+  const time = input('Bookmark time');
+  expect(time.value).toBe('00:00:25');
+  expect(root.querySelector('.selection-count')?.textContent).toBe('1 of 2');
+  time.value = '01:02:03.125';
+  time.dispatchEvent(new Event('change'));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(saved).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 'a', start: 3723.125 })
+  );
+  expect(time.value).toBe('01:02:03.125');
+  expect(root.querySelector('.selection-count')?.textContent).toBe('2 of 2');
+  expect(
+    root.querySelector('[data-bookmark-id="a"]')?.getAttribute('aria-pressed')
+  ).toBe('true');
+  expect(control('Next bookmark').disabled).toBe(true);
+  expect(control('Previous bookmark').disabled).toBe(false);
+  expect(video.currentTime).toBe(40);
+});
+it.each(['00:60:00', '00:00:60', '00:02:00', ''])(
+  'shows recoverable timestamp feedback without saving invalid time (%s)',
+  async (value) => {
+    const time = input('Bookmark time');
+    time.value = value;
+    time.dispatchEvent(new Event('change'));
+    expect(saved).not.toHaveBeenCalled();
+    expect(time.getAttribute('aria-invalid')).toBe('true');
+    expect(
+      root.querySelector('[role=status]')?.getAttribute('data-error')
+    ).toBe('true');
+    editor.update(items, true, true);
+    expect(time.value).toBe(value);
+    time.value = '00:00:30.250';
+    time.dispatchEvent(new Event('input'));
+    time.dispatchEvent(new Event('change'));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(saved).toHaveBeenCalledWith(
+      expect.objectContaining({ start: 30.25 })
+    );
+    expect(time.getAttribute('aria-invalid')).toBeNull();
+    expect(time.value).toBe('00:00:30.250');
+  }
+);
+it('supports keyboard time stepping and clears an invalid draft when selecting another bookmark', async () => {
+  const time = input('Bookmark time');
+  time.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp' }));
+  await vi.advanceTimersByTimeAsync(0);
+  expect(time.value).toBe('00:00:26');
+  time.dispatchEvent(
+    new KeyboardEvent('keydown', { key: 'ArrowDown', shiftKey: true })
+  );
+  await vi.advanceTimersByTimeAsync(0);
+  expect(time.value).toBe('00:00:25.900');
+  time.value = 'invalid';
+  time.dispatchEvent(new Event('change'));
+  control('Next bookmark').click();
+  expect(time.value).toBe('00:01:15');
+  expect(time.getAttribute('aria-invalid')).toBeNull();
+  expect(root.querySelector('.selection-count')?.textContent).toBe('2 of 2');
+});
+it('selects the next bookmark after deletion, retaining chronological Previous/Next navigation', async () => {
+  items = [moment('a', 25), moment('b', 75), moment('c', 50)];
+  editor.update(items, true, true);
+  control('Next bookmark').click();
+  expect(input('Bookmark name').value).toBe('Moment c');
+  control('Delete').click();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(deleted).toHaveBeenCalledWith('c');
+  expect(input('Bookmark name').value).toBe('Moment b');
+  expect(root.querySelector('.selection-count')?.textContent).toBe('2 of 2');
+  expect(control('Next bookmark').disabled).toBe(true);
+  control('Previous bookmark').click();
+  expect(input('Bookmark name').value).toBe('Moment a');
 });
 it('adds at the clicked timeline position and supports undo, redo, clear, and discard', async () => {
   const original = items.map((item) => ({ ...item }));
@@ -132,7 +383,7 @@ it('adds at the clicked timeline position and supports undo, redo, clear, and di
   control('Redo').click();
   await vi.advanceTimersByTimeAsync(0);
   expect(items).toHaveLength(3);
-  control('Clear bookmarks').click();
+  control('Clear').click();
   await vi.advanceTimersByTimeAsync(0);
   expect(items).toEqual([]);
   control('Undo').click();
@@ -151,7 +402,7 @@ it('creates a draft on press, keeps it through updates, and saves its dragged po
   pointer(document, 'pointermove', 300);
   editor.update(items, true, true);
   expect(root.querySelector('[data-draft-time="60"]')).not.toBeNull();
-  input('Bookmark time in seconds').value = '';
+  input('Bookmark time').value = '';
   pointer(document, 'pointerup', 300);
   pointer(video, 'mouseup', 300);
   video.click();
@@ -204,7 +455,7 @@ it('creates and drags on the native YouTube seek bar without native seeking or d
 it('saves the drag position independently of the inspector input', async () => {
   pointer(point(), 'pointerdown', 125);
   pointer(document, 'pointermove', 225);
-  input('Bookmark time in seconds').value = '';
+  input('Bookmark time').value = '';
   pointer(document, 'pointerup', 225);
   await vi.advanceTimersByTimeAsync(0);
   expect(saved).toHaveBeenCalledWith(
@@ -214,11 +465,11 @@ it('saves the drag position independently of the inspector input', async () => {
 it('keeps history and saved bookmarks intact when clear or undo fails', async () => {
   const original = items.map((item) => ({ ...item }));
   restored.mockRejectedValueOnce(new Error('Storage unavailable'));
-  control('Clear bookmarks').click();
+  control('Clear').click();
   await vi.advanceTimersByTimeAsync(0);
   expect(items).toEqual(original);
   expect(control('Undo').disabled).toBe(true);
-  control('Clear bookmarks').click();
+  control('Clear').click();
   await vi.advanceTimersByTimeAsync(0);
   restored.mockRejectedValueOnce(new Error('Storage unavailable'));
   control('Undo').click();
@@ -233,7 +484,7 @@ it('keeps history and saved bookmarks intact when clear or undo fails', async ()
   expect(control('Undo').disabled).toBe(true);
   expect(control('Discard changes').disabled).toBe(true);
 });
-it('keeps the editor above stacked buttons and accounts for player scaling', () => {
+it('keeps action pills anchored to the edit bar without adding stacked-toolbar clearance', () => {
   const player = document.createElement('div');
   player.className = 'html5-video-player';
   const toolbar = document.createElement('div');
@@ -246,15 +497,62 @@ it('keeps the editor above stacked buttons and accounts for player scaling', () 
   timeline.getBoundingClientRect = () => ({ width: 500, top: 300 }) as DOMRect;
   toolbar.getBoundingClientRect = () => ({ top: 240 }) as DOMRect;
   editor.layout();
-  expect(editor.host.style.getPropertyValue('--toolbar-clearance')).toBe(
-    '30px'
+  const actions = root.querySelector('.actions') as HTMLElement;
+  expect(actions.parentNode).toBe(root);
+  expect(editor.host.style.getPropertyValue('--toolbar-clearance')).toBe('');
+  expect((root.querySelector('.inspector') as HTMLElement).style.bottom).toBe(
+    'calc(100% + 96px)'
   );
   expect(editor.host.style.getPropertyValue('--inspector-max-height')).toBe(
     '48px'
   );
   toolbar.dataset.stacked = 'false';
   editor.layout();
-  expect(editor.host.style.getPropertyValue('--toolbar-clearance')).toBe('0px');
+  expect(editor.host.style.getPropertyValue('--toolbar-clearance')).toBe('');
+});
+it('keeps a small-player workspace readable without reopening it on every layout and releases it on close', async () => {
+  const player = document.createElement('div');
+  player.className = 'html5-video-player';
+  document.body.append(player);
+  player.append(video);
+  let width = 500;
+  let height = 280;
+  player.getBoundingClientRect = () => new DOMRect(24, 100, width, height);
+  const timeline = document.querySelector('#timeline') as HTMLElement;
+  Object.defineProperty(timeline, 'clientWidth', { get: () => width - 24 });
+  timeline.getBoundingClientRect = () =>
+    new DOMRect(36, 100 + height - 63, width - 24, 14);
+  const workspace = root.querySelector('.workspace') as HTMLElement;
+  workspace.showPopover = vi.fn();
+  workspace.hidePopover = vi.fn();
+  workspace.getBoundingClientRect = () => new DOMRect(532, 100, 484, 240);
+  const inspector = root.querySelector('.inspector') as HTMLElement;
+  Object.defineProperty(inspector, 'scrollHeight', { value: 132 });
+  const actions = root.querySelector('.actions') as HTMLElement;
+  actions.getBoundingClientRect = () =>
+    new DOMRect(150, 100 + height - 110, 400, 44);
+  editor.layout();
+  expect(workspace.showPopover).toHaveBeenCalledOnce();
+  expect(workspace.dataset.floating).toBe('true');
+  expect(workspace.querySelector('.actions')).toBeNull();
+  expect(actions.parentNode).toBe(root);
+  expect(workspace.style.left).toBe('532px');
+  editor.layout();
+  expect(workspace.showPopover).toHaveBeenCalledOnce();
+  width = 900;
+  height = 500;
+  editor.layout();
+  expect(workspace.hidePopover).toHaveBeenCalledOnce();
+  expect(workspace.hasAttribute('popover')).toBe(false);
+  width = 500;
+  height = 280;
+  editor.layout();
+  expect(workspace.showPopover).toHaveBeenCalledTimes(2);
+  editor.close();
+  expect(workspace.hidePopover).toHaveBeenCalledOnce();
+  await vi.advanceTimersByTimeAsync(240);
+  expect(workspace.hidePopover).toHaveBeenCalledTimes(2);
+  expect(workspace.hasAttribute('popover')).toBe(false);
 });
 it('moves a marker during a drag and saves only when the adjustment finishes', async () => {
   pointer(point(), 'pointerdown', 125);

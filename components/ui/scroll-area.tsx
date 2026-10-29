@@ -26,6 +26,10 @@ function ScrollArea({
   )
 }
 
+function ScrollAreaContent({ ...props }: ScrollAreaPrimitive.Content.Props) {
+  return <ScrollAreaPrimitive.Content data-slot="scroll-area-content" {...props} />
+}
+
 function ScrollBar({
   className,
   orientation = "vertical",
@@ -44,10 +48,10 @@ function ScrollBar({
     >
       <ScrollAreaPrimitive.Thumb
         data-slot="scroll-area-thumb"
-        className="relative flex-1 rounded-full bg-slate-300 transition-colors hover:bg-slate-400 dark:bg-slate-500 dark:hover:bg-slate-400"
+        className="relative flex-1 rounded-full bg-[var(--scrollbar)] transition-colors hover:bg-[var(--scrollbar-hover)]"
       />
     </ScrollAreaPrimitive.Scrollbar>
   )
 }
 
-export { ScrollArea, ScrollBar }
+export { ScrollArea, ScrollAreaContent, ScrollBar }

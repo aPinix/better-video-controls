@@ -4,7 +4,6 @@ import {
   filterCSS,
   formatTime,
   type LoopRange,
-  moveLoop,
   normalizeLoop,
   registerPlayerSeek,
   remainingSeconds,
@@ -14,6 +13,7 @@ import {
   skipVideo,
 } from './player-actions';
 import { CinemaBackdrop } from './player-cinema';
+import { CINEMA_PREVIEW_KEY, isCinemaDimmingPreview } from './player-cinema-preview';
 import { FloatingPlayer } from './player-floating';
 import {
   DEFAULT_FILTERS,
@@ -27,6 +27,7 @@ import {
 } from './player-tools-settings';
 import {
   button,
+  createHistoryIcon,
   element,
   field,
   numberInput,
@@ -49,6 +50,7 @@ import {
 } from './youtube-chapters';
 import {
   YOUTUBE_CONTROL_SHORTCUTS,
+  YOUTUBE_PIP_OVERRIDE_SHORTCUT,
   type YouTubeAdvancedControl,
   type YouTubeControl,
 } from './youtube-control-icons';
@@ -65,7 +67,6 @@ export class PlayerTools {
   private host: HTMLDivElement;
   private root: ShadowRoot;
   private panel: HTMLDivElement;
-  private launcher: HTMLButtonElement;
   private status: HTMLParagraphElement;
   private remaining: HTMLSpanElement;
   private track: HTMLDivElement;
@@ -108,6 +109,7 @@ export class PlayerTools {
   private redoLoops: LoopHistory[] = [];
   private historyBusy = false;
   private fineTune = false;
+  private altLiveTune = false;
   private boostActive = false;
   private autoBoostSuppressed = false;
   private boostBusy = false;
@@ -123,6 +125,12 @@ export class PlayerTools {
   private open = false;
   private hovering = false;
   private cinema = false;
+  private cinemaPreview = false;
+  private cinemaPreviewTimer: number | undefined;
+  private cinemaPreviewHolding = false;
+  private cinemaPreviewDimming: number | null = null;
+  private cinemaPreviewOwner: string | null = null;
+  private cinemaPreviewWatchdog: number | undefined;
   private cinemaBackdrop: CinemaBackdrop | null = null;
   private cleanupFns: Array<() => void> = [];
   private loopTimer: number | undefined;
@@ -136,6 +144,7 @@ export class PlayerTools {
   private ad = false;
   private source = '';
   private identityGeneration = 0;
+  private loopReplacementRevision = 0;
   private claiming = false;
   private claimedKey = '';
   private uiSync: Array<() => void> = [];
@@ -143,6 +152,7 @@ export class PlayerTools {
   private cardStyle: HTMLStyleElement;
   private dragging: {
     mode: string;
+    replaceSections: boolean;
     time: number;
     range: LoopRange | null;
     pointerId: number;
@@ -154,6 +164,7 @@ export class PlayerTools {
     minTime: number;
     maxTime: number;
     moved: boolean;
+    liveTuned: boolean;
   } | null = null;
 
   constructor(
@@ -181,15 +192,6 @@ export class PlayerTools {
     const style = element(this.doc, 'style');
     style.textContent = TOOLS_STYLES;
     this.root.append(style);
-    this.launcher = button(
-      this.doc,
-      'Tools',
-      () => this.setOpen(!this.open),
-      this.root
-    );
-    this.launcher.className = 'launcher';
-    this.launcher.setAttribute('aria-label', 'Video tools');
-    this.launcher.setAttribute('aria-expanded', 'false');
     this.panel = element(this.doc, 'div', 'panel');
     this.panel.hidden = true;
     this.panel.setAttribute('role', 'region');
@@ -197,7 +199,7 @@ export class PlayerTools {
     this.root.append(this.panel);
     const header = element(this.doc, 'header');
     header.append(element(this.doc, 'h2', '', 'Video tools'));
-    button(this.doc, 'Close', () => this.setOpen(false), header);
+    button(this.doc, 'Close', () => this.closeToolsPanel(), header);
     this.panel.append(header);
     this.remaining = element(this.doc, 'span', 'muted');
     this.panel.append(this.remaining);
@@ -263,7 +265,7 @@ export class PlayerTools {
             this.advancedMenu?.close();
             this.bookmarksEditor?.close();
             if (!this.filtersMenu?.isOpen) {
-              if (this.open) this.setOpen(false);
+              if (this.open) this.closeToolsPanel();
               this.setLoopOpen(false);
             }
             this.filtersMenu?.toggle(this.youtubeButtons.filtersButton);
@@ -292,8 +294,11 @@ export class PlayerTools {
           onPreview: (patch) => {
             this.settings = normalizePlayerTools({ ...this.settings, ...patch });
             this.applyPreferences();
+            if (patch.cinemaColor !== undefined || patch.dimming !== undefined)
+              this.previewCinema(patch.dimming !== undefined);
           },
           onSave: (patch) => this.saveAdvancedPreferences(patch),
+          onPreviewEnd: () => this.endCinemaPreview(),
           onOpenChange: () => this.updateYouTubeButtons(),
         })
       : null;
@@ -326,19 +331,26 @@ export class PlayerTools {
       this.doc.createTextNode(' + drag to add a section')
     );
     loopActions.append(loopHint);
+    const loopTools = element(this.doc, 'div', 'loop-actions-pill loop-tools-pill');
+    loopTools.setAttribute('role', 'group');
+    loopTools.setAttribute('aria-label', 'Loop tools');
+    const finishActions = element(this.doc, 'div', 'loop-actions-pill loop-finish-pill');
+    finishActions.setAttribute('role', 'group');
+    finishActions.setAttribute('aria-label', 'Finish loop editing');
+    loopActions.append(loopTools, finishActions);
     const discard = button(this.doc, 'Discard changes', () => this.perform(async () => {
       if (!this.editBaseline || this.historyBusy) return;
       await this.applyLoopSnapshot(this.editBaseline);
       this.undoLoops = [...this.editUndoBaseline];
       this.redoLoops = [...this.editRedoBaseline];
       this.setLoopOpen(false);
-    }), loopActions);
+    }), finishActions);
     discard.className = 'discard-loop-edits';
-    const closeLoop = button(this.doc, '✓ Done editing', () => this.setLoopOpen(false), loopActions);
+    const closeLoop = button(this.doc, '✓ Done editing', () => this.setLoopOpen(false), finishActions);
     closeLoop.className = 'close-loop-editor';
     closeLoop.setAttribute('aria-label', 'Done editing');
     closeLoop.title = 'Keep sections and finish editing';
-    const clearLoops = button(this.doc, 'Clear sections', () => this.perform(async () => {
+    const clearLoops = button(this.doc, 'Clear', () => this.perform(async () => {
       const sections = this.items.filter(item => item.end !== undefined);
       if (sections.length) this.recordLoopHistory();
       this.loop = null;
@@ -350,49 +362,37 @@ export class PlayerTools {
       for (const section of sections) await this.deleteLoopItem(section.id);
       this.renderItems();
       this.layout();
-    }), loopActions);
+    }), loopTools);
     clearLoops.className = 'clear-loop-sections';
-    const undo = button(this.doc, 'Undo', () => this.perform(() => this.restoreLoopHistory(false)), loopActions);
+    const undo = button(this.doc, 'Undo', () => this.perform(() => this.restoreLoopHistory(false)), loopTools);
     undo.className = 'undo-loop-sections';
-    const redo = button(this.doc, 'Redo', () => this.perform(() => this.restoreLoopHistory(true)), loopActions);
+    const redo = button(this.doc, 'Redo', () => this.perform(() => this.restoreLoopHistory(true)), loopTools);
     redo.className = 'redo-loop-sections';
-    const fineTune = button(this.doc, 'Fine tune', () => {
+    const fineTune = button(this.doc, 'Live tune', () => {
       this.fineTune = !this.fineTune;
-      fineTune.setAttribute('aria-pressed', String(this.fineTune));
-      this.track.dataset.fineTune = String(this.fineTune);
-    }, loopActions);
+      this.syncLiveTune();
+    }, loopTools);
     fineTune.className = 'fine-tune-loop';
     fineTune.setAttribute('aria-pressed', 'false');
-    const fineTuneHelp = element(this.doc, 'span', 'fine-tune-help', 'Drag either handle to preview that moment with sound. Each brief preview pauses at the handle. Release to return to your original playback position, paused.');
+    const fineTuneHelp = element(this.doc, 'span', 'fine-tune-help');
+    fineTuneHelp.append(
+      element(this.doc, 'kbd', '', 'Alt'),
+      this.doc.createTextNode(' + drag to preview')
+    );
     fineTuneHelp.id = 'fine-tune-help';
     fineTuneHelp.setAttribute('role', 'tooltip');
     fineTune.setAttribute('aria-describedby', fineTuneHelp.id);
     const fineTuneControl = element(this.doc, 'span', 'fine-tune-control');
     fineTune.replaceWith(fineTuneControl);
     fineTuneControl.append(fineTune, fineTuneHelp);
-    for (const [control, mirrored] of [[undo, false], [redo, true]] as const) {
-      const icon = this.doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
-      icon.setAttribute('viewBox', '0 0 24 24');
-      icon.setAttribute('width', '16');
-      icon.setAttribute('height', '16');
-      icon.setAttribute('fill', 'none');
-      icon.setAttribute('stroke', 'currentColor');
-      icon.setAttribute('stroke-width', '2');
-      icon.setAttribute('stroke-linecap', 'round');
-      icon.setAttribute('stroke-linejoin', 'round');
-      icon.setAttribute('aria-hidden', 'true');
-      const path = this.doc.createElementNS(icon.namespaceURI, 'path');
-      path.setAttribute('d', 'M3 7h10a7 7 0 0 1 0 14h-2 M3 7l4-4 M3 7l4 4');
-      if (mirrored) path.setAttribute('transform', 'translate(24 0) scale(-1 1)');
-      icon.append(path);
-      control.prepend(icon);
-    }
+    loopTools.append(undo, redo, fineTuneControl, clearLoops);
+    undo.prepend(createHistoryIcon(this.doc));
+    redo.prepend(createHistoryIcon(this.doc, true));
     loopActions.addEventListener('pointerdown', (event) => event.stopPropagation());
     this.track.hidden = true;
     this.markers = element(this.doc, 'div');
     this.track.append(this.markers);
     this.selection = element(this.doc, 'div', 'range');
-    this.selection.dataset.mode = 'move';
     this.track.append(this.selection);
     this.selection.addEventListener('click', () => {
       if (!this.editing && this.loopEnabled && this.loop && this.canLoop()) {
@@ -564,6 +564,13 @@ export class PlayerTools {
       (event) => this.keydown(event as KeyboardEvent),
       true
     );
+    this.listen(this.win, 'keyup', (event) => {
+      if (!(event as KeyboardEvent).altKey) this.setAltLiveTune(false);
+    }, true);
+    this.listen(this.win, 'blur', () => this.setAltLiveTune(false));
+    this.listen(this.doc, 'visibilitychange', () => {
+      if (this.doc.hidden) this.setAltLiveTune(false);
+    });
     this.listen(this.root, 'keydown', (event) => {
       if ((event as KeyboardEvent).key !== 'Escape') event.stopPropagation();
     });
@@ -574,21 +581,34 @@ export class PlayerTools {
       if ((event as CustomEvent).detail === this.video) this.toggleLoop();
     });
     this.listen(video, 'play', () => {
-      if (this.loopEnabled && this.loop && !this.editing && !this.dragging && this.canLoop() &&
-        (video.currentTime < this.loop.start || video.currentTime >= this.loop.end))
-        seekVideo(video, this.loop.start);
+      this.selectLoopAtCurrentTime(!this.editing && !video.seeking);
       this.sync();
     });
+    for (const type of ['seeking', 'seeked'])
+      this.listen(video, type, () => {
+        this.selectLoopAtCurrentTime(type === 'seeked');
+        this.sync();
+      });
     for (const type of [
       'timeupdate',
       'ratechange',
       'pause',
-      'seeked',
-      'durationchange',
-      'loadedmetadata',
       'ended',
     ])
       this.listen(video, type, () => this.sync());
+    for (const type of ['loadedmetadata', 'durationchange'])
+      this.listen(video, type, () => {
+        this.refreshIdentity();
+        // YouTube can empty the same video during startup, invalidating the
+        // initial library request without changing its identity.
+        if (type === 'loadedmetadata') void this.loadItems();
+        this.sync();
+        // The library may arrive before a usable duration. Redraw its markers
+        // when metadata becomes available, including their percentage positions.
+        this.renderLoop();
+        this.renderItems();
+        this.layout();
+      });
     this.listen(video, 'emptied', () => this.resetMedia());
     this.listen(this.doc, 'yt-navigate-start', () => this.resetMedia());
     this.listen(this.doc, 'yt-navigate-finish', () => {
@@ -597,6 +617,7 @@ export class PlayerTools {
     });
     this.listen(this.doc, 'fullscreenchange', () => this.layout());
     this.listen(video, 'enterpictureinpicture', () => {
+      this.stopCinemaPreview();
       this.cinema = false;
       this.layout();
     });
@@ -609,12 +630,33 @@ export class PlayerTools {
       area: string
     ) => {
       if (area === 'sync' && changes[PLAYER_TOOLS_KEY]) {
+        const previous = this.settings;
         this.settings = normalizePlayerTools(
           changes[PLAYER_TOOLS_KEY].newValue
         );
         this.applyPreferences();
+        if (
+          previous.cinemaColor !== this.settings.cinemaColor ||
+          previous.dimming !== this.settings.dimming
+        )
+          this.previewCinema();
       }
       if (area === 'local' && changes[LIBRARY_KEY]) void this.loadItems();
+      if (area === 'local' && changes[CINEMA_PREVIEW_KEY]) {
+        const message = changes[CINEMA_PREVIEW_KEY].newValue;
+        if (isCinemaDimmingPreview(message)) {
+          if (message.active) {
+            if (!this.youtube || !this.settings.youtubeCinemaEnabled || this.isAd() ||
+                this.floating.inMini || this.floating.inPip || this.doc.visibilityState === 'hidden') return;
+            this.cinemaPreviewOwner = message.owner;
+            this.cinemaPreviewDimming = message.dimming;
+            this.previewCinema(true);
+            this.win.clearTimeout(this.cinemaPreviewWatchdog);
+            // Recover if Settings closes or its context disappears mid-drag.
+            this.cinemaPreviewWatchdog = this.win.setTimeout(() => this.endCinemaPreview(), 4000);
+          } else if (message.owner === this.cinemaPreviewOwner) this.endCinemaPreview();
+        }
+      }
     };
     chrome.storage.onChanged.addListener(storage);
     this.cleanupFns.push(() =>
@@ -877,7 +919,10 @@ export class PlayerTools {
     }
   }
   private applyPreferences(): void {
-    if (this.youtube && !this.settings.youtubeCinemaEnabled) this.cinema = false;
+    if (this.youtube && !this.settings.youtubeCinemaEnabled) {
+      this.cinema = false;
+      this.stopCinemaPreview();
+    }
     if (!this.settings.youtubeBoostEnabled) {
       resetBoost(this.video);
       this.boostActive = false;
@@ -958,25 +1003,11 @@ export class PlayerTools {
       sync();
     });
   }
-  private setOpen(value: boolean): void {
-    if (value) {
-      this.filtersMenu?.close();
-      this.advancedMenu?.close();
-      this.bookmarksEditor?.close();
-      this.loopOpen = false;
-      this.editing = false;
-    }
-    this.open = value;
-    this.panel.hidden = !value;
-    this.launcher.setAttribute('aria-expanded', String(value));
-    if (value) {
-      void this.loadItems();
-      this.renderChapters();
-    } else {
-      if (!this.loopOpen) this.editing = false;
-      this.renderLoop();
-      this.launcher.focus();
-    }
+  private closeToolsPanel(): void {
+    this.open = false;
+    this.panel.hidden = true;
+    if (!this.loopOpen) this.editing = false;
+    this.renderLoop();
     this.layout();
   }
   private toggleBoost(automatic = false): void {
@@ -1009,6 +1040,7 @@ export class PlayerTools {
   }
   private setLoopOpen(value: boolean): void {
     if (value && !this.canLoop()) return;
+    const wasOpen = this.loopOpen;
     if (value || this.loopOpen) {
       this.win.clearTimeout(this.loopCloseTimer);
       this.loopClosing = !value && !this.win.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -1025,7 +1057,7 @@ export class PlayerTools {
       this.advancedMenu?.close();
       this.bookmarksEditor?.close();
     }
-    if (value) this.setOpen(false);
+    if (value) this.closeToolsPanel();
     if (!value) this.loopPreview?.(null);
     if (value && !this.loopOpen) {
       this.fineTuneWasPlaying = null;
@@ -1033,15 +1065,17 @@ export class PlayerTools {
       this.editUndoBaseline = [...this.undoLoops];
       this.editRedoBaseline = [...this.redoLoops];
     }
-    if (!value && this.loopOpen && this.fineTuneWasPlaying !== null) {
+    this.loopOpen = value;
+    this.editing = value;
+    if (!value) this.altLiveTune = false;
+    this.syncLiveTune();
+    if (!value && wasOpen && this.fineTuneWasPlaying !== null) {
       const resume = this.fineTuneWasPlaying;
       this.fineTuneWasPlaying = null;
       this.win.clearTimeout(this.fineTuneTimer);
       if (resume && this.video.paused) this.perform(() => this.video.play());
       else if (!resume && !this.video.paused) this.video.pause();
     }
-    this.loopOpen = value;
-    this.editing = value;
     if (value) void this.loadItems();
     this.renderLoop();
     this.layout();
@@ -1107,6 +1141,7 @@ export class PlayerTools {
     this.scheduleLoop();
   }
   private renderLoop(): void {
+    this.syncLiveTune();
     this.updateEditingActions();
     this.updateClearSectionsButton();
     this.saveLoopButton.textContent = this.activeSavedId
@@ -1159,6 +1194,36 @@ export class PlayerTools {
     this.renderMarkers();
     this.scheduleLoop();
   }
+  private selectLoopAtCurrentTime(snapOutside = false): void {
+    if (!this.loopEnabled || !this.loop || this.dragging || !this.canLoop()) return;
+    const time = this.video.currentTime;
+    if (time >= this.loop.start && time < this.loop.end) return;
+    // Native timeline seeks can land in any section. Select it without
+    // restarting at its beginning before playback enforcement runs again.
+    const sections = this.items.filter((item): item is SavedMoment & LoopRange =>
+      item.end !== undefined && item.start >= 0 &&
+      item.end <= this.video.duration && item.end > item.start);
+    const containing = sections.find(item => time >= item.start && time < item.end);
+    if (containing) {
+      this.activateItem(containing, true, false);
+      return;
+    }
+    // Let native scrubbing finish, then correct every outside seek, including
+    // repeated clicks. Measure proximity to the section, then seek to its start.
+    if (!snapOutside || this.video.seeking) return;
+    const distance = (range: LoopRange) => Math.max(range.start - time, time - range.end, 0);
+    let closest = this.loop;
+    let nearest: (SavedMoment & LoopRange) | undefined;
+    for (const section of sections) {
+      const delta = distance(section) - distance(closest);
+      if (delta < 0 || (delta === 0 && section.start < closest.start)) {
+        closest = section;
+        nearest = section;
+      }
+    }
+    if (nearest) this.activateItem(nearest);
+    else seekVideo(this.video, this.loop.start);
+  }
   private scheduleLoop(): void {
     this.win.clearTimeout(this.loopTimer);
     if (
@@ -1179,6 +1244,8 @@ export class PlayerTools {
           !this.loop ||
           !this.loopEnabled ||
           this.video.paused ||
+          this.dragging ||
+          this.video.seeking ||
           !this.canLoop()
         )
           return;
@@ -1227,6 +1294,7 @@ export class PlayerTools {
         (target.closest('.marker') && !e.shiftKey)
       )
         return;
+      this.setAltLiveTune(e.altKey);
       const anchorTime = timeAt(e);
       if (e.shiftKey && this.items.some(item => item.end !== undefined &&
           anchorTime > item.start && anchorTime < item.end)) return;
@@ -1245,10 +1313,11 @@ export class PlayerTools {
       const previousRange = this.loop ? { ...this.loop } : null;
       const mode = e.shiftKey
         ? 'create'
-        : (target.closest<HTMLElement>('[data-mode]')?.dataset.mode ??
+        : (target.closest<HTMLElement>('.handle[data-mode]')?.dataset.mode ??
           'create');
+      const replaceSections = mode === 'create' && !e.shiftKey;
       if (e.shiftKey && this.loop) this.commitLoop();
-      const neighbours = this.items.filter(item => item.end !== undefined &&
+      const neighbours = replaceSections ? [] : this.items.filter(item => item.end !== undefined &&
         (e.shiftKey || item.id !== this.activeSavedId));
       const anchorStart = mode === 'create' ? anchorTime : (previousRange?.start ?? anchorTime);
       const anchorEnd = mode === 'create' ? anchorTime : (previousRange?.end ?? anchorTime);
@@ -1256,6 +1325,7 @@ export class PlayerTools {
       const maxTime = Math.min(this.video.duration, ...neighbours.filter(item => item.start >= anchorEnd).map(item => item.start));
       this.dragging = {
         mode,
+        replaceSections,
         minTime,
         maxTime,
         time: anchorTime,
@@ -1268,19 +1338,21 @@ export class PlayerTools {
         playbackInside: !this.video.paused && Boolean(previousRange &&
           this.video.currentTime >= previousRange.start && this.video.currentTime < previousRange.end),
         moved: false,
+        liveTuned: false,
       };
-      if (mode === 'create' && (e.shiftKey || !this.loop)) {
+      if (mode === 'create') {
         this.activeSavedId = null;
         this.loopName.value = '';
       }
-      if (this.fineTune && previousRange && (mode === 'start' || mode === 'end')) {
+      if (this.liveTuneActive && previousRange && (mode === 'start' || mode === 'end')) {
+        this.dragging.liveTuned = true;
         this.fineTuneWasPlaying ??= !this.video.paused;
         this.previewFineTune(previousRange[mode]);
       }
       this.track.setPointerCapture?.(e.pointerId);
       this.renderLoop();
     });
-    this.listen(this.track, 'pointermove', (event) => {
+    const move = (event: Event) => {
       const e = event as PointerEvent;
       const drag = this.dragging;
       if (!drag) {
@@ -1292,15 +1364,14 @@ export class PlayerTools {
         return;
       }
       if (drag.pointerId !== e.pointerId) return;
+      this.setAltLiveTune(e.altKey);
       const grabOffset = drag.range && (drag.mode === 'start' || drag.mode === 'end')
         ? drag.time - drag.range[drag.mode]
         : 0;
       const t = Math.max(drag.minTime, Math.min(drag.maxTime, timeAt(e) - grabOffset)),
         old = drag.range;
       let next: LoopRange | null = null;
-      if (drag.mode === 'move' && old)
-        next = moveLoop(old, Math.max(drag.minTime - old.start, Math.min(drag.maxTime - old.end, t - drag.time)), this.video.duration);
-      else if (drag.mode === 'start' && old)
+      if (drag.mode === 'start' && old)
         next = normalizeLoop(
           Math.min(t, old.end - 0.1),
           old.end,
@@ -1316,11 +1387,9 @@ export class PlayerTools {
       if (next) {
         drag.moved = true;
         this.loop = next;
-        if (this.fineTune && (drag.mode === 'start' || drag.mode === 'end')) {
+        if (this.liveTuneActive && (drag.mode === 'start' || drag.mode === 'end')) {
+          drag.liveTuned = true;
           this.previewFineTune(next[drag.mode]);
-        } else if (drag.mode === 'move' && !this.video.paused &&
-          (this.video.currentTime < next.start || this.video.currentTime >= next.end)) {
-          seekVideo(this.video, next.start);
         } else if (drag.playbackInside && !this.video.paused) {
           if (drag.mode === 'start' && this.video.currentTime < next.start)
             seekVideo(this.video, next.start);
@@ -1330,16 +1399,20 @@ export class PlayerTools {
         this.renderLoop();
         this.loopPreview?.(drag.mode === 'start' ? next.start : next.end);
       }
-    });
+    };
+    this.listen(this.track, 'pointermove', move);
+    this.listen(this.win, 'pointermove', (event) => {
+      if (this.dragging && !event.composedPath().includes(this.track)) move(event);
+    }, true);
     this.listen(this.track, 'pointerleave', () => {
       if (!this.dragging) this.loopPreview?.(null);
     });
-    const finish = (cancel: boolean) => {
+    const finish = (cancel: boolean, event?: Event) => {
       const drag = this.dragging;
-      if (!drag) return;
+      if (!drag || (event && (event as PointerEvent).pointerId !== drag.pointerId)) return;
       this.dragging = null;
       this.win.clearTimeout(this.fineTuneTimer);
-      if (this.fineTune && this.loop && (drag.mode === 'start' || drag.mode === 'end')) {
+      if (drag.liveTuned) {
         this.video.pause();
         seekVideo(this.video, drag.originalPlaybackTime);
       }
@@ -1350,16 +1423,71 @@ export class PlayerTools {
         this.loopName.value = drag.previousName;
         this.loopEnabled = drag.previousEnabled;
       } else {
-        if (drag.mode === 'create') this.loopEnabled = drag.range ? drag.previousEnabled : true;
-        this.commitLoop();
+        if (drag.mode === 'create' && this.loop) {
+          this.loopEnabled = true;
+          this.fineTuneWasPlaying = null;
+          const start = this.loop.start;
+          // Save the new range before selecting the section that contains the
+          // current playback time, which may be an earlier saved section.
+          this.commitLoop(drag.replaceSections);
+          const containing = !this.video.paused && this.items.find(item => item.end !== undefined &&
+            item.start >= 0 && item.end <= this.video.duration &&
+            this.video.currentTime >= item.start && this.video.currentTime < item.end);
+          if (containing) this.activateItem(containing, true, false);
+          else seekVideo(this.video, start);
+          if (this.video.paused) this.perform(() => this.video.play());
+        } else this.commitLoop();
       }
       this.renderLoop();
       if (this.track.hasPointerCapture?.(drag.pointerId))
         this.track.releasePointerCapture(drag.pointerId);
     };
-    this.listen(this.track, 'pointerup', () => finish(false));
-    this.listen(this.track, 'pointercancel', () => finish(true));
-    this.listen(this.track, 'lostpointercapture', () => finish(true));
+    this.listen(this.track, 'pointerup', (event) => finish(!this.editing, event));
+    this.listen(this.track, 'pointercancel', (event) => finish(true, event));
+    // YouTube can reparent the timeline during its first layout after opening.
+    // Capture loss alone is not a cancellation; finish on the real release.
+    this.listen(this.win, 'pointerup', (event) => {
+      if (this.dragging && !event.composedPath().includes(this.track))
+        finish(!this.editing, event);
+    }, true);
+    this.listen(this.win, 'pointercancel', (event) => {
+      if (this.dragging && !event.composedPath().includes(this.track)) finish(true, event);
+    }, true);
+    this.listen(this.win, 'blur', () => finish(true));
+  }
+  private get liveTuneActive(): boolean {
+    return this.editing && (this.fineTune || this.altLiveTune);
+  }
+  private setAltLiveTune(held: boolean): void {
+    const next = held && this.editing;
+    if (this.altLiveTune === next) return;
+    this.altLiveTune = next;
+    this.syncLiveTune();
+  }
+  private syncLiveTune(): void {
+    const active = this.liveTuneActive;
+    const changed = this.track.dataset.fineTune !== String(active);
+    this.track.dataset.fineTune = String(active);
+    this.track.querySelector('.fine-tune-loop')?.setAttribute('aria-pressed', String(active));
+    const hint = this.track.querySelector('.loop-edit-hint');
+    if (hint && hint.getAttribute('data-live-tune') !== String(active)) {
+      hint.setAttribute('data-live-tune', String(active));
+      hint.replaceChildren(
+        element(this.doc, 'kbd', '', active ? 'Alt' : 'Shift'),
+        this.doc.createTextNode(active ? ' + drag a handle to Live tune' : ' + drag to add a section')
+      );
+    }
+    const drag = this.dragging;
+    if (!changed || !drag || !this.loop || !['start', 'end'].includes(drag.mode)) return;
+    if (active) {
+      this.fineTuneWasPlaying ??= !this.video.paused;
+      drag.liveTuned = true;
+      this.previewFineTune(this.loop[drag.mode as 'start' | 'end']);
+    } else if (drag.liveTuned) {
+      this.win.clearTimeout(this.fineTuneTimer);
+      this.video.pause();
+      seekVideo(this.video, drag.originalPlaybackTime);
+    }
   }
   private previewFineTune(time: number): void {
     this.win.clearTimeout(this.fineTuneTimer);
@@ -1376,8 +1504,8 @@ export class PlayerTools {
     const tenth = Math.round((rounded % 1) * 10);
     return `${formatTime(rounded)}${tenth ? `.${tenth}` : ''}`;
   }
-  private commitLoop(): void {
-    if (this.canLoop() && this.loop) this.perform(() => this.saveMoment(true));
+  private commitLoop(replaceSections = false): void {
+    if (this.canLoop() && this.loop) this.perform(() => this.saveMoment(true, this.video.currentTime, replaceSections));
   }
   private loopSnapshot(): LoopHistory {
     return { sections: this.items.filter(item => item.end !== undefined).map(item => ({ ...item })), activeId: this.activeSavedId, enabled: this.loopEnabled };
@@ -1451,14 +1579,14 @@ export class PlayerTools {
           this.youtubeButtons?.reportBookmark('Could not save bookmark. Try again.');
       });
   }
-  private openBookmarks(): void {
+  private openBookmarks(selectedId?: string): void {
     const anchor = this.youtubeButtons?.bookmarksButton;
     if (!anchor || anchor.disabled || !this.settings.youtubeBookmarksEnabled) return;
     this.filtersMenu?.close();
     this.advancedMenu?.close();
-    if (this.open) this.setOpen(false);
+    if (this.open) this.closeToolsPanel();
     this.setLoopOpen(false);
-    this.bookmarksEditor?.open(anchor);
+    this.bookmarksEditor?.open(anchor, selectedId);
     void this.loadItems();
   }
   private async saveBookmarkEdit(item: SavedMoment): Promise<void> {
@@ -1507,8 +1635,9 @@ export class PlayerTools {
     this.items = [...this.items.filter((item) => item.end !== undefined), ...bookmarks];
     this.renderItems();
   }
-  private async saveMoment(asLoop: boolean, bookmarkTime = this.video.currentTime): Promise<void> {
+  private async saveMoment(asLoop: boolean, bookmarkTime = this.video.currentTime, replaceSections = false): Promise<void> {
     const generation = this.identityGeneration;
+    if (replaceSections) this.loopReplacementRevision++;
     if (asLoop && !this.canLoop())
       throw new Error('Enable Loop Sections in YouTube settings to save sections.');
     if (!this.finite())
@@ -1543,14 +1672,18 @@ export class PlayerTools {
       await libraryRequest({ op: 'put', item });
       if (this.disposed || generation !== this.identityGeneration) return;
     }
-    this.sessions = this.sessions.filter((entry) => entry.id !== item.id);
+    this.sessions = this.sessions.filter((entry) => entry.id !== item.id &&
+      !(replaceSections && entry.mediaKey === this.identity.key && entry.end !== undefined));
     this.sessions.push(item);
-    this.items = this.items.filter((entry) => entry.id !== item.id);
+    this.items = this.items.filter((entry) => entry.id !== item.id &&
+      !(replaceSections && entry.end !== undefined));
     this.items.push(item);
     if (asLoop) this.activeSavedId = item.id;
     this.renderItems();
     this.renderLoop();
-    if (asLoop && persist) await libraryRequest({ op: 'put', item });
+    if (asLoop && persist) await libraryRequest(replaceSections
+      ? { op: 'replace-loops', mediaKey: this.identity.key, items: [item] }
+      : { op: 'put', item });
     this.report(
       persist
         ? 'Saved to your local library.'
@@ -1561,11 +1694,15 @@ export class PlayerTools {
   }
   private async loadItems(): Promise<void> {
     const generation = this.identityGeneration;
+    const replacementRevision = this.loopReplacementRevision;
     try {
       const { library } = await libraryRequest({ op: 'list' });
       if (this.disposed || generation !== this.identityGeneration) return;
+      // A replacement invalidates old loop ranges, but bookmarks in the same
+      // startup response still need to be restored.
       const saved = (library?.items ?? []).filter(
-        (item) => item.end === undefined || this.settings.rememberYoutubeLoops
+        (item) => item.end === undefined ||
+          (replacementRevision === this.loopReplacementRevision && this.settings.rememberYoutubeLoops)
       );
       const combined = new Map(
         [...saved, ...this.sessions].map((item) => [item.id, item])
@@ -1574,18 +1711,19 @@ export class PlayerTools {
         (item) => item.mediaKey === this.identity.key
       );
       this.renderItems();
+      this.layout();
     } catch (error) {
       this.report(
         error instanceof Error ? error.message : 'Library unavailable.'
       );
     }
   }
-  private activateItem(item: SavedMoment, enable = true, seek = true): void {
+  private activateItem(item: SavedMoment, enable = true, seek = true): boolean {
     if (item.end !== undefined && !this.canLoop()) {
       this.report(
         'Enable Loop Sections in YouTube settings to open this saved section.'
       );
-      return;
+      return false;
     }
     if (
       !this.finite() ||
@@ -1593,7 +1731,7 @@ export class PlayerTools {
       (item.end !== undefined && item.end > this.video.duration)
     ) {
       this.report('This saved range is outside the current video.');
-      return;
+      return false;
     }
     this.activeSavedId = item.end !== undefined ? item.id : null;
     this.loop =
@@ -1605,6 +1743,7 @@ export class PlayerTools {
     else this.name.value = item.name;
     if (seek && (enable || item.end === undefined)) seekVideo(this.video, item.start);
     this.renderLoop();
+    return true;
   }
   private renderItems(): void {
     this.updateEditingActions();
@@ -1643,6 +1782,7 @@ export class PlayerTools {
     const done = this.track.querySelector<HTMLButtonElement>('.close-loop-editor');
     if (done) {
       done.textContent = changed ? '✓ Done editing' : 'Close';
+      done.dataset.changed = String(changed);
       done.setAttribute('aria-label', changed ? 'Done editing' : 'Close editing');
       done.title = changed ? 'Keep changes and finish editing' : 'Close editing';
       done.disabled = this.historyBusy;
@@ -1677,10 +1817,10 @@ export class PlayerTools {
     for (const item of this.items) {
       if (item.start >= this.video.duration) continue;
       if (item.end !== undefined) {
+        if (this.dragging?.replaceSections && this.dragging.moved) continue;
         if (!this.canLoop() || item.id === this.activeSavedId) continue;
         const section = element(this.doc, 'div', 'saved-range');
         section.dataset.loopId = item.id;
-        section.dataset.mode = 'move';
         section.tabIndex = 0;
         section.setAttribute('role', 'button');
         section.setAttribute(
@@ -1785,6 +1925,8 @@ export class PlayerTools {
       );
   }
   private keydown(event: KeyboardEvent): void {
+    if (this.editing && !event.isComposing && (event.key === 'Alt' || event.altKey))
+      this.setAltLiveTune(true);
     if (event.key === 'Enter' && this.editing && !event.isComposing &&
         !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey &&
         !event.composedPath().some(node => node instanceof HTMLElement &&
@@ -1808,8 +1950,9 @@ export class PlayerTools {
       }
       this.setLoopOpen(false);
       this.cinema = false;
+      this.stopCinemaPreview();
       this.editing = false;
-      if (this.open) this.setOpen(false);
+      if (this.open) this.closeToolsPanel();
       this.layout();
       return;
     }
@@ -1824,7 +1967,7 @@ export class PlayerTools {
             ) ||
               node === this.host ||
               node.matches(
-                '.mfs-youtube-advanced-popup,.mfs-youtube-filters-popup,.mfs-youtube-bookmarks-editor'
+                '.mfs-youtube-advanced-popup,.mfs-youtube-filters-popup,.mfs-youtube-bookmarks-editor,.mfs-loop-surface'
               ) ||
               (node as HTMLElement).isContentEditable)
         )
@@ -1844,11 +1987,13 @@ export class PlayerTools {
       !event.metaKey &&
       !this.isAd()
     ) {
-      const control = (
-        Object.keys(YOUTUBE_CONTROL_SHORTCUTS) as YouTubeControl[]
-      ).find(
-        (kind) => YOUTUBE_CONTROL_SHORTCUTS[kind] === event.key.toLowerCase()
-      );
+      const overrideShortcut =
+        event.key.toLowerCase() === YOUTUBE_PIP_OVERRIDE_SHORTCUT;
+      const control = overrideShortcut
+        ? 'pip'
+        : (Object.keys(YOUTUBE_CONTROL_SHORTCUTS) as YouTubeControl[]).find(
+            (kind) => YOUTUBE_CONTROL_SHORTCUTS[kind] === event.key.toLowerCase()
+          );
       const player = this.video.closest('#movie_player, .html5-video-player');
       const main =
         player?.querySelector('video.html5-main-video') ??
@@ -1866,15 +2011,19 @@ export class PlayerTools {
       ) {
         const target = this.youtubeControl(control);
         const advanced =
-          control === 'boost' || control === 'cinema' || control === 'screenshot' || control === 'bookmarks' || control === 'loop';
+          control === 'boost' || control === 'cinema' || control === 'screenshot' || control === 'bookmarks' || control === 'loop' || control === 'pip';
         if (
           target?.isConnected &&
           !target.disabled &&
-          (!event.shiftKey || advanced)
+          (!event.shiftKey || (advanced && !overrideShortcut))
         ) {
           event.preventDefault();
           event.stopImmediatePropagation();
-          if (event.shiftKey && control === 'bookmarks') this.openBookmarks();
+          if (overrideShortcut)
+            this.perform(() => this.saveAdvancedPreferences({
+              youtubePipOverride: !this.settings.youtubePipOverride,
+            }));
+          else if (event.shiftKey && control === 'bookmarks') this.openBookmarks();
           else if (event.shiftKey && control === 'loop') this.setLoopOpen(true);
           else if (event.shiftKey && advanced && control !== 'bookmarks' && control !== 'loop') this.openAdvanced(control);
           else target.click();
@@ -1969,10 +2118,29 @@ export class PlayerTools {
     const key = this.identity.key;
     const generation = this.identityGeneration;
     try {
-      const { item } = await libraryRequest({ op: 'claim', mediaKey: key });
+      const { item, edit } = await libraryRequest({ op: 'claim', mediaKey: key });
       if (this.disposed || generation !== this.identityGeneration) return;
       this.claimedKey = key;
-      if (item) this.activateItem(item);
+      if (!item) return;
+      if (edit) {
+        await this.loadItems();
+        if (this.disposed || generation !== this.identityGeneration) return;
+        // Keep the claimed item available even when automatic loop recall is off
+        // or an earlier startup load is still in flight.
+        if (!this.items.some((entry) => entry.id === item.id)) {
+          this.sessions.push(item);
+          this.items.push(item);
+          this.renderItems();
+        }
+      }
+      if (!this.activateItem(item) || !edit) return;
+      this.video.pause();
+      if (item.end === undefined) this.openBookmarks(item.id);
+      else {
+        this.setLoopOpen(true);
+        this.selection.querySelector<HTMLButtonElement>('.handle.start')
+          ?.focus({ preventScroll: true });
+      }
     } catch {
       /* Background may be restarting; retry on the next metadata tick. */
     } finally {
@@ -2006,7 +2174,7 @@ export class PlayerTools {
         : `${formatTime(left)} remaining at ${this.video.playbackRate}×`;
     this.editToggle.disabled = !this.canLoop();
     this.loopToggle.disabled = !this.canLoop();
-    if (this.loopEnabled && this.loop && this.video.ended && !ad) {
+    if (this.loopEnabled && this.loop && this.video.ended && !this.video.seeking && !ad) {
       this.advanceLoopSection();
       this.perform(() => this.video.play());
     }
@@ -2040,9 +2208,7 @@ export class PlayerTools {
       r.top < this.win.innerHeight &&
       !this.isAd() &&
       !this.floating.inPip;
-    this.launcher.hidden =
-      this.floating.inMini || !visible || (!this.hovering && !this.open && !this.editing);
-    this.panel.hidden = this.floating.inMini || !this.open || !visible;
+    this.panel.hidden = true;
     const showLoop = !this.floating.inMini && this.loopOpen && visible && this.canLoop();
     const closing = this.loopClosing && !this.floating.inMini && visible && this.canLoop();
     const showBookmarks = this.bookmarksEditor?.isOpen ?? false;
@@ -2061,15 +2227,13 @@ export class PlayerTools {
     }
     this.loopPanel.hidden = true;
     this.loopPanel.setAttribute('aria-hidden', 'true');
-    this.launcher.style.left = `${Math.max(8, Math.min(this.win.innerWidth - 80, r.right - 76))}px`;
-    this.launcher.style.top = `${Math.max(8, r.top + 8)}px`;
     this.panel.style.left = `${Math.max(8, Math.min(this.win.innerWidth - 328, r.right - 328))}px`;
     this.panel.style.top = `${Math.max(8, Math.min(this.win.innerHeight - 180, r.top + 44))}px`;
     this.panel.style.maxHeight = `${Math.max(100, this.win.innerHeight - Number.parseFloat(this.panel.style.top) - 8)}px`;
     this.track.hidden =
       this.floating.inMini || !visible ||
       !this.finite() ||
-      (!this.editing && !closing && !this.loop && !this.items.some(item => item.end !== undefined) && !(this.hovering || this.open));
+      (!this.editing && !closing && !this.loop && !this.items.length && !(this.hovering || this.open));
     if (this.bookmarksEditor?.isVisible) this.track.hidden = true;
 
     this.layoutCinema(r, visible);
@@ -2081,6 +2245,7 @@ export class PlayerTools {
       (this.youtube && !this.settings.youtubeCinemaEnabled)
     )
       return;
+    this.stopCinemaPreview();
     this.cinema = !this.cinema;
     this.layout();
   }
@@ -2202,7 +2367,7 @@ export class PlayerTools {
     if (!anchor || !this.advancedMenu || anchor.disabled) return;
     this.filtersMenu?.close();
     this.bookmarksEditor?.close();
-    if (this.open) this.setOpen(false);
+    if (this.open) this.closeToolsPanel();
     this.setLoopOpen(false);
     this.advancedMenu.open(kind, anchor);
   }
@@ -2215,7 +2380,13 @@ export class PlayerTools {
         if (this.disposed) return;
         const current = await loadPlayerTools();
         if (this.disposed) return;
-        const next = normalizePlayerTools({ ...current, ...patch });
+        const next = normalizePlayerTools({
+          ...current,
+          ...(patch.youtubePipOverride === true && !current.youtubePipOverride
+            ? { youtubePipAutoOnTabChange: true }
+            : {}),
+          ...patch,
+        });
         await savePlayerTools(next);
         if (this.disposed) return;
         this.settings = next;
@@ -2236,13 +2407,49 @@ export class PlayerTools {
     this.settings = next;
     this.applyPreferences();
   }
+  private previewCinema(hold = false): void {
+    if (
+      !this.youtube || !this.settings.youtubeCinemaEnabled || this.disposed ||
+      this.doc.visibilityState === 'hidden' || this.isAd() ||
+      this.floating.inMini || this.floating.inPip
+    ) {
+      this.stopCinemaPreview();
+      return;
+    }
+    this.win.clearTimeout(this.cinemaPreviewTimer);
+    this.cinemaPreview = true;
+    this.cinemaPreviewHolding ||= hold;
+    if (!this.cinemaPreviewHolding) this.cinemaPreviewTimer = this.win.setTimeout(() => {
+      this.stopCinemaPreview();
+      this.layout();
+    }, 1800);
+    this.layout();
+  }
+  private endCinemaPreview(): void {
+    if (!this.cinemaPreviewHolding) return;
+    this.cinemaPreviewHolding = false;
+    this.cinemaPreviewOwner = null;
+    this.win.clearTimeout(this.cinemaPreviewWatchdog);
+    this.previewCinema();
+  }
+  private stopCinemaPreview(): void {
+    this.win.clearTimeout(this.cinemaPreviewTimer);
+    this.cinemaPreview = false;
+    this.cinemaPreviewHolding = false;
+    this.cinemaPreviewDimming = null;
+    this.cinemaPreviewOwner = null;
+    this.win.clearTimeout(this.cinemaPreviewWatchdog);
+  }
   private layoutCinema(r: DOMRect, visible: boolean): void {
-    if (!this.cinemaBackdrop && this.cinema && visible)
+    const active = (this.cinema || this.cinemaPreview) && visible &&
+      !this.floating.inMini && (!this.youtube || this.settings.youtubeCinemaEnabled);
+    if (!this.cinemaBackdrop && active)
       this.cinemaBackdrop = new CinemaBackdrop(this.video, this.root, () => {
         this.cinema = false;
+        this.stopCinemaPreview();
         this.layout();
       });
-    this.cinemaBackdrop?.update(this.cinema && visible, r, this.settings.dimming / 100, this.settings.cinemaColor);
+    this.cinemaBackdrop?.update(active, r, (this.cinemaPreviewDimming ?? this.settings.dimming) / 100, this.settings.cinemaColor);
   }
   private restoreFilter(): void {
     if (
@@ -2260,6 +2467,7 @@ export class PlayerTools {
     this.lastAppliedFilter = null;
   }
   private resetMedia(): void {
+    this.stopCinemaPreview();
     this.bookmarksEditor?.reset();
     this.filtersMenu?.reset();
     this.advancedMenu?.close();
@@ -2268,6 +2476,7 @@ export class PlayerTools {
     this.boostUnavailable = false;
     this.appliedBoost = 0;
     this.fineTuneWasPlaying = null;
+    this.altLiveTune = false;
     this.win.clearTimeout(this.fineTuneTimer);
     this.undoLoops = [];
     this.redoLoops = [];
@@ -2294,6 +2503,7 @@ export class PlayerTools {
     this.renderItems();
   }
   cleanup(): void {
+    this.stopCinemaPreview();
     this.win.clearTimeout(this.fineTuneTimer);
     PlayerTools.instances.delete(this);
     if (this.disposed) return;

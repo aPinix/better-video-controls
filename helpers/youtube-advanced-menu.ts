@@ -4,6 +4,7 @@ import { dismissPopoverOutside } from './popover-dismiss';
 import {
   createYouTubeControlIcon,
   YOUTUBE_CONTROL_LABELS,
+  YOUTUBE_PIP_OVERRIDE_SHORTCUT,
   type YouTubeAdvancedControl,
 } from './youtube-control-icons';
 
@@ -15,6 +16,8 @@ export type YouTubeAdvancedPreferences = Pick<
   | 'cinemaColor'
   | 'cinemaColorCustom'
   | 'youtubeScreenshotIncludeFilters'
+  | 'youtubePipOverride'
+  | 'youtubePipAutoOnTabChange'
 >;
 let menuId = 0;
 
@@ -49,6 +52,7 @@ export class YouTubeAdvancedMenu {
     private video: HTMLVideoElement,
     private actions: {
       onPreview: (patch: Partial<YouTubeAdvancedPreferences>) => void;
+      onPreviewEnd?: () => void;
       onSave: (patch: Partial<YouTubeAdvancedPreferences>) => Promise<void>;
       onOpenChange: () => void;
     }
@@ -127,7 +131,9 @@ export class YouTubeAdvancedMenu {
         ? settings.youtubeBoostEnabled
         : this.kind === 'cinema'
           ? settings.youtubeCinemaEnabled
-          : settings.youtubeScreenshotEnabled;
+          : this.kind === 'pip'
+            ? true
+            : settings.youtubeScreenshotEnabled;
     if (
       !available ||
       !enabled ||
@@ -222,7 +228,15 @@ export class YouTubeAdvancedMenu {
       input.addEventListener('change', () => {
         this.editingSlider = null;
         void this.save({ [key]: input.valueAsNumber });
+        if (key === 'dimming') this.actions.onPreviewEnd?.();
       });
+      if (key === 'dimming') {
+        input.addEventListener('pointerdown', () =>
+          this.actions.onPreview({ dimming: input.valueAsNumber })
+        );
+        for (const type of ['pointerup', 'pointercancel', 'blur'])
+          input.addEventListener(type, () => this.actions.onPreviewEnd?.());
+      }
       field.append(caption, input);
       this.content.append(field);
       renders.push(() => {
@@ -233,14 +247,24 @@ export class YouTubeAdvancedMenu {
     };
     const toggle = (
       label: string,
-      key: 'youtubeAutoBoost' | 'youtubeScreenshotIncludeFilters'
+      key:
+        | 'youtubeAutoBoost'
+        | 'youtubeScreenshotIncludeFilters'
+        | 'youtubePipOverride'
+        | 'youtubePipAutoOnTabChange'
     ) => {
       const field = doc.createElement('label');
       field.className = 'switch';
+      if (key === 'youtubePipAutoOnTabChange') field.style.paddingLeft = '36px';
       const input = doc.createElement('input');
       input.type = 'checkbox';
       input.setAttribute('role', 'switch');
       input.setAttribute('aria-label', label);
+      if (key === 'youtubePipOverride')
+        input.setAttribute(
+          'aria-keyshortcuts',
+          YOUTUBE_PIP_OVERRIDE_SHORTCUT.toUpperCase()
+        );
       input.addEventListener('change', () => {
         void this.save({ [key]: input.checked });
       });
@@ -248,6 +272,10 @@ export class YouTubeAdvancedMenu {
       this.content.append(field);
       renders.push(() => {
         input.checked = Boolean(this.settings?.[key]);
+        if (key === 'youtubePipAutoOnTabChange') {
+          input.disabled = !this.settings?.youtubePipOverride;
+          field.hidden = !this.settings?.youtubePipOverride;
+        }
       });
     };
     if (kind === 'boost') {
@@ -338,8 +366,11 @@ export class YouTubeAdvancedMenu {
         picker.value = this.settings?.cinemaColor ?? '#000000';
         selected.textContent = `(${hoveredColor ?? colorLabel()})`;
       });
+    } else if (kind === 'pip') {
+      toggle('Override YouTube PiP', 'youtubePipOverride');
+      toggle('Open PiP when switching tabs', 'youtubePipAutoOnTabChange');
     } else toggle('Include video filters', 'youtubeScreenshotIncludeFilters');
-    if (kind !== 'screenshot') {
+    if (kind === 'boost' || kind === 'cinema') {
       const reset = doc.createElement('button');
       reset.type = 'button';
       reset.className = 'reset';
@@ -372,6 +403,7 @@ export class YouTubeAdvancedMenu {
     const generation = this.generation;
     this.status.textContent = '';
     try {
+      if (patch.cinemaColor !== undefined) this.actions.onPreview(patch);
       await this.actions.onSave(patch);
       if (!this.disposed && generation === this.generation)
         this.status.textContent = 'Saved.';
@@ -404,7 +436,9 @@ export class YouTubeAdvancedMenu {
 
   close(restoreFocus = false): void {
     if (!this.kind) return;
+    const wasCinema = this.kind === 'cinema';
     this.kind = null;
+    if (wasCinema) this.actions.onPreviewEnd?.();
     this.editingSlider = null;
     this.generation++;
     this.host.hidden = true;

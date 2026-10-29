@@ -12,16 +12,30 @@ it('enables Boost Volume and Loop Sections by default without starting automatic
   ]) {
     expect(settings.youtubeBoostEnabled).toBe(true);
     expect(settings.youtubeLoop).toBe(true);
+    expect(settings.rememberYoutubeLoops).toBe(true);
     expect(settings.youtubeBookmarksEnabled).toBe(true);
     expect(settings.youtubeAutoBoost).toBe(false);
     expect(settings.miniPlayer).toBe(true);
     expect(settings.youtubePipOverride).toBe(false);
     expect(settings.youtubePipMode).toBe('mini-player');
-    expect(settings.youtubePipAutoOnTabChange).toBe(false);
+    expect(settings.youtubePipAutoOnTabChange).toBe(true);
     expect(settings.youtubeScreenshotEnabled).toBe(true);
     expect(settings.youtubeFiltersEnabled).toBe(true);
     expect(settings.youtubeScreenshotIncludeFilters).toBe(false);
   }
+});
+it('preserves an explicitly disabled loop saving preference', () => {
+  expect(
+    normalizePlayerTools({ rememberYoutubeLoops: false }).rememberYoutubeLoops
+  ).toBe(false);
+});
+it('preserves an explicitly disabled PiP tab-change sub-option', () => {
+  expect(
+    normalizePlayerTools({
+      youtubePipOverride: true,
+      youtubePipAutoOnTabChange: false,
+    }).youtubePipAutoOnTabChange
+  ).toBe(false);
 });
 it('preserves Chrome video PiP and falls back to Mini Player for unknown player modes', () => {
   expect(

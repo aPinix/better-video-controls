@@ -216,13 +216,15 @@ export function DomainListItem({
     <li
       aria-hidden={isRemoving || undefined}
       className={cn(
-        'group/domain-row relative grid h-13 min-h-0 items-center gap-1 overflow-hidden rounded-none bg-white pr-2 pl-2 transition-[height,opacity,transform,background-color,grid-template-columns] duration-250 ease-in-out hover:bg-slate-50/70 motion-reduce:transition-none dark:bg-slate-800/70 dark:hover:bg-slate-700/20',
+        'group/domain-row relative grid h-13 min-h-0 items-center gap-1 overflow-hidden rounded-none bg-white pr-2 pl-2 inset-ring-2 transition-[height,opacity,transform,background-color,box-shadow,grid-template-columns] duration-250 ease-in-out first:rounded-t-xl last:rounded-b-xl hover:bg-slate-50/70 motion-reduce:transition-none dark:bg-slate-800/70 dark:hover:bg-slate-700/20',
         showDragHandle
           ? 'grid-cols-[20px_24px_minmax(0,1fr)_80px_28px]'
           : 'grid-cols-[0px_24px_minmax(0,1fr)_80px_28px]',
         showDivider &&
           "after:absolute after:right-3 after:bottom-0 after:left-8 after:h-px after:bg-slate-100/70 after:content-[''] dark:after:bg-white/5",
-        highlighted && 'bg-lime-100/80 dark:bg-lime-900/35',
+        highlighted
+          ? 'bg-lime-100/80 inset-ring-lime-500/35 hover:bg-lime-100/80 dark:bg-lime-900/35 dark:inset-ring-lime-400/35 dark:hover:bg-lime-900/35'
+          : 'inset-ring-transparent',
         isDragging && 'opacity-35',
         isEntering && 'h-0 -translate-y-2 opacity-0',
         isRemoving && 'pointer-events-none h-0 -translate-x-2 opacity-0'

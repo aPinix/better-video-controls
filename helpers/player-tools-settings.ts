@@ -61,14 +61,14 @@ export const DEFAULT_PLAYER_TOOLS: PlayerToolsSettings = {
   youtubeScreenshotIncludeFilters: false,
   youtubeFiltersEnabled: true,
   youtubeAutoBoost: false,
-  rememberYoutubeLoops: false,
+  rememberYoutubeLoops: true,
   rememberYoutubeSpeed: false,
   hideCards: false,
   hideEndScreens: false,
   miniPlayer: true,
   youtubePipOverride: false,
   youtubePipMode: 'mini-player',
-  youtubePipAutoOnTabChange: false,
+  youtubePipAutoOnTabChange: true,
   autoChapters: false,
   dimming: 80,
   cinemaColor: '#000000',
@@ -119,8 +119,13 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
     youtubeBookmarksEnabled: v.youtubeBookmarksEnabled !== false,
     youtubeAutoBoost: v.youtubeAutoBoost === true,
     youtubeBoostEnabled: v.youtubeBoostEnabled !== false,
-    youtubeBoost: Number.isInteger(v.youtubeBoost) && v.youtubeBoost! >= 2 && v.youtubeBoost! <= 10 ? v.youtubeBoost! : 2,
-    rememberYoutubeLoops: v.rememberYoutubeLoops === true,
+    youtubeBoost:
+      Number.isInteger(v.youtubeBoost) &&
+      v.youtubeBoost! >= 2 &&
+      v.youtubeBoost! <= 10
+        ? v.youtubeBoost!
+        : 2,
+    rememberYoutubeLoops: v.rememberYoutubeLoops !== false,
     backward: seekInterval,
     // Migrate independent intervals to the existing rewind value for both keys.
     forward: seekInterval,
@@ -132,11 +137,15 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
     hideEndScreens: v.hideEndScreens === true,
     miniPlayer: v.miniPlayer !== false,
     youtubePipOverride: v.youtubePipOverride === true,
-    youtubePipMode: v.youtubePipMode === 'chrome-video' ? 'chrome-video' : 'mini-player',
-    youtubePipAutoOnTabChange: v.youtubePipAutoOnTabChange === true,
+    youtubePipMode:
+      v.youtubePipMode === 'chrome-video' ? 'chrome-video' : 'mini-player',
+    youtubePipAutoOnTabChange: v.youtubePipAutoOnTabChange !== false,
     autoChapters: v.autoChapters === true,
     dimming: numeric(v.dimming, 80, 0, 100),
-    cinemaColor: typeof v.cinemaColor === 'string' && /^#[0-9a-f]{6}$/i.test(v.cinemaColor) ? v.cinemaColor.toLowerCase() : DEFAULT_PLAYER_TOOLS.cinemaColor,
+    cinemaColor:
+      typeof v.cinemaColor === 'string' && /^#[0-9a-f]{6}$/i.test(v.cinemaColor)
+        ? v.cinemaColor.toLowerCase()
+        : DEFAULT_PLAYER_TOOLS.cinemaColor,
     cinemaColorCustom: v.cinemaColorCustom === true,
     siteFilters,
   };

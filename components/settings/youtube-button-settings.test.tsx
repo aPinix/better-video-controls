@@ -7,6 +7,11 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CINEMA_PREVIEW_KEY } from '@/helpers/player-cinema-preview';
+import {
+  YOUTUBE_CONTROL_SHORTCUTS,
+  YOUTUBE_PIP_OVERRIDE_SHORTCUT,
+} from '@/helpers/youtube-control-icons';
 import { YouTubeBookmarksSetting } from './youtube-bookmarks-setting';
 import { YouTubeCinemaSetting } from './youtube-cinema-setting';
 import { YouTubeFiltersSetting } from './youtube-filters-setting';
@@ -17,8 +22,10 @@ import { YouTubeSettings } from './youtube-settings';
 let preferences: Record<string, unknown>;
 const set = vi.fn();
 const get = vi.fn();
+const localSet = vi.fn();
 const changed = { addListener: vi.fn(), removeListener: vi.fn() };
 beforeEach(() => {
+  localSet.mockReset().mockResolvedValue(undefined);
   preferences = {
     hideEndScreens: true,
     hideCards: false,
@@ -33,7 +40,11 @@ beforeEach(() => {
     .mockImplementation(async () => ({ playerTools: preferences }));
   changed.addListener.mockClear();
   vi.stubGlobal('chrome', {
-    storage: { sync: { get, set }, onChanged: changed },
+    storage: {
+      sync: { get, set },
+      local: { set: localSet },
+      onChanged: changed,
+    },
   });
 });
 afterEach(() => {
@@ -49,6 +60,72 @@ const readySwitch = async (name: string) => {
 };
 
 describe('YouTube button settings', () => {
+  it('starts a tab-only preview on slider press and ends it on release even without changing the value', async () => {
+    render(<YouTubeCinemaSetting />);
+    await readySwitch('Show Cinema Mode button on YouTube');
+    const slider = screen.getByRole('slider', { name: 'Cinema page dimming' });
+    // jsdom has no native pointer-capture API used by Base UI's slider.
+    for (const node of document.querySelectorAll<HTMLElement>(
+      '[data-slot="app-slider"], [data-slot="app-slider"] *'
+    )) {
+      node.hasPointerCapture = () => false;
+      node.setPointerCapture = () => {};
+      node.releasePointerCapture = () => {};
+    }
+    fireEvent.pointerDown(slider, { button: 0 });
+    await waitFor(() =>
+      expect(localSet).toHaveBeenCalledWith({
+        [CINEMA_PREVIEW_KEY]: expect.objectContaining({
+          active: true,
+          dimming: 65,
+        }),
+      })
+    );
+    expect(set).not.toHaveBeenCalled();
+    fireEvent.pointerUp(slider, { button: 0 });
+    await waitFor(() =>
+      expect(localSet.mock.calls.at(-1)?.[0][CINEMA_PREVIEW_KEY].active).toBe(
+        false
+      )
+    );
+    expect(document.querySelector('.shade')).toBeNull();
+  });
+  it('shows the actual player hotkey beside every button feature, without changing switch names', async () => {
+    render(
+      <YouTubeSettings
+        chapteredTimelineEnabled
+        extensionEnabled
+        onChapteredTimelineEnabledChange={vi.fn()}
+        onOpenSavedLibrary={vi.fn()}
+      />
+    );
+    await readySwitch('Show Cinema Mode button on YouTube');
+    for (const [feature, shortcut] of Object.entries(
+      YOUTUBE_CONTROL_SHORTCUTS
+    )) {
+      const key = feature === 'pip' ? YOUTUBE_PIP_OVERRIDE_SHORTCUT : shortcut;
+      expect(
+        screen.getByLabelText(`YouTube shortcut: ${key.toUpperCase()}`).tagName
+      ).toBe('KBD');
+    }
+    expect(
+      screen.getByRole('switch', { name: 'Show Cinema Mode button on YouTube' })
+    ).toBeTruthy();
+    expect(
+      screen.getByText('Mini Player').parentElement?.querySelector('kbd')
+    ).toBeNull();
+  });
+  it('saves color choices without dimming the Settings page', async () => {
+    render(<YouTubeCinemaSetting />);
+    await readySwitch('Show Cinema Mode button on YouTube');
+    const originalNodes = [...document.body.children];
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Ocean Cinema Mode preset' })
+    );
+    await waitFor(() => expect(preferences.cinemaColor).toBe('#172554'));
+    expect([...document.body.children]).toEqual(originalNodes);
+    expect(document.querySelector('.shade')).toBeNull();
+  });
   it('defaults Bookmarks on, preserves the saved choice, and reports storage errors', async () => {
     render(<YouTubeBookmarksSetting />);
     const toggle = await readySwitch('Show Bookmarks button on YouTube');
@@ -334,6 +411,7 @@ describe('YouTube button settings', () => {
         chapteredTimelineEnabled
         extensionEnabled
         onChapteredTimelineEnabledChange={vi.fn()}
+        onOpenSavedLibrary={vi.fn()}
       />
     );
     await readySwitch('Show Info Cards button on YouTube');

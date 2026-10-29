@@ -44,7 +44,10 @@ export function installYouTubePipBridge(
     .prototype;
   const originalRequest = videoPrototype.requestPictureInPicture;
   const requests = new WeakMap<HTMLVideoElement, Promise<Window>>();
-  const request = (video: HTMLVideoElement): Promise<Window> | null => {
+  const request = (
+    video: HTMLVideoElement,
+    automatic = doc.hidden && video.dataset.mfsPipAuto === 'true'
+  ): Promise<Window> | null => {
     const pending = requests.get(video);
     if (pending) return pending;
     // DOM events and attributes cross extension worlds. JavaScript objects and
@@ -63,7 +66,16 @@ export function installYouTubePipBridge(
       };
       video.addEventListener(YOUTUBE_PIP_RESULT, finish);
     });
-    video.dispatchEvent(event);
+    // Pass the request's origin across extension worlds before it opens.
+    const previousOrigin = video.dataset.mfsPipAutomaticRequest;
+    video.dataset.mfsPipAutomaticRequest = String(automatic);
+    try {
+      video.dispatchEvent(event);
+    } finally {
+      if (previousOrigin === undefined)
+        delete video.dataset.mfsPipAutomaticRequest;
+      else video.dataset.mfsPipAutomaticRequest = previousOrigin;
+    }
     if (!event.defaultPrevented) {
       video.removeEventListener(YOUTUBE_PIP_RESULT, finish);
       return null;
@@ -108,11 +120,27 @@ export function installYouTubePipBridge(
   let overriding = false;
   let active: HTMLVideoElement | null = null;
   const activeVideo = () => {
-    if (active?.dataset.mfsPipOverride === 'true' && active.isConnected)
-      return active;
-    active = doc.querySelector<HTMLVideoElement>(
-      'video[data-mfs-pip-override="true"]'
+    const current =
+      active?.dataset.mfsPipOverride === 'true' && active.isConnected
+        ? active
+        : null;
+    const pip = win.documentPictureInPicture?.window;
+    if (pip && current?.ownerDocument === pip.document) return current;
+    const videos = Array.from(
+      doc.querySelectorAll<HTMLVideoElement>(
+        'video[data-mfs-pip-override="true"]'
+      )
     );
+    // YouTube can retain the previous video while a new one starts playing.
+    // A cached, paused element must not suppress the new video's Auto PiP.
+    const playing = videos.filter((video) => !video.paused && !video.ended);
+    active =
+      playing.find((video) => video.closest('#movie_player')) ??
+      playing[0] ??
+      current ??
+      videos.find((video) => video.closest('#movie_player')) ??
+      videos[0] ??
+      null;
     return active;
   };
   const api = win.documentPictureInPicture;
@@ -154,7 +182,7 @@ export function installYouTubePipBridge(
       return;
     if (video.dataset.mfsPipMode === 'chrome-video')
       void originalRequest.call(video).catch(() => {});
-    else void request(video)?.catch(() => {});
+    else void request(video, automatic)?.catch(() => {});
   };
   const originalSetActionHandler = session.setActionHandler;
   session.setActionHandler = (action, callback) => {
@@ -175,8 +203,15 @@ export function installYouTubePipBridge(
     }
   };
   doc.addEventListener(YOUTUBE_PIP_SETTINGS_CHANGED, changed);
+  // Synchronize already-applied preferences too: a bridge installed after the
+  // controller's settings event otherwise never registers the browser action.
+  doc.addEventListener('play', changed, true);
+  win.addEventListener('pageshow', changed);
+  changed();
   return () => {
     doc.removeEventListener(YOUTUBE_PIP_SETTINGS_CHANGED, changed);
+    doc.removeEventListener('play', changed, true);
+    win.removeEventListener('pageshow', changed);
     videoPrototype.requestPictureInPicture = originalRequest;
     api.requestWindow = originalDocumentRequest;
     session.setActionHandler = originalSetActionHandler;

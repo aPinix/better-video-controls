@@ -4,6 +4,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { SliderResetButton } from '@/components/app/slider-reset-button';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeBoostSetting({
   disabled = false,
@@ -101,7 +102,9 @@ export function YouTubeBoostSetting({
       description="Add a button to boost the video’s volume"
       icon={Volume2Icon}
       iconIsToggled={settings.youtubeBoostEnabled}
-      title="Boost Volume"
+      title={
+        <YouTubeFeatureTitle feature="boost">Boost Volume</YouTubeFeatureTitle>
+      }
     />
   );
 }

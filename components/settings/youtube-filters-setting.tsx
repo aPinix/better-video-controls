@@ -2,6 +2,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeFiltersIcon } from '@/components/youtube-filters-icon';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeFiltersSetting({
   disabled = false,
@@ -31,7 +32,11 @@ export function YouTubeFiltersSetting({
       description="Add a button to adjust the video’s brightness, contrast and color"
       icon={YouTubeFiltersIcon}
       iconIsToggled={settings.youtubeFiltersEnabled}
-      title="Video Filters"
+      title={
+        <YouTubeFeatureTitle feature="filters">
+          Video Filters
+        </YouTubeFeatureTitle>
+      }
     />
   );
 }

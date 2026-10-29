@@ -180,16 +180,18 @@ describe('YouTube toolbar ownership', () => {
     expect(controls.querySelector('.ytp-subtitles-button')?.parentElement).toBe(
       controls
     );
-    // Eight custom buttons, two native controls, and the left controls fit
-    // exactly. Do not reserve extra space that forces a second row early.
-    availableWidth = 660;
+    // Keep breathing room before contact, with extra room required to return.
+    availableWidth = 676;
     resize?.();
     expect(buttons.toolbar.dataset.stacked).toBe('false');
     expect(buttons.toolbar.style.bottom).toBe('');
-    availableWidth = 659;
+    availableWidth = 667;
     resize?.();
     expect(buttons.toolbar.dataset.stacked).toBe('true');
-    availableWidth = 660;
+    availableWidth = 675;
+    resize?.();
+    expect(buttons.toolbar.dataset.stacked).toBe('true');
+    availableWidth = 676;
     resize?.();
     expect(buttons.toolbar.dataset.stacked).toBe('false');
     availableWidth = 280;
@@ -217,6 +219,141 @@ describe('YouTube toolbar ownership', () => {
     }
     buttons.update(state());
     // 432px custom + 64px native, even when the player is scaled to 50%.
+    expect(buttons.toolbar.dataset.stacked).toBe('false');
+  });
+  it('reserves nested left controls, native row padding and the gap before overlap', () => {
+    const controls = document.querySelector(
+      '.ytp-right-controls'
+    ) as HTMLElement;
+    const chrome = document.createElement('div');
+    chrome.className = 'ytp-chrome-bottom';
+    controls.before(chrome);
+    chrome.innerHTML =
+      '<div class="ytp-chrome-controls" style="display:flex;padding:0 20px;column-gap:12px"><div class="ytp-left-controls" style="width:40px"><button style="width:32px"></button><button style="width:32px"></button><span style="width:100px"></span></div></div>';
+    const row = chrome.firstElementChild as HTMLElement;
+    row.append(controls);
+    let available = 700;
+    Object.defineProperty(chrome, 'clientWidth', { get: () => available });
+    Object.defineProperty(row, 'clientWidth', { get: () => available });
+    for (const child of controls.children)
+      Object.defineProperty(child, 'offsetWidth', { value: 48 });
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('true');
+    available = 740;
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('false');
+  });
+  it.each([1, 0.5])(
+    'detects painted controls nearing contact and stays stacked at scale %s',
+    (scale) => {
+      const controls = document.querySelector(
+        '.ytp-right-controls'
+      ) as HTMLElement;
+      const chrome = document.createElement('div');
+      chrome.className = 'ytp-chrome-bottom';
+      controls.before(chrome);
+      const left = document.createElement('div');
+      left.className = 'ytp-left-controls';
+      const time = document.createElement('span');
+      left.append(time);
+      chrome.append(left, controls);
+      let available = 1000;
+      Object.defineProperty(chrome, 'clientWidth', { get: () => available });
+      chrome.getBoundingClientRect = () =>
+        new DOMRect(0, 0, available * scale, 64 * scale);
+      time.getBoundingClientRect = () =>
+        new DOMRect(200 * scale, 10 * scale, 148 * scale, 40 * scale);
+      buttons.toolbar.getBoundingClientRect = () =>
+        new DOMRect(
+          (available - 650) * scale,
+          10 * scale,
+          384 * scale,
+          40 * scale
+        );
+      for (const child of controls.children)
+        Object.defineProperty(child, 'offsetWidth', { value: 48 });
+      buttons.update(state());
+      expect(buttons.toolbar.dataset.stacked).toBe('true');
+      buttons.update(state());
+      expect(buttons.toolbar.dataset.stacked).toBe('true');
+      available = 1020;
+      buttons.update(state());
+      expect(buttons.toolbar.dataset.stacked).toBe('false');
+      buttons.update(state());
+      expect(buttons.toolbar.dataset.stacked).toBe('false');
+    }
+  );
+  it('observes nested native time and volume controls as their sizes change', () => {
+    const observed = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        observe = observed;
+        disconnect() {}
+      }
+    );
+    const controls = document.querySelector(
+      '.ytp-right-controls'
+    ) as HTMLElement;
+    const chrome = document.createElement('div');
+    chrome.className = 'ytp-chrome-bottom';
+    controls.before(chrome);
+    chrome.innerHTML =
+      '<div class="ytp-left-controls"><div><span class="time"></span><input class="volume"></div></div>';
+    chrome.append(controls);
+    buttons.update(state());
+    expect(observed).toHaveBeenCalledWith(chrome.querySelector('.time'));
+    expect(observed).toHaveBeenCalledWith(chrome.querySelector('.volume'));
+    expect(observed).not.toHaveBeenCalledWith(buttons.toolbar);
+  });
+  it('reserves room for an expanded volume slider without counting its clipped closed contents', () => {
+    const controls = document.querySelector(
+      '.ytp-right-controls'
+    ) as HTMLElement;
+    const chrome = document.createElement('div');
+    chrome.className = 'ytp-chrome-bottom';
+    controls.before(chrome);
+    chrome.innerHTML =
+      '<div class="ytp-left-controls" style="display:flex"><button style="width:40px"></button><div class="volume" style="width:0px;overflow:hidden"><span style="display:block;width:60px"></span></div><span style="width:100px"></span></div>';
+    chrome.append(controls);
+    Object.defineProperty(chrome, 'clientWidth', { value: 650 });
+    for (const child of controls.children)
+      Object.defineProperty(child, 'offsetWidth', { value: 48 });
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('false');
+    const volume = chrome.querySelector('.volume') as HTMLElement;
+    volume.style.width = '60px';
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('true');
+    volume.style.width = '0px';
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('false');
+  });
+  it('detects native right-hand icons overlapping custom controls even when container width totals fit', () => {
+    const controls = document.querySelector(
+      '.ytp-right-controls'
+    ) as HTMLElement;
+    const chrome = document.createElement('div');
+    chrome.className = 'ytp-chrome-bottom';
+    controls.before(chrome);
+    chrome.append(controls);
+    let available = 1000;
+    Object.defineProperty(chrome, 'clientWidth', { get: () => available });
+    chrome.getBoundingClientRect = () => new DOMRect(0, 0, available, 64);
+    const captions = controls.querySelector(
+      '.ytp-subtitles-button'
+    ) as HTMLElement;
+    captions.getBoundingClientRect = () =>
+      new DOMRect(available - 320, 10, 32, 40);
+    for (const child of controls.children)
+      Object.defineProperty(child, 'offsetWidth', { value: 48 });
+    buttons.toolbar.getBoundingClientRect = () => new DOMRect(300, 10, 384, 40);
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('true');
+    buttons.update(state());
+    expect(buttons.toolbar.dataset.stacked).toBe('true');
+    available = 1020;
+    buttons.update(state());
     expect(buttons.toolbar.dataset.stacked).toBe('false');
   });
 
@@ -306,7 +443,7 @@ describe('YouTube toolbar ownership', () => {
     expect(buttons.cinemaButton.style.width).toBe('56px');
     expect(buttons.cinemaButton.style.height).toBe('56px');
   });
-  it.each(['boost', 'cinema', 'screenshot'] as const)(
+  it.each(['boost', 'cinema', 'screenshot', 'pip'] as const)(
     'opens %s options on a hold without triggering its click',
     async (kind) => {
       vi.useFakeTimers();
@@ -317,7 +454,9 @@ describe('YouTube toolbar ownership', () => {
           ? actions.onBoost
           : kind === 'cinema'
             ? actions.onCinema
-            : actions.onScreenshot;
+            : kind === 'pip'
+              ? actions.onPip
+              : actions.onScreenshot;
       button.dispatchEvent(
         new MouseEvent('pointerdown', { button: 0, bubbles: true })
       );
@@ -381,6 +520,31 @@ describe('YouTube toolbar ownership', () => {
     await vi.advanceTimersByTimeAsync(700);
     expect(actions.onAdvanced).not.toHaveBeenCalled();
   });
+  it.each([
+    { edge: 'right', buttonX: 600, tipX: 520, scale: 1, expected: -68 },
+    { edge: 'left', buttonX: 0, tipX: -80, scale: 1, expected: 108 },
+    { edge: 'scaled right', buttonX: 560, tipX: 500, scale: 2, expected: -14 },
+  ])(
+    'keeps the $edge tooltip inside the player',
+    ({ buttonX, tipX, scale, expected }) => {
+      buttons.update(state());
+      const player = document.querySelector('#movie_player') as HTMLElement;
+      player.getBoundingClientRect = () => new DOMRect(0, 0, 640, 360);
+      const button = buttons.pipButton;
+      Object.defineProperties(button, {
+        offsetWidth: { value: 40 },
+        offsetLeft: { value: 0 },
+      });
+      button.getBoundingClientRect = () =>
+        new DOMRect(buttonX, 300, 40 * scale, 40 * scale);
+      const tip = button.nextElementSibling as HTMLElement;
+      tip.getBoundingClientRect = () => new DOMRect(tipX, 250, 200, 40);
+      button.dispatchEvent(new Event('pointerenter'));
+      expect(tip.style.left).toBe(`${expected}px`);
+      expect(tip.style.maxWidth).toBe(`${624 / scale}px`);
+      expect(tip.style.whiteSpace).toBe('normal');
+    }
+  );
   it('anchors every tooltip to its button instead of a stale native tooltip position', () => {
     const nativeTip = document.createElement('div');
     nativeTip.className = 'ytp-tooltip';
@@ -479,7 +643,9 @@ describe('YouTube toolbar ownership', () => {
     const next = state();
     buttons.update(next);
     expect(buttons.pipButton.querySelector('svg rect')).not.toBeNull();
-    expect(buttons.pipButton.getAttribute('aria-keyshortcuts')).toBe('P');
+    expect(buttons.pipButton.getAttribute('aria-keyshortcuts')).toBe(
+      'P Shift+P Shift+Enter'
+    );
     expect(buttons.pipButton.nextElementSibling?.textContent).toContain(
       'Open Picture-in-Picture'
     );

@@ -175,6 +175,46 @@ afterEach(() => {
 });
 
 describe('OverlayCreator keyboard handling', () => {
+  it.each(['ShiftLeft', 'ShiftRight'])('keeps timeline editing visible and active while %s is held', (code) => {
+    const states = new VideoStateManager();
+    const creator = new OverlayCreator(createSettingsManager(), states, () => {});
+    const { video, state } = createVideoState();
+    state.timeline.dataset.mfsLoopEditing = 'true';
+    state.cancelTimelineSeeking = vi.fn();
+    states.set(video, state);
+    const methods = creator as unknown as {
+      handleKeyDown: (event: KeyboardEvent) => void;
+      handleKeyUp: (event: KeyboardEvent) => void;
+    };
+    methods.handleKeyDown(new KeyboardEvent('keydown', { code, key: 'Shift', shiftKey: true }));
+    expect(document.documentElement.dataset.mfsMinimalPlayerBypass).toBeUndefined();
+    expect(document.documentElement.classList.contains('mfs-disabled')).toBe(false);
+    expect(document.getElementById('mfs-fast-hide')).toBeNull();
+    expect(state.timeline.style.display).toBe('');
+    expect(state.cancelTimelineSeeking).not.toHaveBeenCalled();
+    methods.handleKeyUp(new KeyboardEvent('keyup', { code, key: 'Shift' }));
+    expect(state.timeline.style.display).toBe('');
+  });
+  it('restores the editor when opened with Shift already held and resumes bypass after editing ends', () => {
+    const states = new VideoStateManager();
+    const creator = new OverlayCreator(createSettingsManager(), states, () => {});
+    const { video, state } = createVideoState();
+    states.set(video, state);
+    const methods = creator as unknown as {
+      handleKeyDown: (event: KeyboardEvent) => void;
+      updateMinimalPlayerBypassState: () => void;
+    };
+    methods.handleKeyDown(new KeyboardEvent('keydown', { code: 'ShiftLeft', key: 'Shift', shiftKey: true }));
+    expect(state.timeline.style.display).toBe('none');
+    state.timeline.dataset.mfsLoopEditing = 'true';
+    methods.updateMinimalPlayerBypassState();
+    expect(state.timeline.style.display).toBe('');
+    expect(document.documentElement.classList.contains('mfs-disabled')).toBe(false);
+    expect(document.getElementById('mfs-fast-hide')).toBeNull();
+    state.timeline.dataset.mfsLoopEditing = 'false';
+    methods.updateMinimalPlayerBypassState();
+    expect(state.timeline.style.display).toBe('none');
+  });
   it('hides the extension seekbar with Shift even when Minimal Player is off', () => {
     const videoStateManager = new VideoStateManager();
     const overlayCreator = new OverlayCreator(

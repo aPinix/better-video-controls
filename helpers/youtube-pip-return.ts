@@ -1,7 +1,4 @@
-import type { PipRect } from './pip-window-geometry';
 import { element } from './player-tools-ui';
-import { animateYouTubePipRect } from './youtube-pip-animation';
-import { YOUTUBE_PIP_WINDOW_MESSAGE } from './youtube-pip-window';
 
 export function createYouTubePipReturnArea(
   doc: Document,
@@ -43,56 +40,4 @@ export function createYouTubePipReturnArea(
   if (!native) area.append(message);
   area.append(button);
   return { area, button };
-}
-
-export async function animateYouTubePipReturn(
-  pip: Window,
-  video: HTMLVideoElement,
-  destination: HTMLElement
-): Promise<void> {
-  const source = destination.ownerDocument.defaultView;
-  if (!source) return;
-  const bounds = destination.getBoundingClientRect();
-  const aspect =
-    video.videoWidth && video.videoHeight
-      ? video.videoWidth / video.videoHeight
-      : 16 / 9;
-  const width = Math.min(bounds.width, bounds.height * aspect);
-  const height = width / aspect;
-  const frameWidth = Math.max(0, pip.outerWidth - pip.innerWidth);
-  const frameHeight = Math.max(0, pip.outerHeight - pip.innerHeight);
-  const result = await chrome.runtime.sendMessage({
-    type: YOUTUBE_PIP_WINDOW_MESSAGE,
-    action: 'return',
-    aspect,
-    frameWidth,
-    frameHeight,
-    destination: {
-      left: bounds.left + (bounds.width - width) / 2,
-      top: bounds.top + (bounds.height - height) / 2,
-      width,
-      height,
-      viewportWidth: source.innerWidth,
-      viewportHeight: source.innerHeight,
-    },
-  });
-  if (result?.error) throw new Error(result.error);
-  const from = result?.from as PipRect | undefined;
-  const target = result?.rect as PipRect | undefined;
-  if (!from || !target || result.windowId === undefined) return;
-  await animateYouTubePipRect(pip, from, target, async (rect) => {
-    const moved = await chrome.runtime.sendMessage({
-      type: YOUTUBE_PIP_WINDOW_MESSAGE,
-      action: 'return',
-      windowId: result.windowId,
-      aspect,
-      frameWidth,
-      frameHeight,
-      x: rect.left,
-      y: rect.top,
-      width: rect.width,
-      height: rect.height,
-    });
-    if (moved?.error) throw new Error(moved.error);
-  });
 }

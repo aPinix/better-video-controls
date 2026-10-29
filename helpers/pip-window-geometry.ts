@@ -31,29 +31,13 @@ export function pipDisplayForRect(
   return best;
 }
 
-export function fitPipRect(
-  rect: PipRect,
-  workArea: PipRect,
-  aspect: number,
-  frameWidth = 0,
-  frameHeight = 0
-): PipRect {
-  const availableWidth = Math.max(
-    1,
-    workArea.width - 2 * PIP_SCREEN_GAP - frameWidth
+export function fitPipRect(rect: PipRect, workArea: PipRect): PipRect {
+  const width = Math.round(
+    clamp(rect.width, 1, Math.max(1, workArea.width - 2 * PIP_SCREEN_GAP))
   );
-  const availableHeight = Math.max(
-    1,
-    workArea.height - 2 * PIP_SCREEN_GAP - frameHeight
+  const height = Math.round(
+    clamp(rect.height, 1, Math.max(1, workArea.height - 2 * PIP_SCREEN_GAP))
   );
-  const maxWidth = Math.min(availableWidth, availableHeight * aspect);
-  const videoWidth = clamp(
-    rect.width - frameWidth,
-    Math.min(240, maxWidth),
-    maxWidth
-  );
-  const width = Math.round(videoWidth + frameWidth);
-  const height = Math.round(videoWidth / aspect + frameHeight);
   return {
     left: Math.round(
       clamp(

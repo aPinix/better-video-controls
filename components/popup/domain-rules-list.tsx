@@ -46,6 +46,7 @@ import { DomainModeE, DomainSortE } from '@/types/domains';
 
 import { DomainFavicon } from './domain-favicon';
 import { DomainListItem } from './domain-list-item';
+import { usePopupViewState } from './use-popup-view-memory';
 
 interface DomainRulesListPropsI {
   canRedo: boolean;
@@ -61,6 +62,7 @@ interface DomainRulesListPropsI {
   onSortChange: (sort: DomainSortT) => void;
   onUndo: () => void;
   removingDomain?: string;
+  revealedDomain?: string;
   sort: DomainSortT;
 }
 
@@ -158,6 +160,7 @@ function SortableDomainRulesList({
   onSortChange,
   onUndo,
   removingDomain,
+  revealedDomain,
   sort,
 }: DomainRulesListPropsI) {
   const externalSiteRules = useMemo(
@@ -168,12 +171,13 @@ function SortableDomainRulesList({
   const [enteringDomains, setEnteringDomains] = useState(
     () => new Set<string>()
   );
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = usePopupViewState('domains.query', '');
   const [highlightedDomain, setHighlightedDomain] = useState('');
   const [announcement, setAnnouncement] = useState('');
   const [toolbarTarget, setToolbarTarget] = useState<HTMLElement | null>(null);
   const siteRulesRef = useRef(siteRules);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const manualSearchRef = useRef(false);
   const creationOrderRef = useRef(
     new Map(externalSiteRules.map(({ domain }, index) => [domain, index]))
   );
@@ -189,7 +193,10 @@ function SortableDomainRulesList({
   const rowEntryFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (!isActive) return;
+    if (!isActive) {
+      manualSearchRef.current = false;
+      return;
+    }
     searchInputRef.current?.focus({ preventScroll: true });
   }, [isActive]);
 
@@ -484,12 +491,24 @@ function SortableDomainRulesList({
   const isFiltering = Boolean(trimmedSearchValue);
   const firstSearchDomain = visibleSiteRules[0]?.domain;
   useEffect(() => {
-    if (!normalizedSearchValue || !firstSearchDomain) return;
+    if (
+      !isActive ||
+      !manualSearchRef.current ||
+      !normalizedSearchValue ||
+      !firstSearchDomain
+    )
+      return;
     const timer = setTimeout(() => {
-      rowRefs.current.get(firstSearchDomain)?.scrollIntoView?.({ block: 'center', behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+      rowRefs.current.get(firstSearchDomain)?.scrollIntoView?.({
+        block: 'center',
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')
+          .matches
+          ? 'auto'
+          : 'smooth',
+      });
     }, 160);
     return () => clearTimeout(timer);
-  }, [normalizedSearchValue, firstSearchDomain]);
+  }, [normalizedSearchValue, firstSearchDomain, isActive]);
 
   const captureRowPositions = useCallback(() => {
     reorderPositionsRef.current = new Map(
@@ -533,6 +552,7 @@ function SortableDomainRulesList({
       isSearchDomainSaved,
       onAdd,
       searchDomain,
+      setSearchValue,
     ]
   );
 
@@ -629,7 +649,10 @@ function SortableDomainRulesList({
         <AppInputText
           aria-label="Search website settings"
           className="h-10 rounded-full pr-18 pl-8 text-sm"
-          onChange={(event) => setSearchValue(event.target.value)}
+          onChange={(event) => {
+            manualSearchRef.current = true;
+            setSearchValue(event.target.value);
+          }}
           placeholder="Search domains or URLs"
           ref={searchInputRef}
           role="searchbox"
@@ -678,9 +701,11 @@ function SortableDomainRulesList({
 
   const sortControl = (
     <AppSortPicker
+      collisionPadding={{ top: 88, bottom: 128 }}
       label="Sort website settings"
       onValueChange={handleSortChange}
       options={domainSortOptions}
+      placement="auto"
       value={sort}
     />
   );
@@ -698,7 +723,14 @@ function SortableDomainRulesList({
           title="Website Settings"
         >
           {historyControls}
-          {isFiltering && <span role="status" className="ml-1 whitespace-nowrap text-xs font-normal normal-case text-muted-foreground">{visibleSiteRules.length} found</span>}
+          {isFiltering && (
+            <span
+              className="ml-1 whitespace-nowrap text-xs font-normal normal-case text-muted-foreground"
+              role="status"
+            >
+              {visibleSiteRules.length} found
+            </span>
+          )}
           {sortControl}
         </SectionTitle>
 
@@ -710,8 +742,11 @@ function SortableDomainRulesList({
             {visibleSiteRules.map((rule, index) => (
               <DomainListItem
                 globalDefaultOn={globalDefaultOn}
-                highlighted={isFiltering || highlightedDomain === rule.domain}
-                searchQuery={normalizedSearchValue}
+                highlighted={
+                  isFiltering ||
+                  highlightedDomain === rule.domain ||
+                  revealedDomain === rule.domain
+                }
                 index={index}
                 isEntering={enteringDomains.has(rule.domain)}
                 isRemoving={removingDomain === rule.domain}
@@ -728,6 +763,7 @@ function SortableDomainRulesList({
                 onRemove={onRemove}
                 onRename={handleRename}
                 rule={rule}
+                searchQuery={normalizedSearchValue}
                 showDivider={index < visibleSiteRules.length - 1}
                 showDragHandle={sort === DomainSortE.Custom}
                 sortingDisabled={isFiltering || sort !== DomainSortE.Custom}

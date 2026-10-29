@@ -123,7 +123,7 @@ describe('SeekControlsPreview', () => {
       'backdrop-blur-sm'
     );
     expect(screen.getByTestId('timeline-progress').className).toContain(
-      'bg-brand-400/80'
+      'bg-brand-400'
     );
     expect(screen.getByTestId('drag-gesture-cue').className).toContain(
       'bg-white/20'

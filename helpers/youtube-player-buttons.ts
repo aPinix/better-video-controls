@@ -48,7 +48,7 @@ const controlStyles = `
   .mfs-loop-tooltip{position:absolute;z-index:1003;bottom:calc(100% + 12px);left:50%;transform:translateX(-50%);display:flex;align-items:center;padding:5px 9px;border-radius:8px;backdrop-filter:var(--yt-frosted-glass-backdrop-filter-override,blur(16px));background:var(--yt-sys-color-baseline--overlay-background-medium-light,rgba(0,0,0,.3));color:#fff;font-size:118%;font-weight:500;line-height:15px;text-shadow:0 0 2px #000;white-space:nowrap;pointer-events:none;opacity:0;visibility:hidden;transition:opacity 100ms ease}
   .mfs-loop-tooltip .ytp-tooltip-keyboard-shortcut{display:flex;justify-content:center;align-items:center;border:1px solid rgba(255,255,255,.3);min-width:11px;border-radius:4px;margin-left:4px;color:#fff;padding:0 2px;font:inherit}
   .mfs-loop-tooltip[data-advanced=true]{flex-direction:column;gap:4px;padding:7px 9px}
-  .mfs-tooltip-heading{display:flex;align-items:center}
+  .mfs-tooltip-heading{display:flex;align-items:center;max-width:100%}.mfs-tooltip-label{min-width:0;overflow-wrap:anywhere}
   .mfs-tooltip-hint{font-size:85%;font-weight:400;line-height:1.25;color:rgba(255,255,255,.65)}
   .mfs-loop-tooltip[hidden]{display:none!important}
   .mfs-player-button:hover + .mfs-loop-tooltip,.mfs-player-button:focus-visible + .mfs-loop-tooltip{opacity:1;visibility:visible}
@@ -88,6 +88,8 @@ export class YouTubePlayerButtons {
   private resizeObserver: ResizeObserver | undefined;
   private controlsObserver: MutationObserver | undefined;
   private observedControls: HTMLElement | undefined;
+  private layoutFrame: number | undefined;
+  private layoutExtra = 0;
 
   constructor(
     private video: HTMLVideoElement,
@@ -172,6 +174,7 @@ export class YouTubePlayerButtons {
       ['loop', this.loopButton],
       ['screenshot', this.screenshotButton],
       ['bookmarks', this.bookmarksButton],
+      ['pip', this.pipButton],
     ] as const) {
       button.setAttribute('aria-haspopup', 'dialog');
       button.setAttribute('aria-expanded', 'false');
@@ -278,6 +281,7 @@ export class YouTubePlayerButtons {
         'loop',
         'screenshot',
         'bookmarks',
+        'pip',
       ].includes(kind);
       button.setAttribute(
         'aria-keyshortcuts',
@@ -336,6 +340,28 @@ export class YouTubePlayerButtons {
       // be stale, and viewport coordinates would apply player scaling twice.
       tip.style.left = `${button.offsetLeft + button.offsetWidth / 2}px`;
       tip.style.bottom = `calc(100% + ${12 - button.offsetTop}px)`;
+      const bounds = player?.getBoundingClientRect();
+      if (bounds?.width) {
+        const buttonRect = button.getBoundingClientRect();
+        const scale =
+          button.offsetWidth && buttonRect.width
+            ? buttonRect.width / button.offsetWidth
+            : 1;
+        const padding = Math.min(8, bounds.width / 4);
+        tip.style.maxWidth = `${(bounds.width - padding * 2) / scale}px`;
+        tip.style.boxSizing = 'border-box';
+        tip.style.whiteSpace = 'normal';
+        tip.style.width = 'max-content';
+        const rect = tip.getBoundingClientRect();
+        const shift =
+          rect.right > bounds.right - padding
+            ? bounds.right - padding - rect.right
+            : rect.left < bounds.left + padding
+              ? bounds.left + padding - rect.left
+              : 0;
+        if (rect.width && shift)
+          tip.style.left = `${button.offsetLeft + button.offsetWidth / 2 + shift / scale}px`;
+      }
     };
     button.addEventListener('pointerenter', syncTooltip);
     button.addEventListener('focus', syncTooltip);
@@ -361,19 +387,34 @@ export class YouTubePlayerButtons {
     this.resizeObserver?.disconnect();
     this.controlsObserver?.disconnect();
     this.observedControls = controls;
+    this.layoutExtra = 0;
     const win = this.video.ownerDocument.defaultView;
+    if (!win) return;
+    const observeControls = () => {
+      const chrome = controls.closest<HTMLElement>('.ytp-chrome-bottom');
+      const candidates = [
+        controls,
+        chrome,
+        ...(chrome?.querySelectorAll('*') ?? []),
+      ];
+      for (const element of candidates)
+        if (
+          element instanceof win.HTMLElement &&
+          !this.toolbar.contains(element)
+        )
+          this.resizeObserver?.observe(element);
+    };
     if (win?.ResizeObserver) {
       this.resizeObserver = new win.ResizeObserver(() => this.layout());
-      const chrome = controls.closest<HTMLElement>('.ytp-chrome-bottom');
-      const left = chrome?.querySelector<HTMLElement>('.ytp-left-controls');
-      for (const element of [controls, chrome, left, ...controls.children]) {
-        if (element) this.resizeObserver.observe(element);
-      }
+      observeControls();
     }
     if (win?.MutationObserver) {
       this.controlsObserver = new win.MutationObserver((records) => {
-        if (records.some(({ target }) => !this.toolbar.contains(target)))
+        if (records.some(({ target }) => !this.toolbar.contains(target))) {
+          if (records.some(({ type }) => type === 'childList'))
+            observeControls();
           this.layout();
+        }
       });
       const chrome = controls.closest('.ytp-chrome-bottom') ?? controls;
       this.controlsObserver.observe(chrome, {
@@ -402,9 +443,19 @@ export class YouTubePlayerButtons {
       [...element.children].filter(
         (child): child is HTMLElement => child instanceof win.HTMLElement
       );
+    const collapsed = (element: HTMLElement): boolean => {
+      const style = win.getComputedStyle(element);
+      return (
+        style.width === '0px' &&
+        ['hidden', 'clip'].some(
+          (value) => style.overflowX === value || style.overflow === value
+        )
+      );
+    };
     const width = (element: HTMLElement): number => {
       const style = win.getComputedStyle(element);
-      if (element.hidden || style.display === 'none') return 0;
+      if (element.hidden || style.display === 'none' || collapsed(element))
+        return 0;
       const renderedWidth = element.getBoundingClientRect().width / scale;
       return (
         (renderedWidth ||
@@ -417,16 +468,37 @@ export class YouTubePlayerButtons {
     };
     const contentWidth = (element: HTMLElement): number => {
       const style = win.getComputedStyle(element);
-      if (element.hidden || style.display === 'none') return 0;
+      if (element.hidden || style.display === 'none' || collapsed(element))
+        return 0;
       const visible = children(element).filter(
         (child) =>
           !child.hidden && win.getComputedStyle(child).display !== 'none'
       );
-      if (!style.display.includes('flex') || !visible.length)
-        return width(element);
+      if (!visible.length) return width(element);
+      const inline =
+        style.display.includes('flex') || style.whiteSpace === 'nowrap';
+      const rendered = visible.map((child) => child.getBoundingClientRect());
+      const extent = rendered.some((rect) => rect.width > 0)
+        ? (Math.max(
+            ...rendered
+              .filter((rect) => rect.width > 0)
+              .map((rect) => rect.right)
+          ) -
+            Math.min(
+              ...rendered
+                .filter((rect) => rect.width > 0)
+                .map((rect) => rect.left)
+            )) /
+          scale
+        : 0;
       return (
-        visible.reduce((total, child) => total + contentWidth(child), 0) +
-        (Number.parseFloat(style.columnGap) || 0) * (visible.length - 1) +
+        Math.max(
+          extent,
+          inline
+            ? visible.reduce((total, child) => total + contentWidth(child), 0) +
+                (Number.parseFloat(style.columnGap) || 0) * (visible.length - 1)
+            : 0
+        ) +
         horizontalSpacing(style) +
         (Number.parseFloat(style.marginLeft) || 0) +
         (Number.parseFloat(style.marginRight) || 0)
@@ -447,6 +519,17 @@ export class YouTubePlayerButtons {
       .reduce((total, button) => total + width(button), 0);
     const controlsStyle = win.getComputedStyle(controls);
     const chromeStyle = win.getComputedStyle(chrome);
+    const row = controls.closest<HTMLElement>('.ytp-chrome-controls');
+    const rowStyle = row && win.getComputedStyle(row);
+    const rowWidth = row
+      ? row.clientWidth ||
+        row.getBoundingClientRect().width / scale ||
+        chrome.clientWidth
+      : chrome.clientWidth;
+    const availableWidth = Math.min(
+      chrome.clientWidth - horizontalSpacing(chromeStyle),
+      rowWidth - (rowStyle ? horizontalSpacing(rowStyle) : 0)
+    );
     const gap = Number.parseFloat(controlsStyle.columnGap) || 0;
     const leftStyle = left && win.getComputedStyle(left);
     // Modern YouTube stretches/shrinks the left container to fill the remaining
@@ -461,10 +544,7 @@ export class YouTubePlayerButtons {
           win.getComputedStyle(child).display !== 'none'
       );
     const leftWidth =
-      left &&
-      leftStyle &&
-      leftChildren?.length &&
-      leftStyle.display.includes('flex')
+      left && leftStyle && leftChildren?.length
         ? leftChildren.reduce(
             (total, child) =>
               total + Math.max(width(child), contentWidth(child)),
@@ -478,21 +558,84 @@ export class YouTubePlayerButtons {
         : left
           ? width(left)
           : 0;
-    // Keep the original inline layout up to its actual fit boundary. An extra
-    // safety margin would move the buttons above the native row prematurely.
-    const stacked =
+    const protectedRects =
+      leftChildren
+        ?.filter((child) => !collapsed(child))
+        .flatMap((child) => [child, ...children(child)])
+        .map((child) => child.getBoundingClientRect())
+        .filter((rect) => rect.width > 0) ?? [];
+    const protectedWidth = protectedRects.length
+      ? (Math.max(...protectedRects.map((rect) => rect.right)) -
+          Math.min(...protectedRects.map((rect) => rect.left))) /
+          scale +
+        (leftStyle ? horizontalSpacing(leftStyle) : 0)
+      : 0;
+    const requiredWidth =
       customWidth +
-        nativeWidth +
-        leftWidth +
-        gap * native.length +
-        horizontalSpacing(controlsStyle) >
-      chrome.clientWidth - horizontalSpacing(chromeStyle);
+      nativeWidth +
+      Math.max(leftWidth, protectedWidth) +
+      gap * native.length +
+      horizontalSpacing(controlsStyle) +
+      (left && rowStyle ? Number.parseFloat(rowStyle.columnGap) || 0 : 0);
+    const wasStacked = this.toolbar.dataset.stacked === 'true';
+    const toolbarRect = this.toolbar.getBoundingClientRect();
+    const nativeRects = native
+      .flatMap((element) => [
+        ...(element.matches('button,.ytp-button,[role=button]')
+          ? [element]
+          : []),
+        ...element.querySelectorAll('button,.ytp-button,[role=button],svg'),
+      ])
+      .map((element) => element.getBoundingClientRect())
+      .filter(
+        (rect) =>
+          rect.width > 0 &&
+          rect.height > 0 &&
+          rect.bottom > toolbarRect.top &&
+          rect.top < toolbarRect.bottom
+      );
+    const rightOverlap = nativeRects.length
+      ? (toolbarRect.right -
+          Math.min(...nativeRects.map((rect) => rect.left))) /
+        scale
+      : 0;
+    // Padding, nested button groups, and animated native controls can overflow
+    // their allocated containers. Also check their actual painted positions.
+    const deficit =
+      !wasStacked && toolbarRect.width > 0
+        ? Math.max(
+            0,
+            rightOverlap > 0.5 ? rightOverlap + 8 : 0,
+            ...protectedRects
+              .filter(
+                (rect) =>
+                  rect.bottom > toolbarRect.top && rect.top < toolbarRect.bottom
+              )
+              .map(
+                (rect) => (rect.right + 8 * scale - toolbarRect.left) / scale
+              )
+          )
+        : 0;
+    if (!wasStacked)
+      this.layoutExtra =
+        deficit > 0
+          ? Math.max(0, availableWidth + deficit - requiredWidth - 8)
+          : 0;
+    // Leave a small gap before contact, and require a little more room to move
+    // back inline so native flex resizing cannot make the toolbar oscillate.
+    const stacked =
+      requiredWidth + this.layoutExtra + (wasStacked ? 16 : 8) > availableWidth;
     this.toolbar.dataset.stacked = String(stacked);
     if (!stacked) {
       this.toolbar.style.removeProperty('bottom');
       this.toolbar.style.removeProperty('right');
       this.toolbar.style.removeProperty('max-width');
       this.toolbar.style.removeProperty('width');
+      if (wasStacked && this.layoutFrame === undefined)
+        this.layoutFrame = win.requestAnimationFrame(() => {
+          this.layoutFrame = undefined;
+          this.layout();
+        });
       return;
     }
     // Position above the whole native chrome, including the progress bar.
@@ -707,6 +850,10 @@ export class YouTubePlayerButtons {
     for (const cleanup of this.cleanups) cleanup();
     this.resizeObserver?.disconnect();
     this.controlsObserver?.disconnect();
+    if (this.layoutFrame !== undefined)
+      this.video.ownerDocument.defaultView?.cancelAnimationFrame(
+        this.layoutFrame
+      );
     this.toolbar.remove();
   }
 }

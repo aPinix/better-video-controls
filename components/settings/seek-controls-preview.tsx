@@ -739,8 +739,8 @@ export function SeekControlsPreview({
             className={cn(
               'absolute inset-y-0 left-0 w-[34%] overflow-visible backdrop-blur-sm backdrop-saturate-[1.4]',
               colorizedTimeline
-                ? 'bg-brand-400/80 dark:bg-brand-600/80'
-                : 'bg-white/30'
+                ? 'bg-brand-400'
+                : 'bg-white'
             )}
             data-testid="timeline-progress"
             ref={progressRef}

@@ -48,6 +48,7 @@ const ready = async () => {
   return toggle;
 };
 it('defaults off and reveals the tab-change sub-option after enabling', async () => {
+  preferences.youtubePipAutoOnTabChange = false;
   render(<YouTubePipSetting />);
   const toggle = await ready();
   expect(toggle.getAttribute('aria-checked')).toBe('false');
@@ -70,10 +71,7 @@ it('defaults off and reveals the tab-change sub-option after enabling', async ()
       .getByRole('switch', { name: 'Open PiP when switching tabs' })
       .getAttribute('aria-checked')
   ).toBe('true');
-  expect(
-    (screen.getByRole('radio', { name: 'Custom PiP' }) as HTMLInputElement)
-      .checked
-  ).toBe(true);
+  expect(screen.queryByRole('radio')).toBeNull();
   expect(
     screen.getByRole('figure', { name: 'Custom PiP preview' })
   ).toBeTruthy();
@@ -89,24 +87,18 @@ it('defaults off and reveals the tab-change sub-option after enabling', async ()
   ).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
 });
-it('saves the Chrome video PiP sub-option and preserves automatic PiP', async () => {
+it('always previews Custom PiP when overriding, including legacy Chrome mode preferences', async () => {
   preferences.youtubePipOverride = true;
+  preferences.youtubePipMode = 'chrome-video';
   render(<YouTubePipSetting />);
   await ready();
-  fireEvent.click(screen.getByRole('radio', { name: 'Chrome PiP' }));
-  await waitFor(() =>
-    expect(save).toHaveBeenCalledWith({
-      playerTools: expect.objectContaining({
-        youtubePipMode: 'chrome-video',
-        youtubePipOverride: true,
-        youtubePipAutoOnTabChange: true,
-        miniPlayer: false,
-      }),
-    })
-  );
+  expect(screen.queryByRole('radio')).toBeNull();
   expect(
-    screen.getByRole('figure', { name: 'Chrome PiP preview' })
+    screen.getByRole('figure', { name: 'Custom PiP preview' })
   ).toBeTruthy();
+  expect(screen.getByLabelText('YouTube shortcut: O')).toBeTruthy();
+  expect(screen.queryByLabelText('YouTube shortcut: P')).toBeNull();
+  expect(save).not.toHaveBeenCalled();
 });
 it('saves the sub-option without changing PiP or Mini Player preferences', async () => {
   preferences.youtubePipOverride = true;
@@ -144,8 +136,6 @@ it('disables both switches with the extension', async () => {
   for (const toggle of screen.getAllByRole('switch'))
     expect(toggle.getAttribute('aria-disabled')).toBe('true');
   expect(
-    screen
-      .getByRole('group', { name: 'YouTube PiP player' })
-      .hasAttribute('disabled')
-  ).toBe(true);
+    screen.queryByRole('group', { name: 'YouTube PiP player' })
+  ).toBeNull();
 });

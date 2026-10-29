@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 import {
   Tooltip,
@@ -18,6 +18,8 @@ export interface AppSortPickerOptionI<T extends string> {
 }
 
 interface AppSortPickerPropsI<T extends string> {
+  placement?: 'selected' | 'below' | 'auto';
+  collisionPadding?: { top: number; bottom: number };
   className?: string;
   label: string;
   onValueChange: (value: T) => void;
@@ -34,8 +36,53 @@ export function AppSortPicker<T extends string>({
   onValueChange,
   options,
   value,
+  placement = 'selected',
+  collisionPadding,
 }: AppSortPickerPropsI<T>) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [autoPlacement, setAutoPlacement] = useState<'above' | 'below'>(
+    'below'
+  );
+  const pickerRef = useRef<HTMLFieldSetElement>(null);
+  const paddingTop = collisionPadding?.top ?? 8;
+  const paddingBottom = collisionPadding?.bottom ?? 8;
+
+  useLayoutEffect(() => {
+    if (!isExpanded || placement !== 'auto') return;
+
+    const updatePlacement = () => {
+      const picker = pickerRef.current;
+      if (!picker) return;
+
+      const rect = picker.getBoundingClientRect();
+      const viewport = picker
+        .closest('[data-slot="scroll-area-viewport"]')
+        ?.getBoundingClientRect();
+      const top = Math.max(0, viewport?.top ?? 0) + paddingTop;
+      const bottom =
+        Math.min(window.innerHeight, viewport?.bottom ?? window.innerHeight) -
+        paddingBottom;
+      const rem = Number.parseFloat(
+        getComputedStyle(document.documentElement).fontSize
+      );
+      const expansion = (options.length - 1) * OPTION_SPACING_REM * rem;
+      const spaceAbove = rect.top - top;
+      const spaceBelow = bottom - rect.bottom;
+
+      setAutoPlacement(
+        spaceBelow >= expansion || spaceBelow >= spaceAbove ? 'below' : 'above'
+      );
+    };
+
+    updatePlacement();
+    window.addEventListener('scroll', updatePlacement, true);
+    window.addEventListener('resize', updatePlacement);
+    return () => {
+      window.removeEventListener('scroll', updatePlacement, true);
+      window.removeEventListener('resize', updatePlacement);
+    };
+  }, [isExpanded, options.length, paddingBottom, paddingTop, placement]);
+
   const selectedIndex = Math.max(
     options.findIndex((option) => option.value === value),
     0
@@ -47,7 +94,13 @@ export function AppSortPicker<T extends string>({
   const SelectedIcon = selectedOption.icon;
   const expandedHeight =
     (options.length - 1) * OPTION_SPACING_REM + BUTTON_SIZE_REM;
-  const expandedTop = -selectedIndex * OPTION_SPACING_REM;
+  const resolvedPlacement = placement === 'auto' ? autoPlacement : placement;
+  const expandedTop =
+    resolvedPlacement === 'selected'
+      ? -selectedIndex * OPTION_SPACING_REM
+      : resolvedPlacement === 'above'
+        ? -(options.length - 1) * OPTION_SPACING_REM
+        : 0;
 
   return (
     <TooltipProvider>
@@ -70,6 +123,7 @@ export function AppSortPicker<T extends string>({
           event.stopPropagation();
           setIsExpanded(false);
         }}
+        ref={pickerRef}
       >
         <span
           aria-hidden="true"
@@ -91,7 +145,14 @@ export function AppSortPicker<T extends string>({
           if (index === selectedIndex) return null;
 
           const Icon = option.icon;
-          const offset = (index - selectedIndex) * OPTION_SPACING_REM;
+          const offset =
+            (resolvedPlacement !== 'selected'
+              ? index < selectedIndex
+                ? index + 1
+                : index
+              : index - selectedIndex) *
+            OPTION_SPACING_REM *
+            (resolvedPlacement === 'above' ? -1 : 1);
 
           return (
             <Tooltip key={option.value}>
@@ -101,7 +162,7 @@ export function AppSortPicker<T extends string>({
                     aria-hidden={!isExpanded || undefined}
                     aria-label={option.label}
                     className={cn(
-                      'absolute top-0 right-0 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 outline-none transition-[transform,opacity,background-color,color] duration-300 ease-out hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-brand/35 motion-reduce:transition-none dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
+                      'focus-visible:ring-brand/35 absolute top-0 right-0 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[transform,opacity,background-color,color] duration-300 ease-out outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 motion-reduce:transition-none dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
                       isExpanded
                         ? 'pointer-events-auto opacity-100'
                         : 'pointer-events-none opacity-0'
@@ -136,7 +197,7 @@ export function AppSortPicker<T extends string>({
                 aria-expanded={isExpanded}
                 aria-label={`${label}: ${selectedOption.label}`}
                 className={cn(
-                  'absolute top-0 right-0 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 outline-none transition-[background-color,color] duration-200 hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
+                  'focus-visible:ring-brand/35 absolute top-0 right-0 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[background-color,color] duration-200 outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
                   isExpanded &&
                     'bg-slate-200/70 text-slate-800 dark:bg-slate-700 dark:text-slate-100'
                 )}

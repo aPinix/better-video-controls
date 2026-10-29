@@ -74,6 +74,125 @@ const enable = (auto = false) => {
   document.dispatchEvent(new Event(YOUTUBE_PIP_SETTINGS_CHANGED));
 };
 describe('YouTube PiP bridge', () => {
+  it('registers automatic PiP when preferences were applied before the bridge started', async () => {
+    cleanup?.();
+    enable(true);
+    setAction.mockClear();
+    cleanup = installYouTubePipBridge(document);
+    expect(setAction).toHaveBeenCalledWith(
+      'enterpictureinpicture',
+      expect.any(Function)
+    );
+    handler({
+      action: 'enterpictureinpicture',
+      reason: 'contentoccluded',
+    } as unknown as MediaSessionActionDetails);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+  });
+  it.each(['play', 'pageshow'])(
+    'retries browser registration on %s after an initial failure',
+    (type) => {
+      setAction.mockImplementationOnce(() => {
+        throw new Error('Media session not ready');
+      });
+      enable(true);
+      setAction.mockClear();
+      if (type === 'play') video.dispatchEvent(new Event(type));
+      else window.dispatchEvent(new Event(type));
+      expect(setAction).toHaveBeenCalledWith(
+        'enterpictureinpicture',
+        expect.any(Function)
+      );
+      cleanup?.();
+      cleanup = undefined;
+      setAction.mockClear();
+      video.dispatchEvent(new Event('play'));
+      window.dispatchEvent(new Event('pageshow'));
+      expect(setAction).not.toHaveBeenCalled();
+    }
+  );
+  it('opens the playing replacement video instead of a cached paused video', async () => {
+    enable(true);
+    Object.defineProperty(video, 'paused', { value: true });
+    const next = document.createElement('video');
+    next.dataset.mfsPipOverride = next.dataset.mfsPipAuto = 'true';
+    Object.defineProperties(next, {
+      paused: { value: false },
+      ended: { value: false },
+    });
+    document.body.append(next);
+    const opened = vi.fn((event: Event) => {
+      event.preventDefault();
+      const api = (window as PipWindow).documentPictureInPicture;
+      if (api) api.window = pip;
+      next.dispatchEvent(new Event(YOUTUBE_PIP_RESULT));
+    });
+    next.addEventListener(YOUTUBE_PIP_REQUEST, opened);
+    handler({
+      action: 'enterpictureinpicture',
+      reason: 'contentoccluded',
+    } as unknown as MediaSessionActionDetails);
+    await vi.waitFor(() => expect(opened).toHaveBeenCalledOnce());
+    expect(request).not.toHaveBeenCalled();
+  });
+  it('prefers the actual YouTube player over another playing video on the page', () => {
+    const player = document.createElement('div');
+    player.id = 'movie_player';
+    const mainVideo = document.createElement('video');
+    mainVideo.dataset.mfsPipOverride = mainVideo.dataset.mfsPipAuto = 'true';
+    Object.defineProperties(mainVideo, {
+      paused: { value: false },
+      ended: { value: false },
+    });
+    player.append(mainVideo);
+    document.body.append(player);
+    const opened = vi.fn((event: Event) => event.preventDefault());
+    mainVideo.addEventListener(YOUTUBE_PIP_REQUEST, opened);
+    enable(true);
+    handler({
+      action: 'enterpictureinpicture',
+      reason: 'contentoccluded',
+    } as unknown as MediaSessionActionDetails);
+    expect(opened).toHaveBeenCalledOnce();
+    expect(request).not.toHaveBeenCalled();
+  });
+  it('keeps the current PiP video selected while other videos start on the source page', async () => {
+    enable(true);
+    const frame = document.createElement('iframe');
+    document.body.append(frame);
+    const pipWindow = frame.contentWindow as Window;
+    pipWindow.document.body.append(video);
+    const api = (window as PipWindow).documentPictureInPicture;
+    if (api) api.window = pipWindow;
+    const next = document.createElement('video');
+    next.dataset.mfsPipOverride = next.dataset.mfsPipAuto = 'true';
+    Object.defineProperty(next, 'paused', { value: false });
+    document.body.append(next);
+    const opened = vi.fn((event: Event) => event.preventDefault());
+    next.addEventListener(YOUTUBE_PIP_REQUEST, opened);
+    handler({
+      action: 'enterpictureinpicture',
+      reason: 'contentoccluded',
+    } as unknown as MediaSessionActionDetails);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+    expect(opened).not.toHaveBeenCalled();
+  });
+  it('passes automatic versus explicit request origin across the bridge and removes temporary metadata', async () => {
+    const origins: Array<string | undefined> = [];
+    video.addEventListener(YOUTUBE_PIP_REQUEST, () =>
+      origins.push(video.dataset.mfsPipAutomaticRequest)
+    );
+    enable(true);
+    handler({
+      action: 'enterpictureinpicture',
+      enterPictureInPictureReason: 'contentoccluded',
+    } as unknown as MediaSessionActionDetails);
+    await vi.waitFor(() => expect(request).toHaveBeenCalledOnce());
+    await video.requestPictureInPicture();
+    await video.requestPictureInPicture();
+    expect(origins).toEqual(['true', 'false']);
+    expect(video.dataset.mfsPipAutomaticRequest).toBeUndefined();
+  });
   it('uses Chrome video PiP for explicit and automatic requests in the selected mode', async () => {
     video.dataset.mfsPipMode = 'chrome-video';
     enable(false);

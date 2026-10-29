@@ -2,6 +2,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeInfoCardsIcon } from '@/components/youtube-info-cards-icon';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeInfoCardsSetting({
   disabled = false,
@@ -31,7 +32,11 @@ export function YouTubeInfoCardsSetting({
       description="Add a button to show or hide end-of-video recommendations"
       icon={YouTubeInfoCardsIcon}
       iconIsToggled={settings.youtubeInfoCardsEnabled}
-      title="Info Cards"
+      title={
+        <YouTubeFeatureTitle feature="infoCards">
+          Info Cards
+        </YouTubeFeatureTitle>
+      }
     />
   );
 }

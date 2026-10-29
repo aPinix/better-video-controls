@@ -132,7 +132,9 @@ Hover over a video and open **Tools**. The compact menu includes:
 
 Loop is YouTube-only and off by default. Enable **Settings → YouTube → Loop** to add its button before autoplay and captions in the native player controls. The button opens a dedicated editor, separate from Tools. Draw an A–B range on the timeline while the editor is open. Drag its handles to adjust the boundaries, drag its middle to move it, or enter times in seconds. Focus a handle and use the arrow keys for 0.1-second adjustments (Shift for one second). Enable the loop to repeat it. Name it and choose **Save loop**; editing a saved range uses **Save changes**. Normal timeline dragging continues to seek outside editing mode. Turning the feature off removes its native button and stops the active loop.
 
-**Bookmark this moment** saves a named timestamp. The extension popup's **Saved moments & loops** library supports search, editing, deletion, reopening, and JSON import/export. Exported files are versioned; imports preserve existing items with matching IDs. Opening a saved item seeks only the matching video; ordinary visits never activate saved loops automatically.
+**Bookmark this moment** saves a named timestamp. In the extension popup, open **Settings → YouTube → Saved bookmarks & loops** to browse YouTube saves grouped by video, search, edit, delete, reopen, or import/export JSON backups. Backups include only YouTube saves, and imports preserve existing items with matching IDs. Other-site saves remain in storage. Opening a saved item seeks only the matching video; ordinary visits never activate saved loops automatically.
+
+The popup remembers its page, searches, sorting, and scroll positions for ten minutes after closing. Reopening it renews that window; after a longer gap, it starts at the top of Settings.
 
 Saved YouTube items use the video ID. Stable direct video URLs can also be saved across sessions. Videos with temporary or signed URLs remain session-only because their addresses cannot reliably identify the same video later. Saved media stays in local browser storage; preferences use the existing browser sync storage. No account or AI service is required.
 

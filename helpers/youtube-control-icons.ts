@@ -40,7 +40,8 @@ export const YOUTUBE_CONTROL_SHORTCUTS: Record<YouTubeControl, string> = {
   filters: 'v',
   pip: 'p',
 };
-export type YouTubeAdvancedControl = 'boost' | 'cinema' | 'screenshot';
+export const YOUTUBE_PIP_OVERRIDE_SHORTCUT = 'o';
+export type YouTubeAdvancedControl = 'boost' | 'cinema' | 'screenshot' | 'pip';
 
 type IconShape = { tag: 'path' | 'rect'; attributes: Record<string, string> };
 export const YOUTUBE_CONTROL_ICONS: Record<

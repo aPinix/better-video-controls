@@ -221,6 +221,9 @@ export class OverlayCreator {
     this.pressedKeys.add(event.code);
     this.updateMinimalPlayerBypassState();
 
+    // Both timeline editors use Shift for editing gestures, not UI bypass.
+    if (SHIFT_KEY_CODES.has(event.code) && this.isTimelineEditorActive()) return;
+
     // Keep configured wheel modifiers available so their gesture reaches the
     // existing overlay instead of suspending it first. Track them so a real
     // multi-key shortcut still remains suspended until every key is released.
@@ -296,6 +299,14 @@ export class OverlayCreator {
     );
   }
 
+  private isTimelineEditorActive(): boolean {
+    let editing = false;
+    this.videoStateManager.forEach((state) => {
+      if (state.timeline.dataset.mfsLoopEditing === 'true') editing = true;
+    });
+    return editing;
+  }
+
   private updateMinimalPlayerBypassState(): void {
     const hasShift = Array.from(SHIFT_KEY_CODES).some((code) =>
       this.pressedKeys.has(code)
@@ -303,9 +314,16 @@ export class OverlayCreator {
     const hasBlockingModifier = Array.from(
       MINIMAL_PLAYER_BYPASS_BLOCKING_KEY_CODES
     ).some((code) => this.pressedKeys.has(code));
-    const shouldBypass = hasShift && !hasBlockingModifier;
+    const editing = this.isTimelineEditorActive();
+    const shouldBypass = hasShift && !hasBlockingModifier && !editing;
 
     this.setMinimalPlayerBypassActive(shouldBypass);
+    if (
+      editing &&
+      hasShift &&
+      [...this.pressedKeys].every((code) => SHIFT_KEY_CODES.has(code))
+    )
+      this.resumeKeyboardSuspension();
   }
 
   private setMinimalPlayerBypassActive(isActive: boolean): void {
@@ -686,7 +704,11 @@ export class OverlayCreator {
     );
 
     // Update height and its anchored position together before the next paint.
-    scrubTimeline.addEventListener('mfs-loop-layout', updateTimelineInteractivity);
+    const updateEditorLayout = () => {
+      this.updateMinimalPlayerBypassState();
+      updateTimelineInteractivity();
+    };
+    scrubTimeline.addEventListener('mfs-loop-layout', updateEditorLayout);
     const playerTools = !DOMUtils.isYouTubeHoverPreview(video)
       ? new PlayerTools(video, scrubTimeline, deferredSeek, (time) => {
           if (time === null) { thumbnailPreviewController?.hide(); return; }
@@ -701,7 +723,7 @@ export class OverlayCreator {
 
     videoState.syncCleanup = () => {
       playerTools?.cleanup();
-      scrubTimeline.removeEventListener('mfs-loop-layout', updateTimelineInteractivity);
+      scrubTimeline.removeEventListener('mfs-loop-layout', updateEditorLayout);
       video.removeEventListener('loadedmetadata', updateContentWidth);
       video.removeEventListener('durationchange', updateContentWidth);
       video.removeEventListener('loadedmetadata', updateTimelineInteractivity);

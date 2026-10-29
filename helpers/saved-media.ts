@@ -17,9 +17,13 @@ export type LibraryCommand =
   | { op: 'list' }
   | { op: 'put'; item: SavedMoment }
   | { op: 'delete'; id: string }
-  | { op: 'replace-bookmarks'; mediaKey: string; items: SavedMoment[] }
+  | {
+      op: 'replace-bookmarks' | 'replace-loops';
+      mediaKey: string;
+      items: SavedMoment[];
+    }
   | { op: 'import'; library: MediaLibrary }
-  | { op: 'open'; id: string }
+  | { op: 'open'; id: string; edit?: boolean }
   | { op: 'claim'; mediaKey: string };
 
 export function mediaIdentity(
@@ -118,7 +122,7 @@ export function mergeLibraries(
 }
 export async function libraryRequest(
   command: LibraryCommand
-): Promise<{ library?: MediaLibrary; item?: SavedMoment }> {
+): Promise<{ library?: MediaLibrary; item?: SavedMoment; edit?: boolean }> {
   const result = await chrome.runtime.sendMessage({
     type: LIBRARY_MESSAGE,
     command,
@@ -146,7 +150,7 @@ export function registerLibraryBackground(): void {
         if (sender.tab?.id === undefined) return {};
         const key = `mfsPending:${sender.tab.id}`;
         const pending = (await chrome.storage.session.get(key))[key] as
-          | { item: SavedMoment; expires: number }
+          | { item: SavedMoment; expires: number; edit?: boolean }
           | undefined;
         if (pending && pending.expires < Date.now()) {
           await chrome.storage.session.remove(key);
@@ -154,6 +158,14 @@ export function registerLibraryBackground(): void {
         }
         if (pending?.item.mediaKey === command.mediaKey) {
           await chrome.storage.session.remove(key);
+          if (pending.edit === true) {
+            const item = library.items.find(
+              (entry) =>
+                entry.id === pending.item.id &&
+                entry.mediaKey === command.mediaKey
+            );
+            return item ? { item, edit: true } : {};
+          }
           return { item: pending.item };
         }
         return {};
@@ -164,7 +176,11 @@ export function registerLibraryBackground(): void {
         const tab = await chrome.tabs.create({ url: 'about:blank' });
         if (tab.id === undefined) throw new Error('Could not open a tab.');
         await chrome.storage.session.set({
-          [`mfsPending:${tab.id}`]: { item, expires: Date.now() + 120000 },
+          [`mfsPending:${tab.id}`]: {
+            item,
+            expires: Date.now() + 120000,
+            ...(command.edit === true ? { edit: true } : {}),
+          },
         });
         await chrome.tabs.update(tab.id, { url: item.url });
         return {};
@@ -176,26 +192,33 @@ export function registerLibraryBackground(): void {
         );
         library.items.push(command.item);
         library = parseLibrary(library);
-      } else if (command.op === 'replace-bookmarks') {
+      } else if (
+        command.op === 'replace-bookmarks' ||
+        command.op === 'replace-loops'
+      ) {
         if (typeof command.mediaKey !== 'string' || !command.mediaKey)
           throw new Error('Invalid video identity.');
+        const loops = command.op === 'replace-loops';
         const keep = library.items.filter(
           (entry) =>
-            entry.mediaKey !== command.mediaKey || entry.end !== undefined
+            entry.mediaKey !== command.mediaKey ||
+            (loops ? entry.end === undefined : entry.end !== undefined)
         );
         if (
           !Array.isArray(command.items) ||
           command.items.some(
             (entry) =>
               !validMoment(entry) ||
-              entry.end !== undefined ||
+              (loops ? entry.end === undefined : entry.end !== undefined) ||
               entry.mediaKey !== command.mediaKey ||
               keep.some((other) => other.id === entry.id)
           ) ||
           new Set(command.items.map((entry) => entry.id)).size !==
             command.items.length
         )
-          throw new Error('Invalid bookmarks.');
+          throw new Error(
+            loops ? 'Invalid loop sections.' : 'Invalid bookmarks.'
+          );
         library.items = [...keep, ...command.items];
         library = parseLibrary(library);
       } else if (command.op === 'delete')

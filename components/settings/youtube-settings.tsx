@@ -1,5 +1,5 @@
-import { ListVideoIcon } from 'lucide-react';
-import { useState } from 'react';
+import { BookmarkIcon, ListVideoIcon } from 'lucide-react';
+import { type RefObject, useState } from 'react';
 
 import { AppBetaBadge } from '@/components/app/app-beta-badge';
 import { AppSwitch } from '@/components/app/app-switch';
@@ -26,10 +26,14 @@ export function YouTubeSettings({
   chapteredTimelineEnabled,
   extensionEnabled,
   onChapteredTimelineEnabledChange,
+  onOpenSavedLibrary,
+  savedLibraryEntryRef,
 }: {
   chapteredTimelineEnabled: boolean;
   extensionEnabled: boolean;
   onChapteredTimelineEnabledChange: (enabled: boolean) => void;
+  onOpenSavedLibrary: (pointer: boolean) => void;
+  savedLibraryEntryRef?: RefObject<HTMLDivElement | null>;
 }) {
   const [activePreview, setActivePreview] = useState<YouTubeControl | null>(
     null
@@ -47,66 +51,76 @@ export function YouTubeSettings({
     );
   };
   return (
-    <section
-      aria-label="YouTube player settings"
-      className={cn(
-        'relative rounded-xl bg-white dark:bg-slate-800/70',
-        !extensionEnabled && 'pointer-events-none opacity-50'
-      )}
-      onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget))
-          setActivePreview(null);
-      }}
-      onFocus={(event) => highlightRow(event.target)}
-      onMouseLeave={(event) =>
-        highlightRow(event.currentTarget.ownerDocument.activeElement)
-      }
-      onMouseOver={(event) => highlightRow(event.target)}
-    >
-      <div className="sticky top-16 z-20">
-        <YouTubePlayerButtonPreview feature={activePreview} />
-      </div>
-      <CardListItemWrapper className="[&>.card-list-item:first-child]:rounded-t-none">
-        <YouTubeBoostSetting disabled={!extensionEnabled} />
-        <YouTubeCinemaSetting disabled={!extensionEnabled} />
-        <YouTubeLoopSetting disabled={!extensionEnabled} />
-        <YouTubeBookmarksSetting disabled={!extensionEnabled} />
-        <YouTubeInfoCardsSetting disabled={!extensionEnabled} />
-        <YouTubeScreenshotSetting disabled={!extensionEnabled} />
-        <YouTubeFiltersSetting disabled={!extensionEnabled} />
-        <YouTubeMiniPlayerSetting disabled={!extensionEnabled} />
-        <YouTubePipSetting disabled={!extensionEnabled} />
+    <>
+      <section
+        aria-label="YouTube player settings"
+        className={cn(
+          'relative rounded-xl bg-white dark:bg-slate-800/70',
+          !extensionEnabled && 'pointer-events-none opacity-50'
+        )}
+        onBlur={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget))
+            setActivePreview(null);
+        }}
+        onFocus={(event) => highlightRow(event.target)}
+        onMouseLeave={(event) =>
+          highlightRow(event.currentTarget.ownerDocument.activeElement)
+        }
+        onMouseOver={(event) => highlightRow(event.target)}
+      >
+        <div className="sticky top-16 z-20">
+          <YouTubePlayerButtonPreview feature={activePreview} />
+        </div>
+        <CardListItemWrapper className="[&>.card-list-item:first-child]:rounded-t-none">
+          <YouTubeBoostSetting disabled={!extensionEnabled} />
+          <YouTubeCinemaSetting disabled={!extensionEnabled} />
+          <YouTubeLoopSetting disabled={!extensionEnabled} />
+          <YouTubeBookmarksSetting disabled={!extensionEnabled} />
+          <YouTubeInfoCardsSetting disabled={!extensionEnabled} />
+          <YouTubeScreenshotSetting disabled={!extensionEnabled} />
+          <YouTubeFiltersSetting disabled={!extensionEnabled} />
+          <YouTubeMiniPlayerSetting disabled={!extensionEnabled} />
+          <YouTubePipSetting disabled={!extensionEnabled} />
+          <CardListItem
+            components={{
+              RightSlot: (
+                <AppSwitch
+                  aria-label="Use chaptered timeline on YouTube"
+                  checked={chapteredTimelineEnabled}
+                  disabled={!extensionEnabled}
+                  onCheckedChange={onChapteredTimelineEnabledChange}
+                />
+              ),
+            }}
+            description="Timeline feature: show YouTube chapter divisions and names"
+            icon={ListVideoIcon}
+            iconIsToggled={chapteredTimelineEnabled}
+            title={
+              <span className="inline-flex items-center gap-2">
+                Chaptered Timeline
+                <ExtraFeaturePreviewTooltip featureName="Chaptered Timeline" />
+                <AppBetaBadge
+                  featureName="Chaptered Timeline"
+                  tooltip={
+                    <>
+                      <strong>Chaptered Timeline</strong> is in beta and may
+                      need adjustments as YouTube updates its players.
+                    </>
+                  }
+                />
+              </span>
+            }
+          />
+        </CardListItemWrapper>
+      </section>
+      <div className="mt-3" ref={savedLibraryEntryRef}>
         <CardListItem
-          components={{
-            RightSlot: (
-              <AppSwitch
-                aria-label="Use chaptered timeline on YouTube"
-                checked={chapteredTimelineEnabled}
-                disabled={!extensionEnabled}
-                onCheckedChange={onChapteredTimelineEnabledChange}
-              />
-            ),
-          }}
-          description="Timeline feature: show YouTube chapter divisions and names"
-          icon={ListVideoIcon}
-          iconIsToggled={chapteredTimelineEnabled}
-          title={
-            <span className="inline-flex items-center gap-2">
-              Chaptered Timeline
-              <ExtraFeaturePreviewTooltip featureName="Chaptered Timeline" />
-              <AppBetaBadge
-                featureName="Chaptered Timeline"
-                tooltip={
-                  <>
-                    <strong>Chaptered Timeline</strong> is in beta and may need
-                    adjustments as YouTube updates its players.
-                  </>
-                }
-              />
-            </span>
-          }
+          description="Browse your saved YouTube videos, bookmarks, and loop sections."
+          icon={BookmarkIcon}
+          onClick={(event) => onOpenSavedLibrary(event.detail > 0)}
+          title="Saved bookmarks & loops"
         />
-      </CardListItemWrapper>
-    </section>
+      </div>
+    </>
   );
 }

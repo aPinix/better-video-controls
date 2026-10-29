@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://www.youtube.com/watch?v=screenshot-test"}
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { FloatingPlayer } from './player-floating';
 import { PlayerTools } from './player-tools';
 import { DEFAULT_FILTERS, DEFAULT_PLAYER_TOOLS } from './player-tools-settings';
 
@@ -144,7 +145,7 @@ describe('YouTube Screenshot button', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(screenshot.disabled).toBe(false);
     const status = document.querySelector<HTMLElement>(
-      '.mfs-screenshot-status'
+      '.mfs-screenshot-status:not(.mfs-bookmark-status)'
     );
     expect(status?.textContent).toBe('Screenshot saved.');
     expect(status?.hidden).toBe(false);
@@ -157,9 +158,10 @@ describe('YouTube Screenshot button', () => {
     );
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
-    expect(document.querySelector('.mfs-screenshot-status')?.textContent).toBe(
-      'Screenshot blocked by this video source.'
-    );
+    expect(
+      document.querySelector('.mfs-screenshot-status:not(.mfs-bookmark-status)')
+        ?.textContent
+    ).toBe('Screenshot blocked by this video source.');
     expect(screenshot.disabled).toBe(false);
     screenshot.click();
     await vi.advanceTimersByTimeAsync(0);
@@ -209,6 +211,50 @@ describe('YouTube Screenshot button', () => {
 });
 
 describe('YouTube Video Filters popup', () => {
+  it.each(['Brightness', 'Contrast', 'Saturation', 'Grayscale'])(
+    'resets only %s on double-click without closing or affecting playback',
+    (name) => {
+      filtersButton().click();
+      const values = {
+        Brightness: 140,
+        Contrast: 130,
+        Saturation: 120,
+        Grayscale: 50,
+      };
+      for (const [label, value] of Object.entries(values)) {
+        const input = filterInput(label);
+        input.value = String(value);
+        input.dispatchEvent(new Event('input'));
+      }
+      const videoClick = vi.fn();
+      video.parentElement?.addEventListener('dblclick', videoClick);
+      filterInput(name).dispatchEvent(
+        new MouseEvent('dblclick', {
+          bubbles: true,
+          composed: true,
+          cancelable: true,
+        })
+      );
+      for (const [label, value] of Object.entries(values))
+        expect(filterInput(label).value).toBe(
+          String(label === name ? (label === 'Grayscale' ? 0 : 100) : value)
+        );
+      expect(filterInput(name).getAttribute('aria-valuetext')).toBe(
+        name === 'Grayscale' ? '0%' : '100%'
+      );
+      expect(video.style.filter).toContain(
+        name === 'Grayscale'
+          ? 'grayscale(0%)'
+          : `${name === 'Saturation' ? 'saturate' : name.toLowerCase()}(100%)`
+      );
+      expect(videoClick).not.toHaveBeenCalled();
+      expect(
+        document.querySelector<HTMLElement>('.mfs-youtube-filters-popup')
+          ?.hidden
+      ).toBe(false);
+      expect(video.currentTime).toBe(25);
+    }
+  );
   it('stays open through focus changes and inside interactions until toggled closed', () => {
     filtersButton().click();
     const host = document.querySelector(
@@ -255,6 +301,12 @@ describe('YouTube Video Filters popup', () => {
         )
       ).toBe(true);
       const vivid = filterAction('Vivid');
+      expect(
+        vivid.querySelector<HTMLImageElement>('img')?.style.filter
+      ).toContain('saturate(145%)');
+      expect(vivid.querySelector<HTMLElement>('.thumbnail')?.style.filter).toBe(
+        ''
+      );
       vivid.click();
       expect(vivid.getAttribute('aria-pressed')).toBe('true');
       expect(filterInput('Saturation').value).toBe('145');
@@ -523,6 +575,54 @@ describe('YouTube advanced controls and shortcuts', () => {
     });
     return () => saved;
   };
+  it('keeps O for PiP override, P for opening PiP, and edits the same saved toggle from a hold', async () => {
+    const saved = liveStorage();
+    saved().youtubePipAutoOnTabChange = false;
+    vi.stubGlobal('documentPictureInPicture', { requestWindow: vi.fn() });
+    preferencesChanged(saved());
+    const open = vi
+      .spyOn(FloatingPlayer.prototype, 'openPip')
+      .mockResolvedValue(undefined);
+    try {
+      key('o');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(saved().youtubePipOverride).toBe(true);
+      expect(saved().youtubePipAutoOnTabChange).toBe(true);
+      expect(open).not.toHaveBeenCalled();
+      key('p');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(open).toHaveBeenCalledOnce();
+      expect(saved().youtubePipOverride).toBe(true);
+      await hold('pip');
+      expect(open).toHaveBeenCalledOnce();
+      const toggle = advancedInput('Override YouTube PiP');
+      expect(toggle.checked).toBe(true);
+      expect(toggle.getAttribute('aria-keyshortcuts')).toBe('O');
+      advancedInput('Open PiP when switching tabs').click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(saved().youtubePipAutoOnTabChange).toBe(false);
+      toggle.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(saved().youtubePipOverride).toBe(false);
+      expect(toggle.checked).toBe(false);
+      expect(advancedHost().hidden).toBe(false);
+      expect(advancedInput('Open PiP when switching tabs').disabled).toBe(true);
+      expect(
+        advancedInput('Open PiP when switching tabs').closest('label')?.hidden
+      ).toBe(true);
+      toggle.click();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(saved().youtubePipOverride).toBe(true);
+      expect(saved().youtubePipAutoOnTabChange).toBe(true);
+      expect(
+        advancedInput('Open PiP when switching tabs').closest('label')?.hidden
+      ).toBe(false);
+      preferencesChanged({ youtubePipOverride: true });
+      expect(toggle.checked).toBe(true);
+    } finally {
+      open.mockRestore();
+    }
+  });
   it('keeps normal boost clicks separate from holds and applies saved levels to an active boost', async () => {
     const saved = liveStorage();
     await hold('boost');
@@ -581,6 +681,22 @@ describe('YouTube advanced controls and shortcuts', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(saved().dimming).toBe(42);
   });
+  it('holds the dimming preview while dragging and ends it only after release', async () => {
+    await hold('cinema');
+    const dimming = advancedInput('Page dimming');
+    const toolsRoot = document.querySelector('.mfs-player-tools')?.shadowRoot;
+    dimming.dispatchEvent(new MouseEvent('pointerdown', { button: 0 }));
+    dimming.value = '35';
+    dimming.dispatchEvent(new Event('input'));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(toolsRoot?.querySelector<HTMLElement>('.shade')?.style.opacity).toBe(
+      '0.35'
+    );
+    expect(control('cinema').getAttribute('aria-pressed')).toBe('false');
+    dimming.dispatchEvent(new Event('change'));
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(toolsRoot?.querySelector('.shade')).toBeNull();
+  });
   it('saves cinema presets, custom selection, and dimming while keeping the menu and selection current', async () => {
     const saved = liveStorage();
     await hold('cinema');
@@ -596,6 +712,13 @@ describe('YouTube advanced controls and shortcuts', () => {
       cinemaColorCustom: false,
     });
     expect(ocean?.getAttribute('aria-pressed')).toBe('true');
+    const toolsRoot = document.querySelector('.mfs-player-tools')?.shadowRoot;
+    expect(toolsRoot?.querySelector('.shade path')?.getAttribute('fill')).toBe(
+      '#172554'
+    );
+    expect(control('cinema').getAttribute('aria-pressed')).toBe('false');
+    await vi.advanceTimersByTimeAsync(2100);
+    expect(toolsRoot?.querySelector('.shade')).toBeNull();
     const color = advancedInput('Custom Cinema Mode color');
     color.click();
     await vi.advanceTimersByTimeAsync(0);
@@ -759,12 +882,12 @@ describe('YouTube advanced controls and shortcuts', () => {
     expect(host.hidden).toBe(false);
     key('Escape');
     (document.activeElement as HTMLElement)?.blur();
-    expect(key('r').defaultPrevented).toBe(true);
+    expect(key('r', { shiftKey: true }).defaultPrevented).toBe(true);
     expect(
       document
         .querySelector('#movie_player')
         ?.classList.contains('mfs-filters-open')
     ).toBe(false);
-    expect(control('loop-edit').getAttribute('aria-expanded')).toBe('true');
+    expect(control('loop').getAttribute('aria-expanded')).toBe('true');
   });
 });

@@ -4,6 +4,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { ExtraFeaturePreviewTooltip } from '@/components/popup/extra-feature-preview-tooltip';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeLoopSetting({
   disabled = false,
@@ -63,10 +64,10 @@ export function YouTubeLoopSetting({
       icon={RepeatIcon}
       iconIsToggled={settings.youtubeLoop}
       title={
-        <span className="inline-flex items-center gap-1.5">
+        <YouTubeFeatureTitle feature="loop">
           Loop Sections
           <ExtraFeaturePreviewTooltip featureName="Loop Sections" />
-        </span>
+        </YouTubeFeatureTitle>
       }
     />
   );

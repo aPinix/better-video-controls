@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import {
   handleYouTubePipWindowRequest,
   normalizeYouTubePipPosition,
+  registerYouTubePipWindowBackground,
   YOUTUBE_PIP_POSITION_KEY,
   YOUTUBE_PIP_WINDOW_MESSAGE,
 } from './youtube-pip-window';
@@ -60,10 +61,14 @@ beforeEach(() => {
       getAll: async () => windows,
       get: async (id: number) => windows.find((win) => win.id === id),
       update,
+      onRemoved: { addListener: vi.fn() },
+      onBoundsChanged: { addListener: vi.fn() },
     },
+    runtime: { onMessage: { addListener: vi.fn() } },
     tabs: { getZoom: async () => 1 },
     system: {
       display: {
+        onDisplayChanged: { addListener: vi.fn() },
         getInfo: async () => [
           {
             isEnabled: true,
@@ -79,8 +84,14 @@ beforeEach(() => {
       },
     },
   });
+  registerYouTubePipWindowBackground();
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  for (const [removed] of vi.mocked(chrome.windows.onRemoved.addListener).mock
+    .calls)
+    for (const id of [1, 2, 3]) removed(id);
+  vi.unstubAllGlobals();
+});
 it('restores saved multi-monitor coordinates only on the requesting tab’s PiP', async () => {
   expect(
     await handleYouTubePipWindowRequest(
@@ -122,14 +133,12 @@ it('moves and resizes an owned PiP window', async () => {
   expect(update).toHaveBeenCalledWith(2, {
     left: 640,
     top: 280,
-    width: 360,
-    height: 203,
   });
   expect(update).toHaveBeenCalledWith(2, {
     left: 640,
     top: 280,
     width: 480,
-    height: 270,
+    height: 304,
   });
 });
 it.each([1, 3, 999])(
@@ -194,8 +203,6 @@ it('allows temporary edge overshoot but lands 10px inside the usable screen on r
   expect(update).toHaveBeenLastCalledWith(2, {
     left: 1650,
     top: 928,
-    width: 360,
-    height: 203,
   });
   await handleYouTubePipWindowRequest(
     {
@@ -216,6 +223,7 @@ it('allows temporary edge overshoot but lands 10px inside the usable screen on r
   });
 });
 it('sends a directional flick to a corner and includes browser frame height', async () => {
+  Object.assign(windows[1] ?? {}, { height: 237 });
   await handleYouTubePipWindowRequest(
     {
       type: YOUTUBE_PIP_WINDOW_MESSAGE,
@@ -224,7 +232,6 @@ it('sends a directional flick to a corner and includes browser frame height', as
       vx: -2,
       vy: 1,
       flick: true,
-      frameHeight: 34,
       reducedMotion: true,
     },
     sender
@@ -252,7 +259,6 @@ it('prepares a flick without blocking on worker timers, then accepts immediate a
       vx: 2,
       vy: 1,
       flick: true,
-      frameHeight: 34,
       prepareAnimation: true,
     },
     sender
@@ -265,9 +271,9 @@ it('prepares a flick without blocking on worker timers, then accepts immediate a
   });
   expect(prepared.rect).toEqual({
     left: 1550,
-    top: 773,
+    top: 807,
     width: 360,
-    height: 237,
+    height: 203,
   });
   expect(update).not.toHaveBeenCalled();
   await handleYouTubePipWindowRequest(
@@ -278,8 +284,7 @@ it('prepares a flick without blocking on worker timers, then accepts immediate a
       x: 800,
       y: 600,
       width: 360,
-      height: 237,
-      frameHeight: 34,
+      height: 203,
     },
     sender
   );
@@ -287,7 +292,7 @@ it('prepares a flick without blocking on worker timers, then accepts immediate a
     left: 800,
     top: 600,
     width: 360,
-    height: 237,
+    height: 203,
   });
 });
 it('uses the prepared display snapshot for frames and still rejects another opener', async () => {
@@ -324,74 +329,165 @@ it('uses the prepared display snapshot for frames and still rejects another open
     })
   ).rejects.toThrow('unavailable');
 });
-it.each([1, 2])(
-  'returns to the source player at browser zoom %s, accounting for the PiP header',
-  async (zoom) => {
-    chrome.tabs.getZoom = vi.fn(async () => zoom) as typeof chrome.tabs.getZoom;
-    const result = await handleYouTubePipWindowRequest(
-      {
-        type: YOUTUBE_PIP_WINDOW_MESSAGE,
-        action: 'return',
-        aspect: 16 / 9,
-        frameHeight: 34,
-        reducedMotion: true,
-        destination: {
-          left: 100 / zoom,
-          top: 150 / zoom,
-          width: 640 / zoom,
-          height: 360 / zoom,
-          viewportWidth: 1200 / zoom,
-          viewportHeight: 700 / zoom,
-        },
-      },
-      sender
-    );
-    expect(result.rect).toEqual({
-      left: 200,
-      top: 266,
-      width: 640,
-      height: 394,
-    });
-    expect(result.from).toEqual({
-      left: 100,
-      top: 100,
-      width: 360,
-      height: 203,
-    });
-    expect(update).not.toHaveBeenCalled();
+it('uses only one native window update per drag or resize frame after registration', async () => {
+  const get = vi.spyOn(chrome.windows, 'get');
+  const displays = vi.spyOn(chrome.system.display, 'getInfo');
+  await handleYouTubePipWindowRequest(
+    { type: YOUTUBE_PIP_WINDOW_MESSAGE, action: 'register' },
+    sender
+  );
+  get.mockClear();
+  displays.mockClear();
+  update.mockClear();
+  for (const x of [700, 720, 740])
     await handleYouTubePipWindowRequest(
       {
         type: YOUTUBE_PIP_WINDOW_MESSAGE,
-        action: 'return',
+        action: 'move',
         windowId: 2,
-        x: result.rect.left,
-        y: result.rect.top,
-        width: result.rect.width,
-        height: result.rect.height,
-        frameHeight: 34,
+        x,
+        y: 300,
       },
       sender
     );
-    expect(update).toHaveBeenLastCalledWith(2, result.rect);
-  }
-);
-it('rejects a corrupt return destination without moving an unrelated window', async () => {
+  await handleYouTubePipWindowRequest(
+    {
+      type: YOUTUBE_PIP_WINDOW_MESSAGE,
+      action: 'resize',
+      windowId: 2,
+      x: 740,
+      y: 300,
+      width: 480,
+      height: 300,
+    },
+    sender
+  );
+  expect(get).not.toHaveBeenCalled();
+  expect(displays).not.toHaveBeenCalled();
+  expect(update).toHaveBeenCalledTimes(4);
+  expect(update.mock.calls[0]?.[1]).toEqual({ left: 700, top: 300 });
+  expect(update.mock.calls.at(-1)?.[1]).toEqual({
+    left: 740,
+    top: 300,
+    width: 480,
+    height: 300,
+  });
+  await handleYouTubePipWindowRequest(
+    {
+      type: YOUTUBE_PIP_WINDOW_MESSAGE,
+      action: 'settle',
+      windowId: 2,
+      reducedMotion: true,
+    },
+    sender
+  );
+  expect(get).toHaveBeenCalledOnce();
+  expect(displays).toHaveBeenCalledOnce();
+});
+it('revalidates cached controls when monitors change or the window closes', async () => {
+  const get = vi.spyOn(chrome.windows, 'get');
+  const displays = vi.spyOn(chrome.system.display, 'getInfo');
+  await handleYouTubePipWindowRequest(
+    { type: YOUTUBE_PIP_WINDOW_MESSAGE, action: 'register' },
+    sender
+  );
+  get.mockClear();
+  displays.mockClear();
+  vi.mocked(
+    chrome.system.display.onDisplayChanged.addListener
+  ).mock.calls[0]?.[0]();
+  const move = {
+    type: YOUTUBE_PIP_WINDOW_MESSAGE,
+    action: 'move',
+    windowId: 2,
+    x: 700,
+    y: 300,
+  } as const;
+  await handleYouTubePipWindowRequest(move, sender);
+  expect(get).toHaveBeenCalledOnce();
+  expect(displays).toHaveBeenCalledOnce();
+  vi.mocked(chrome.windows.onRemoved.addListener).mock.calls[0]?.[0](2);
+  windows = windows.filter((win) => win.id !== 2);
+  await expect(handleYouTubePipWindowRequest(move, sender)).rejects.toThrow(
+    'unavailable'
+  );
+});
+it('retains verified ownership when a native update omits window metadata', async () => {
+  await handleYouTubePipWindowRequest(
+    { type: YOUTUBE_PIP_WINDOW_MESSAGE, action: 'register' },
+    sender
+  );
+  update.mockImplementationOnce(
+    async (_id, rect) =>
+      ({
+        id: 2,
+        left: rect.left,
+        top: rect.top,
+        tabs: undefined,
+      }) as chrome.windows.Window
+  );
+  for (const x of [700, 720])
+    await expect(
+      handleYouTubePipWindowRequest(
+        {
+          type: YOUTUBE_PIP_WINDOW_MESSAGE,
+          action: 'move',
+          windowId: 2,
+          x,
+          y: 300,
+        },
+        sender
+      )
+    ).resolves.toMatchObject({ windowId: 2, rect: { left: x, top: 300 } });
+});
+it('uses current native window size after title-bar movement or native resizing', async () => {
+  await handleYouTubePipWindowRequest(
+    { type: YOUTUBE_PIP_WINDOW_MESSAGE, action: 'register' },
+    sender
+  );
+  const native = {
+    id: 2,
+    left: 300,
+    top: 200,
+    width: 480,
+    height: 304,
+  } as chrome.windows.Window;
+  Object.assign(windows[1] ?? {}, native);
+  vi.mocked(chrome.windows.onBoundsChanged.addListener).mock.calls[0]?.[0](
+    native
+  );
+  const result = await handleYouTubePipWindowRequest(
+    {
+      type: YOUTUBE_PIP_WINDOW_MESSAGE,
+      action: 'move',
+      windowId: 2,
+      x: 700,
+      y: 250,
+    },
+    sender
+  );
+  expect(result.rect).toEqual({ left: 700, top: 250, width: 480, height: 304 });
+});
+it('keeps cached window ownership scoped to its original YouTube opener', async () => {
+  await handleYouTubePipWindowRequest(
+    { type: YOUTUBE_PIP_WINDOW_MESSAGE, action: 'register' },
+    sender
+  );
+  update.mockClear();
   await expect(
     handleYouTubePipWindowRequest(
       {
         type: YOUTUBE_PIP_WINDOW_MESSAGE,
-        action: 'return',
-        destination: {
-          left: Number.NaN,
-          top: 100,
-          width: 640,
-          height: 360,
-          viewportWidth: 1200,
-          viewportHeight: 700,
-        },
+        action: 'move',
+        windowId: 2,
+        x: 700,
+        y: 300,
       },
-      sender
+      {
+        ...sender,
+        tab: { ...sender.tab, id: 20 },
+      } as chrome.runtime.MessageSender
     )
-  ).rejects.toThrow('Invalid PiP return destination');
+  ).rejects.toThrow('unavailable');
   expect(update).not.toHaveBeenCalled();
 });

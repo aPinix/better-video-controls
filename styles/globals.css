@@ -222,7 +222,8 @@
   --skeleton-foreground: hsl(from var(--background) h 0 calc(l - 4));
 
   /* colors: scrollbar */
-  --scrollbar: oklch(0.8 0 0);
+  --scrollbar: hsl(from var(--foreground) h s l / 0.1);
+  --scrollbar-hover: hsl(from var(--foreground) h s l / 0.18);
 
   /* colors: highlight */
   --hl-fg: hsl(from var(--foreground) h s calc(l + 30)); /* inherit */
@@ -281,7 +282,8 @@
   --skeleton-foreground: hsl(from var(--background) h 0 calc(l + 4));
 
   /* colors: scrollbar */
-  --scrollbar: oklch(0.45 0 0);
+  --scrollbar: hsl(from var(--foreground) h s l / 0.12);
+  --scrollbar-hover: hsl(from var(--foreground) h s l / 0.2);
 }
 
 @layer base {
@@ -306,6 +308,9 @@
   ::-webkit-scrollbar-thumb {
     background: var(--scrollbar);
     border-radius: 5px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-hover);
   }
   * {
     scrollbar-width: thin;

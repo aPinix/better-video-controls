@@ -5,7 +5,13 @@ import {
   PowerIcon,
   SlidersHorizontalIcon,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import { AppBetaBadge } from '@/components/app/app-beta-badge';
 import { AppKbd } from '@/components/app/app-kbd';
 import { AppSwitch } from '@/components/app/app-switch';
@@ -14,13 +20,15 @@ import { CardListItem } from '@/components/popup/card-list-item';
 import { ExtraFeaturePreviewTooltip } from '@/components/popup/extra-feature-preview-tooltip';
 import { MinimalPlayerDescription } from '@/components/popup/minimal-player-description';
 import { SectionTitle } from '@/components/popup/section-title';
+import { SettingsSearch } from '@/components/popup/settings-search';
 import { ShowOnHoverSetting } from '@/components/popup/show-on-hover-setting';
 import { SiteAccessView } from '@/components/popup/site-access-view';
-import { SettingsSearch } from '@/components/popup/settings-search';
+import { usePopupViewState } from '@/components/popup/use-popup-view-memory';
+import { useYouTubeLibraryPage } from '@/components/popup/use-youtube-library-page';
 import { ViewTitle } from '@/components/popup/view-title';
 import { ArrowSeekSettings } from '@/components/settings/arrow-seek-settings';
-import { SharedVideoSettings } from '@/components/settings/shared-video-settings';
 import { SeekControlsSettings } from '@/components/settings/seek-controls-settings';
+import { SharedVideoSettings } from '@/components/settings/shared-video-settings';
 import { YouTubeSettings } from '@/components/settings/youtube-settings';
 import { useTheme } from '@/components/theme-provider';
 import { Button } from '@/components/ui/button';
@@ -39,6 +47,7 @@ import {
   sendMessageToCurrentTab,
   subscribeToEnabledChanges,
 } from '@/helpers/popup-storage';
+import { readPopupView } from '@/helpers/popup-view-session';
 import type { ScrollHotkeyT } from '@/helpers/scroll-speed';
 import type { ThumbnailTimeDisplay } from '@/helpers/thumbnail-time';
 import { getCurrentDomain } from '@/lib/popup-utils';
@@ -65,6 +74,11 @@ const shortcutKeySymbols: Record<string, string> = {
   Shift: '⇧',
 };
 const compactModifierSymbols = new Set(['⌘', '⇧', '⌥', '⌃']);
+const popupViews = [
+  { id: 'settings', label: 'Settings', icon: SlidersHorizontalIcon },
+  { id: 'domains', label: 'Domains', icon: GlobeIcon },
+] as const;
+type PopupView = (typeof popupViews)[number]['id'];
 
 function getShortcutKeys(shortcut: string) {
   if (shortcut.includes('+')) {
@@ -209,7 +223,7 @@ export function PopupContent() {
   const { theme } = useTheme();
   const carouselRef = useRef<HTMLElement>(null);
   const settingsContentRef = useRef<HTMLDivElement>(null);
-  const programmaticViewRef = useRef<boolean | null>(null);
+  const programmaticViewRef = useRef<PopupView | null>(null);
   const domainSortTouchedRef = useRef(false);
   const [isEnabled, setIsEnabled] = useState(true);
   const [isScrollSeekingEnabled, setIsScrollSeekingEnabled] = useState(
@@ -257,7 +271,23 @@ export function PopupContent() {
     DEFAULT_SETTINGS.domainSort
   );
   const [currentDomain, setCurrentDomain] = useState('');
-  const [showDomainsView, setShowDomainsView] = useState(false);
+  const [activeView, setActiveView] = usePopupViewState<PopupView>(
+    'navigation.view',
+    'settings'
+  );
+  const showDomainsView = activeView === 'domains';
+  const showSettingsView = activeView === 'settings';
+  const youtubeLibrary = useYouTubeLibraryPage(showSettingsView);
+  const showPreferences = showSettingsView && !youtubeLibrary.isOpen;
+  const showYouTubeLibrary = showSettingsView && youtubeLibrary.isOpen;
+  useLayoutEffect(() => {
+    const carousel = carouselRef.current;
+    if (carousel)
+      carousel.scrollLeft =
+        readPopupView<PopupView>('navigation.view', 'settings') === 'domains'
+          ? carousel.clientWidth
+          : 0;
+  }, []);
   const [fastScrollHotkey, setFastScrollHotkey] = useState<ScrollHotkeyT>(
     DEFAULT_SETTINGS.fastScrollHotkey
   );
@@ -830,22 +860,46 @@ export function PopupContent() {
     });
   };
 
-  const selectPopupView = useCallback((showDomains: boolean) => {
-    const carousel = carouselRef.current;
-    setShowDomainsView(showDomains);
-    if (!carousel) return;
+  const selectPopupView = useCallback(
+    (view: PopupView, pointer = true) => {
+      if (
+        view === 'settings' &&
+        showSettingsView &&
+        youtubeLibrary.hasLibrary
+      ) {
+        youtubeLibrary.back(pointer);
+        return;
+      }
+      youtubeLibrary.leave();
+      const carousel = carouselRef.current;
+      setActiveView(view);
+      if (!carousel) return;
 
-    const targetLeft = showDomains ? carousel.clientWidth : 0;
-    if (Math.abs(carousel.scrollLeft - targetLeft) < 1) {
-      programmaticViewRef.current = null;
-      return;
-    }
+      const targetLeft =
+        popupViews.findIndex(({ id }) => id === view) * carousel.clientWidth;
+      if (Math.abs(carousel.scrollLeft - targetLeft) < 1) {
+        programmaticViewRef.current = null;
+        return;
+      }
 
-    programmaticViewRef.current = showDomains;
-    carousel.scrollTo({
-      left: targetLeft,
-    });
-  }, []);
+      programmaticViewRef.current = view;
+      carousel.scrollTo({
+        left: targetLeft,
+        behavior:
+          pointer &&
+          !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+            ? 'smooth'
+            : 'instant',
+      });
+    },
+    [
+      youtubeLibrary.leave,
+      youtubeLibrary.back,
+      youtubeLibrary.hasLibrary,
+      showSettingsView,
+      setActiveView,
+    ]
+  );
 
   return (
     <div className={cn(theme === 'dark' && 'dark')}>
@@ -853,318 +907,389 @@ export function PopupContent() {
         <PopupHeader />
 
         <main
-          className="scrollbar-none relative flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden"
+          className={cn(
+            'scrollbar-none relative flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden',
+            youtubeLibrary.hasLibrary && 'overflow-x-hidden'
+          )}
           onScroll={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (
+              youtubeLibrary.hasLibrary &&
+              programmaticViewRef.current !== 'domains'
+            ) {
+              event.currentTarget.scrollLeft = 0;
+              return;
+            }
             if (programmaticViewRef.current !== null) return;
 
             const carousel = event.currentTarget;
-            const nextShowDomains =
-              carousel.scrollLeft >= carousel.clientWidth / 2;
-            setShowDomainsView((current) =>
-              current === nextShowDomains ? current : nextShowDomains
+            const index = Math.max(
+              0,
+              Math.min(
+                popupViews.length - 1,
+                Math.round(carousel.scrollLeft / carousel.clientWidth)
+              )
             );
+            setActiveView(popupViews[index]?.id ?? 'settings');
           }}
           onScrollEnd={(event) => {
+            if (event.target !== event.currentTarget) return;
+            if (
+              youtubeLibrary.hasLibrary &&
+              programmaticViewRef.current !== 'domains'
+            ) {
+              event.currentTarget.scrollLeft = 0;
+              return;
+            }
             programmaticViewRef.current = null;
             const carousel = event.currentTarget;
-            const nextShowDomains =
-              carousel.scrollLeft >= carousel.clientWidth / 2;
-            setShowDomainsView(nextShowDomains);
+            const index = Math.max(
+              0,
+              Math.min(
+                popupViews.length - 1,
+                Math.round(carousel.scrollLeft / carousel.clientWidth)
+              )
+            );
+            setActiveView(popupViews[index]?.id ?? 'settings');
           }}
           ref={carouselRef}
         >
           {/* Main View */}
           <div
-            aria-hidden={showDomainsView}
-            className="flex h-full w-full shrink-0 snap-start snap-always flex-col"
-            inert={showDomainsView}
+            aria-hidden={!showSettingsView}
+            className="flex h-full w-full shrink-0 snap-start snap-always flex-col overflow-hidden"
+            inert={!showSettingsView}
           >
-            {/* Scrollable Content */}
-            <ScrollArea className="flex-1 overflow-hidden **:data-[slot='scroll-area-viewport']:relative">
+            <div
+              className={cn(
+                'scrollbar-none relative flex min-h-0 flex-1 overflow-y-hidden [&::-webkit-scrollbar]:hidden',
+                youtubeLibrary.hasLibrary
+                  ? 'snap-x snap-mandatory overflow-x-auto overscroll-x-contain'
+                  : 'overflow-x-clip'
+              )}
+              data-testid="settings-carousel"
+              ref={youtubeLibrary.surfaceRef}
+            >
               <div
-                ref={settingsContentRef}
-                className="flex flex-1 flex-col gap-6 p-6 pt-22 pb-36"
+                aria-hidden={youtubeLibrary.isOpen}
+                className="flex h-full min-h-0 w-full shrink-0 snap-start snap-always flex-col"
+                inert={youtubeLibrary.isOpen}
               >
-                <ViewTitle
-                  description="Customize video controls and scrolling"
-                  title="Settings"
-                />
-
-                {/* Extension Section */}
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="Extension">
-                    {!isExtensionAtDefaults && (
-                      <ResetDefaultsButton
-                        onClick={handleResetExtensionDefaults}
-                        section="Extension"
-                      />
-                    )}
-                  </SectionTitle>
-                  <CardListItemWrapper>
-                    <CardListItem
-                      classNameIcon={
-                        isEnabled ? 'text-brand-400! filter-[saturate(2)]' : ''
-                      }
-                      components={{
-                        RightSlot: (
-                          <>
-                            <Button
-                              aria-label="Configure extension toggle shortcut"
-                              className="h-7 min-w-22 max-w-36 rounded-lg border-slate-200 bg-slate-50 px-2.5 font-mono text-[11px] text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950/50 dark:hover:text-brand-300"
-                              onClick={() => {
-                                chrome.tabs.create({
-                                  url: 'chrome://extensions/shortcuts',
-                                });
-                              }}
-                              size="sm"
-                              title="Change extension toggle shortcut"
-                              variant="outline"
-                            >
-                              <ShortcutKeycaps shortcut={toggleShortcut} />
-                            </Button>
-                            <AppSwitch
-                              aria-label="Enable extension"
-                              checked={isEnabled}
-                              onCheckedChange={handleEnabledToggle}
-                            />
-                          </>
-                        ),
-                      }}
-                      description="Turn video seeking on/off"
-                      disabledSoft={!isEnabled}
-                      icon={PowerIcon}
-                      title="Enable Extension"
-                    />
-                  </CardListItemWrapper>
-                </div>
-
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="Seek Controls">
-                    {!isSettingsAtDefaults ? (
-                      <ResetDefaultsButton
-                        onClick={handleResetSettingsDefaults}
-                        section="Seek Controls"
-                      />
-                    ) : null}
-                  </SectionTitle>
-
+                {/* Scrollable Content */}
+                <ScrollArea
+                  className="flex-1 overflow-hidden **:data-[slot='scroll-area-viewport']:relative"
+                  ref={youtubeLibrary.preferencesScrollRef}
+                >
                   <div
-                    className={cn(
-                      !isEnabled && 'pointer-events-none opacity-50'
-                    )}
+                    className="flex flex-1 flex-col gap-6 p-6 pt-22 pb-36"
+                    ref={settingsContentRef}
                   >
-                    <SeekControlsSettings
-                      actionArea={actionArea}
-                      actionAreaSize={actionAreaSize}
-                      actionAreaSizeUnit={actionAreaSizeUnit}
-                      colorizedTimeline={colorizedTimeline}
-                      fastScrollHotkey={fastScrollHotkey}
-                      isDragSeekingEnabled={dragVideoToSeek}
-                      isPlayPauseWheelEnabled={isPlayPauseWheelEnabled}
-                      isScrollSeekingEnabled={isScrollSeekingEnabled}
-                      isSeekbarSeekingEnabled={isTimelineSeekingEnabled}
-                      onActionAreaChange={applyActionArea}
-                      onActionAreaReset={() =>
-                        applyActionArea(DEFAULT_SETTINGS.actionArea)
-                      }
-                      onActionAreaSizeChange={handleActionAreaSizeChange}
-                      onActionAreaSizeReset={handleActionAreaSizeReset}
-                      onActionAreaSizeUnitChange={
-                        handleActionAreaSizeUnitChange
-                      }
-                      onDragSeekingEnabledChange={handleDragVideoToSeekToggle}
-                      onFastScrollHotkeyChange={handleFastScrollHotkeyChange}
-                      onHeightChange={handleTimelineHeightChange}
-                      onHeightReset={handleTimelineHeightReset}
-                      onPlayPauseWheelEnabledChange={
-                        handlePlayPauseWheelEnabledChange
-                      }
-                      onPositionChange={handleTimelinePositionChange}
-                      onPositionReset={() =>
-                        handleTimelinePositionChange(
-                          DEFAULT_SETTINGS.timelinePosition
-                        )
-                      }
-                      onScrollInversionChange={handleScrollInversionToggle}
-                      onScrollSeekingEnabledChange={handleScrollSeekingToggle}
-                      onScrollSpeedFactorChange={handleScrollSpeedFactorChange}
-                      onSeekbarSeekingEnabledChange={
-                        handleTimelineSeekingToggle
-                      }
-                      onSlowScrollHotkeyChange={handleSlowScrollHotkeyChange}
-                      onUnitChange={handleTimelineHeightUnitChange}
-                      scrollInverted={invertHorizontalScroll}
-                      scrollSpeedFactor={scrollSpeedFactor}
-                      slowScrollHotkey={slowScrollHotkey}
-                      timelineHeight={timelineHeight}
-                      timelinePosition={timelinePosition}
-                      timelineUnit={timelineHeightUnit}
+                    <ViewTitle
+                      description="Customize video controls and scrolling"
+                      title="Settings"
                     />
-                  </div>
-                </div>
 
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="Basic Features" />
-                  <CardListItemWrapper
-                    className={cn(
-                      !isEnabled && 'pointer-events-none opacity-50'
-                    )}
-                  >
-                    <ArrowSeekSettings disabled={!isEnabled} />
-                  </CardListItemWrapper>
-                </div>
-
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="Extra Features" />
-                  <PlayerToolsLibrary />
-                  <CardListItemWrapper
-                    className={cn(
-                      !isEnabled && 'pointer-events-none opacity-50'
-                    )}
-                  >
-                    <ShowOnHoverSetting
-                      checked={showTimelineOnHover}
-                      isSeekbarSeekingEnabled={isTimelineSeekingEnabled}
-                      isSeekbarThumbnailPreviewEnabled={
-                        isSeekbarThumbnailPreviewEnabled
-                      }
-                      onCheckedChange={handleTimelineHoverToggle}
-                    />
-                    <CardListItem
-                      components={{
-                        RightSlot: (
-                          <AppSwitch
-                            aria-label="Use minimal player"
-                            checked={hideVideoControls}
-                            onCheckedChange={handleHideVideoControlsToggle}
+                    {/* Extension Section */}
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle title="Extension">
+                        {!isExtensionAtDefaults && (
+                          <ResetDefaultsButton
+                            onClick={handleResetExtensionDefaults}
+                            section="Extension"
                           />
-                        ),
-                      }}
-                      description={<MinimalPlayerDescription />}
-                      icon={EyeOffIcon}
-                      iconIsToggled={hideVideoControls}
-                      title={
-                        <span className="inline-flex items-center gap-1.5">
-                          Minimal Player
-                          <ExtraFeaturePreviewTooltip featureName="Minimal Player" />
-                          <AppBetaBadge
-                            featureName="Minimal Player"
-                            tooltip={
+                        )}
+                      </SectionTitle>
+                      <CardListItemWrapper>
+                        <CardListItem
+                          classNameIcon={
+                            isEnabled
+                              ? 'text-brand-400! filter-[saturate(2)]'
+                              : ''
+                          }
+                          components={{
+                            RightSlot: (
                               <>
-                                <strong>Minimal Player</strong> is experimental,
-                                so replacement controls may not be fully
-                                supported on every site.
+                                <Button
+                                  aria-label="Configure extension toggle shortcut"
+                                  className="h-7 min-w-22 max-w-36 rounded-lg border-slate-200 bg-slate-50 px-2.5 font-mono text-[11px] text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950/50 dark:hover:text-brand-300"
+                                  onClick={() => {
+                                    chrome.tabs.create({
+                                      url: 'chrome://extensions/shortcuts',
+                                    });
+                                  }}
+                                  size="sm"
+                                  title="Change extension toggle shortcut"
+                                  variant="outline"
+                                >
+                                  <ShortcutKeycaps shortcut={toggleShortcut} />
+                                </Button>
+                                <AppSwitch
+                                  aria-label="Enable extension"
+                                  checked={isEnabled}
+                                  onCheckedChange={handleEnabledToggle}
+                                />
                               </>
-                            }
-                          />
-                        </span>
-                      }
-                    />
-                    <CardListItem
-                      components={{
-                        RightSlot: (
-                          <AppSwitch
-                            aria-label="Toggle match site color"
-                            checked={colorizedTimeline}
-                            onCheckedChange={handleColorizedTimelineToggle}
-                          />
-                        ),
-                      }}
-                      description="Use each site's favicon color for the timeline"
-                      icon={PaletteIcon}
-                      iconIsToggled={colorizedTimeline}
-                      title={
-                        <span className="inline-flex items-center gap-1.5">
-                          Match Site Color
-                          <ExtraFeaturePreviewTooltip featureName="Match Site Color" />
-                        </span>
-                      }
-                    />
-                  </CardListItemWrapper>
-                </div>
+                            ),
+                          }}
+                          description="Turn video seeking on/off"
+                          disabledSoft={!isEnabled}
+                          icon={PowerIcon}
+                          title="Enable Extension"
+                        />
+                      </CardListItemWrapper>
+                    </div>
 
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="Shared Video Features" />
-                  <SharedVideoSettings
-                    extensionEnabled={isEnabled}
-                    thumbnailTimeDisplay={thumbnailTimeDisplay}
-                    onThumbnailTimeDisplayChange={(value) => {
-                      setThumbnailTimeDisplay(value);
-                      saveSettings({ thumbnailTimeDisplay: value });
-                    }}
-                    youtube={{
-                      thumbnailPreviewEnabled: isSeekbarThumbnailPreviewEnabled,
-                      onThumbnailPreviewEnabledChange:
-                        handleSeekbarThumbnailPreviewToggle,
-                    }}
-                    instagram={{
-                      thumbnailPreviewEnabled: instagramHoverThumbnails,
-                      onThumbnailPreviewEnabledChange: (value) => {
-                        setInstagramHoverThumbnails(value);
-                        saveSettings({ instagramHoverThumbnails: value });
-                      },
-                      autoSkip: instagramAutoSkip,
-                      onAutoSkipChange: (value) => {
-                        setInstagramAutoSkip(value);
-                        saveSettings({ instagramAutoSkip: value });
-                      },
-                      playbackSpeed: instagramPlaybackSpeed,
-                      onPlaybackSpeedChange: (value) => {
-                        setInstagramPlaybackSpeed(value);
-                        saveSettings({ instagramPlaybackSpeed: value });
-                      },
-                      showAutoSkip: instagramShowAutoSkip,
-                      onShowAutoSkipChange: (value) => {
-                        setInstagramShowAutoSkip(value);
-                        saveSettings({ instagramShowAutoSkip: value });
-                      },
-                      showPlaybackSpeed: instagramShowPlaybackSpeed,
-                      onShowPlaybackSpeedChange: (value) => {
-                        setInstagramShowPlaybackSpeed(value);
-                        saveSettings({ instagramShowPlaybackSpeed: value });
-                      },
-                    }}
-                    tiktok={{
-                      thumbnailPreviewEnabled: tiktokHoverThumbnails,
-                      onThumbnailPreviewEnabledChange: (value) => {
-                        setTikTokHoverThumbnails(value);
-                        saveSettings({ tiktokHoverThumbnails: value });
-                      },
-                      autoSkip: tiktokAutoSkip,
-                      onAutoSkipChange: (value) => {
-                        setTikTokAutoSkip(value);
-                        saveSettings({ tiktokAutoSkip: value });
-                      },
-                      playbackSpeed: tiktokPlaybackSpeed,
-                      onPlaybackSpeedChange: (value) => {
-                        setTikTokPlaybackSpeed(value);
-                        saveSettings({ tiktokPlaybackSpeed: value });
-                      },
-                      showAutoSkip: tiktokShowAutoSkip,
-                      onShowAutoSkipChange: (value) => {
-                        setTikTokShowAutoSkip(value);
-                        saveSettings({ tiktokShowAutoSkip: value });
-                      },
-                      showPlaybackSpeed: tiktokShowPlaybackSpeed,
-                      onShowPlaybackSpeedChange: (value) => {
-                        setTikTokShowPlaybackSpeed(value);
-                        saveSettings({ tiktokShowPlaybackSpeed: value });
-                      },
-                    }}
-                  />
-                </div>
-                <div className="flex flex-none flex-col">
-                  <SectionTitle title="YouTube" icon={YouTubeBrandIcon} />
-                  <YouTubeSettings
-                    chapteredTimelineEnabled={isYouTubeChapteredTimelineEnabled}
-                    extensionEnabled={isEnabled}
-                    onChapteredTimelineEnabledChange={
-                      handleYouTubeChapteredTimelineToggle
-                    }
-                  />
-                </div>
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle title="Seek Controls">
+                        {!isSettingsAtDefaults ? (
+                          <ResetDefaultsButton
+                            onClick={handleResetSettingsDefaults}
+                            section="Seek Controls"
+                          />
+                        ) : null}
+                      </SectionTitle>
+
+                      <div
+                        className={cn(
+                          !isEnabled && 'pointer-events-none opacity-50'
+                        )}
+                      >
+                        <SeekControlsSettings
+                          actionArea={actionArea}
+                          actionAreaSize={actionAreaSize}
+                          actionAreaSizeUnit={actionAreaSizeUnit}
+                          colorizedTimeline={colorizedTimeline}
+                          fastScrollHotkey={fastScrollHotkey}
+                          isDragSeekingEnabled={dragVideoToSeek}
+                          isPlayPauseWheelEnabled={isPlayPauseWheelEnabled}
+                          isScrollSeekingEnabled={isScrollSeekingEnabled}
+                          isSeekbarSeekingEnabled={isTimelineSeekingEnabled}
+                          onActionAreaChange={applyActionArea}
+                          onActionAreaReset={() =>
+                            applyActionArea(DEFAULT_SETTINGS.actionArea)
+                          }
+                          onActionAreaSizeChange={handleActionAreaSizeChange}
+                          onActionAreaSizeReset={handleActionAreaSizeReset}
+                          onActionAreaSizeUnitChange={
+                            handleActionAreaSizeUnitChange
+                          }
+                          onDragSeekingEnabledChange={
+                            handleDragVideoToSeekToggle
+                          }
+                          onFastScrollHotkeyChange={
+                            handleFastScrollHotkeyChange
+                          }
+                          onHeightChange={handleTimelineHeightChange}
+                          onHeightReset={handleTimelineHeightReset}
+                          onPlayPauseWheelEnabledChange={
+                            handlePlayPauseWheelEnabledChange
+                          }
+                          onPositionChange={handleTimelinePositionChange}
+                          onPositionReset={() =>
+                            handleTimelinePositionChange(
+                              DEFAULT_SETTINGS.timelinePosition
+                            )
+                          }
+                          onScrollInversionChange={handleScrollInversionToggle}
+                          onScrollSeekingEnabledChange={
+                            handleScrollSeekingToggle
+                          }
+                          onScrollSpeedFactorChange={
+                            handleScrollSpeedFactorChange
+                          }
+                          onSeekbarSeekingEnabledChange={
+                            handleTimelineSeekingToggle
+                          }
+                          onSlowScrollHotkeyChange={
+                            handleSlowScrollHotkeyChange
+                          }
+                          onUnitChange={handleTimelineHeightUnitChange}
+                          scrollInverted={invertHorizontalScroll}
+                          scrollSpeedFactor={scrollSpeedFactor}
+                          slowScrollHotkey={slowScrollHotkey}
+                          timelineHeight={timelineHeight}
+                          timelinePosition={timelinePosition}
+                          timelineUnit={timelineHeightUnit}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle title="Basic Features" />
+                      <CardListItemWrapper
+                        className={cn(
+                          !isEnabled && 'pointer-events-none opacity-50'
+                        )}
+                      >
+                        <ArrowSeekSettings disabled={!isEnabled} />
+                      </CardListItemWrapper>
+                    </div>
+
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle title="Extra Features" />
+                      <CardListItemWrapper
+                        className={cn(
+                          !isEnabled && 'pointer-events-none opacity-50'
+                        )}
+                      >
+                        <ShowOnHoverSetting
+                          checked={showTimelineOnHover}
+                          isSeekbarSeekingEnabled={isTimelineSeekingEnabled}
+                          isSeekbarThumbnailPreviewEnabled={
+                            isSeekbarThumbnailPreviewEnabled
+                          }
+                          onCheckedChange={handleTimelineHoverToggle}
+                        />
+                        <CardListItem
+                          components={{
+                            RightSlot: (
+                              <AppSwitch
+                                aria-label="Use minimal player"
+                                checked={hideVideoControls}
+                                onCheckedChange={handleHideVideoControlsToggle}
+                              />
+                            ),
+                          }}
+                          description={<MinimalPlayerDescription />}
+                          icon={EyeOffIcon}
+                          iconIsToggled={hideVideoControls}
+                          title={
+                            <span className="inline-flex items-center gap-1.5">
+                              Minimal Player
+                              <ExtraFeaturePreviewTooltip featureName="Minimal Player" />
+                              <AppBetaBadge
+                                featureName="Minimal Player"
+                                tooltip={
+                                  <>
+                                    <strong>Minimal Player</strong> is
+                                    experimental, so replacement controls may
+                                    not be fully supported on every site.
+                                  </>
+                                }
+                              />
+                            </span>
+                          }
+                        />
+                        <CardListItem
+                          components={{
+                            RightSlot: (
+                              <AppSwitch
+                                aria-label="Toggle match site color"
+                                checked={colorizedTimeline}
+                                onCheckedChange={handleColorizedTimelineToggle}
+                              />
+                            ),
+                          }}
+                          description="Use each site's favicon color for the timeline"
+                          icon={PaletteIcon}
+                          iconIsToggled={colorizedTimeline}
+                          title={
+                            <span className="inline-flex items-center gap-1.5">
+                              Match Site Color
+                              <ExtraFeaturePreviewTooltip featureName="Match Site Color" />
+                            </span>
+                          }
+                        />
+                      </CardListItemWrapper>
+                    </div>
+
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle title="Shared Video Features" />
+                      <SharedVideoSettings
+                        extensionEnabled={isEnabled}
+                        instagram={{
+                          thumbnailPreviewEnabled: instagramHoverThumbnails,
+                          onThumbnailPreviewEnabledChange: (value) => {
+                            setInstagramHoverThumbnails(value);
+                            saveSettings({ instagramHoverThumbnails: value });
+                          },
+                          autoSkip: instagramAutoSkip,
+                          onAutoSkipChange: (value) => {
+                            setInstagramAutoSkip(value);
+                            saveSettings({ instagramAutoSkip: value });
+                          },
+                          playbackSpeed: instagramPlaybackSpeed,
+                          onPlaybackSpeedChange: (value) => {
+                            setInstagramPlaybackSpeed(value);
+                            saveSettings({ instagramPlaybackSpeed: value });
+                          },
+                          showAutoSkip: instagramShowAutoSkip,
+                          onShowAutoSkipChange: (value) => {
+                            setInstagramShowAutoSkip(value);
+                            saveSettings({ instagramShowAutoSkip: value });
+                          },
+                          showPlaybackSpeed: instagramShowPlaybackSpeed,
+                          onShowPlaybackSpeedChange: (value) => {
+                            setInstagramShowPlaybackSpeed(value);
+                            saveSettings({ instagramShowPlaybackSpeed: value });
+                          },
+                        }}
+                        onThumbnailTimeDisplayChange={(value) => {
+                          setThumbnailTimeDisplay(value);
+                          saveSettings({ thumbnailTimeDisplay: value });
+                        }}
+                        thumbnailTimeDisplay={thumbnailTimeDisplay}
+                        tiktok={{
+                          thumbnailPreviewEnabled: tiktokHoverThumbnails,
+                          onThumbnailPreviewEnabledChange: (value) => {
+                            setTikTokHoverThumbnails(value);
+                            saveSettings({ tiktokHoverThumbnails: value });
+                          },
+                          autoSkip: tiktokAutoSkip,
+                          onAutoSkipChange: (value) => {
+                            setTikTokAutoSkip(value);
+                            saveSettings({ tiktokAutoSkip: value });
+                          },
+                          playbackSpeed: tiktokPlaybackSpeed,
+                          onPlaybackSpeedChange: (value) => {
+                            setTikTokPlaybackSpeed(value);
+                            saveSettings({ tiktokPlaybackSpeed: value });
+                          },
+                          showAutoSkip: tiktokShowAutoSkip,
+                          onShowAutoSkipChange: (value) => {
+                            setTikTokShowAutoSkip(value);
+                            saveSettings({ tiktokShowAutoSkip: value });
+                          },
+                          showPlaybackSpeed: tiktokShowPlaybackSpeed,
+                          onShowPlaybackSpeedChange: (value) => {
+                            setTikTokShowPlaybackSpeed(value);
+                            saveSettings({ tiktokShowPlaybackSpeed: value });
+                          },
+                        }}
+                        youtube={{
+                          thumbnailPreviewEnabled:
+                            isSeekbarThumbnailPreviewEnabled,
+                          onThumbnailPreviewEnabledChange:
+                            handleSeekbarThumbnailPreviewToggle,
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-none flex-col">
+                      <SectionTitle icon={YouTubeBrandIcon} title="YouTube" />
+                      <YouTubeSettings
+                        chapteredTimelineEnabled={
+                          isYouTubeChapteredTimelineEnabled
+                        }
+                        extensionEnabled={isEnabled}
+                        onChapteredTimelineEnabledChange={
+                          handleYouTubeChapteredTimelineToggle
+                        }
+                        onOpenSavedLibrary={youtubeLibrary.open}
+                        savedLibraryEntryRef={youtubeLibrary.entryRef}
+                      />
+                    </div>
+                  </div>
+                </ScrollArea>
               </div>
-            </ScrollArea>
+              {youtubeLibrary.hasLibrary && (
+                <PlayerToolsLibrary
+                  isActive={showYouTubeLibrary}
+                  onBackToSettings={youtubeLibrary.back}
+                  onPageChange={youtubeLibrary.navigate}
+                  page={youtubeLibrary.page}
+                />
+              )}
+            </div>
           </div>
 
           {/* Domains View */}
@@ -1187,13 +1312,17 @@ export function PopupContent() {
         {/* Gradient edge blurs behind the fixed chrome */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute top-0 right-2.5 left-0 z-30 h-24 bg-linear-to-b from-slate-100/80 via-slate-100/60 to-transparent [-webkit-backdrop-filter:saturate(180%)_blur(20px)] [backdrop-filter:saturate(180%)_blur(20px)] [mask-image:linear-gradient(to_bottom,black_0%,black_62%,transparent_100%)] dark:from-slate-900/80 dark:via-slate-900/60"
+          className={cn(
+            'pointer-events-none absolute top-0 right-2.5 left-0 z-30 bg-linear-to-b from-slate-100/80 via-slate-100/60 to-transparent [-webkit-backdrop-filter:saturate(180%)_blur(20px)] [backdrop-filter:saturate(180%)_blur(20px)] [mask-image:linear-gradient(to_bottom,black_0%,black_calc(100%_-_2.25rem),transparent_100%)] dark:from-slate-900/80 dark:via-slate-900/60',
+            youtubeLibrary.hasLibrary && showSettingsView ? 'h-49' : 'h-24'
+          )}
+          data-testid="top-gradient-blur"
         />
         <div
           aria-hidden="true"
           className={cn(
             'pointer-events-none absolute right-2.5 bottom-0 left-0 z-40 bg-linear-to-t from-slate-100/80 via-slate-100/60 to-transparent [-webkit-backdrop-filter:saturate(180%)_blur(20px)] [backdrop-filter:saturate(180%)_blur(20px)] dark:from-slate-900/80 dark:via-slate-900/60',
-            showDomainsView
+            !showPreferences
               ? 'mask-[linear-gradient(to_top,black_0%,black_70%,transparent_100%)] h-36'
               : 'mask-[linear-gradient(to_top,black_0%,black_58%,transparent_100%)] h-24'
           )}
@@ -1203,16 +1332,17 @@ export function PopupContent() {
         {/* Persistent Tab Navigation */}
         <footer className="absolute inset-x-3 bottom-2 z-50 h-12 p-1">
           <div
-            aria-hidden={showDomainsView}
-            inert={showDomainsView}
+            aria-hidden={!showPreferences}
             className={cn(
               'absolute right-1 bottom-[calc(100%+0.25rem)] left-1 transition-opacity duration-200 ease-in-out motion-reduce:transition-none',
-              showDomainsView ? 'pointer-events-none opacity-0' : 'opacity-100'
+              showPreferences ? 'opacity-100' : 'pointer-events-none opacity-0'
             )}
+            inert={!showPreferences}
           >
             <SettingsSearch
+              activationMode={youtubeLibrary.searchActivation}
+              active={showPreferences}
               contentRef={settingsContentRef}
-              active={!showDomainsView}
             />
           </div>
           <div
@@ -1226,6 +1356,19 @@ export function PopupContent() {
             id="domain-toolbar-root"
             inert={!showDomainsView || undefined}
           />
+          <div
+            aria-hidden={!showYouTubeLibrary}
+            className={cn(
+              'absolute right-1 bottom-[calc(100%+0.25rem)] left-1 z-0 transition-opacity duration-200 ease-in-out motion-reduce:transition-none',
+              showYouTubeLibrary
+                ? 'opacity-100'
+                : 'pointer-events-none opacity-0'
+            )}
+            data-active={showYouTubeLibrary}
+            data-testid="saved-toolbar-dock"
+            id="saved-toolbar-root"
+            inert={!showYouTubeLibrary || undefined}
+          />
           <nav
             aria-label="Popup navigation"
             className="relative z-10 grid h-full grid-cols-2 rounded-full"
@@ -1234,37 +1377,26 @@ export function PopupContent() {
               aria-hidden="true"
               className={cn(
                 'pointer-events-none absolute inset-y-0 left-0 w-1/2 rounded-full bg-brand/20 shadow-sm ring-1 ring-brand/25 backdrop-blur-sm transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-brand-400/20 dark:ring-brand-300/25',
-                showDomainsView ? 'translate-x-full' : 'translate-x-0'
+                activeView === 'domains' ? 'translate-x-full' : 'translate-x-0'
               )}
             />
-            <button
-              aria-current={showDomainsView ? undefined : 'page'}
-              className={cn(
-                'relative z-10 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full font-semibold text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2',
-                showDomainsView
-                  ? 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-                  : 'text-brand dark:text-brand-200'
-              )}
-              onClick={() => selectPopupView(false)}
-              type="button"
-            >
-              <SlidersHorizontalIcon className="size-4" />
-              Settings
-            </button>
-            <button
-              aria-current={showDomainsView ? 'page' : undefined}
-              className={cn(
-                'relative z-10 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full font-semibold text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2',
-                showDomainsView
-                  ? 'text-brand dark:text-brand-200'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
-              )}
-              onClick={() => selectPopupView(true)}
-              type="button"
-            >
-              <GlobeIcon className="size-4" />
-              Domains
-            </button>
+            {popupViews.map(({ id, label, icon: Icon }) => (
+              <button
+                aria-current={activeView === id ? 'page' : undefined}
+                className={cn(
+                  'relative z-10 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full font-semibold text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2',
+                  activeView === id
+                    ? 'text-brand dark:text-brand-200'
+                    : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'
+                )}
+                key={id}
+                onClick={(event) => selectPopupView(id, event.detail > 0)}
+                type="button"
+              >
+                <Icon aria-hidden="true" className="size-4" />
+                {label}
+              </button>
+            ))}
           </nav>
         </footer>
       </div>

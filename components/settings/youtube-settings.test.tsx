@@ -37,6 +37,7 @@ describe('YouTubeSettings', () => {
         chapteredTimelineEnabled={false}
         extensionEnabled
         onChapteredTimelineEnabledChange={onChange}
+        onOpenSavedLibrary={vi.fn()}
       />
     );
 
@@ -61,11 +62,13 @@ describe('YouTubeSettings', () => {
   });
 
   it('disables the switch when the extension is disabled', () => {
+    const onOpenSavedLibrary = vi.fn();
     render(
       <YouTubeSettings
         chapteredTimelineEnabled
         extensionEnabled={false}
         onChapteredTimelineEnabledChange={vi.fn()}
+        onOpenSavedLibrary={onOpenSavedLibrary}
       />
     );
 
@@ -76,5 +79,13 @@ describe('YouTubeSettings', () => {
         })
         .getAttribute('aria-disabled')
     ).toBe('true');
+    const entry = screen.getByRole('button', {
+      name: /Saved bookmarks & loops/,
+    });
+    expect((entry as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(entry, { detail: 1 });
+    expect(onOpenSavedLibrary).toHaveBeenLastCalledWith(true);
+    fireEvent.click(entry, { detail: 0 });
+    expect(onOpenSavedLibrary).toHaveBeenLastCalledWith(false);
   });
 });

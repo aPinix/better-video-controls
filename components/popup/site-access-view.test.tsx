@@ -499,7 +499,7 @@ describe('SiteAccessView', () => {
     ).toBeTruthy();
   });
 
-  it('reveals an existing current website from the plus button', async () => {
+  it('briefly highlights the current website after the target button scrolls to it', async () => {
     const user = userEvent.setup();
     vi.mocked(Element.prototype.scrollIntoView).mockClear();
     render(<SiteAccessHarness />);
@@ -516,6 +516,16 @@ describe('SiteAccessView', () => {
       behavior: 'smooth',
       block: 'center',
     });
+
+    const row = document.querySelector('[data-domain="youtube.com"]');
+    const viewport = row?.closest('[data-slot="scroll-area-viewport"]');
+    expect(row?.classList).not.toContain('bg-lime-100/80');
+    fireEvent(viewport as HTMLElement, new Event('scrollend'));
+    expect(row?.classList).toContain('bg-lime-100/80');
+    await waitFor(
+      () => expect(row?.classList).not.toContain('bg-lime-100/80'),
+      { timeout: 2000 }
+    );
   });
 
   it('enables Add for a valid unsaved URL and creates it directly', async () => {

@@ -6,7 +6,9 @@ import { SliderResetButton } from '@/components/app/slider-reset-button';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { cinemaPresets } from '@/helpers/player-cinema-presets';
 import { DEFAULT_PLAYER_TOOLS } from '@/helpers/player-tools-settings';
+import { useCinemaDimmingPreview } from './use-cinema-dimming-preview';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeCinemaSetting({
   disabled = false,
@@ -16,6 +18,7 @@ export function YouTubeCinemaSetting({
   const { settings, ready, saving, error, save, preview } =
     usePlayerToolsPreferences('Cinema Mode');
   const unavailable = disabled || !ready || saving;
+  const dimmingPreview = useCinemaDimmingPreview();
   const [hoveredPreset, setHoveredPreset] = useState<string | null>(null);
   const selectedPreset = cinemaPresets.find(
     ({ color }) => color === settings.cinemaColor
@@ -37,7 +40,7 @@ export function YouTubeCinemaSetting({
           />
         ),
         BottomSlot:
-          settings.youtubeCinemaEnabled || error ? (
+          settings.youtubeCinemaEnabled || error || dimmingPreview.error ? (
             <div className="space-y-3">
               {settings.youtubeCinemaEnabled && (
                 <div className="space-y-1 rounded-lg bg-slate-50 px-3 py-3 dark:bg-slate-900/40">
@@ -67,16 +70,25 @@ export function YouTubeCinemaSetting({
                     disabled={unavailable}
                     max={100}
                     min={0}
-                    onValueChange={(next) =>
-                      preview({
-                        dimming: Array.isArray(next) ? (next[0] ?? 80) : next,
-                      })
+                    onBlur={dimmingPreview.end}
+                    onPointerCancel={dimmingPreview.end}
+                    onPointerDownCapture={() =>
+                      dimmingPreview.update(settings.dimming)
                     }
-                    onValueCommitted={(next) =>
+                    onPointerUp={dimmingPreview.end}
+                    onValueChange={(next) => {
+                      const value = Array.isArray(next)
+                        ? (next[0] ?? 80)
+                        : next;
+                      preview({ dimming: value });
+                      dimmingPreview.update(value);
+                    }}
+                    onValueCommitted={(next) => {
                       save({
                         dimming: Array.isArray(next) ? (next[0] ?? 80) : next,
-                      })
-                    }
+                      });
+                      dimmingPreview.end();
+                    }}
                     step={1}
                     thumbClassName="after:opacity-0"
                     trackClassName="h-3"
@@ -103,12 +115,12 @@ export function YouTubeCinemaSetting({
                           className="size-7 shrink-0 rounded-full border border-black/15 outline-none ring-offset-2 ring-offset-slate-50 hover:ring-2 hover:ring-brand/40 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 aria-pressed:ring-2 aria-pressed:ring-brand dark:border-white/20 dark:ring-offset-slate-900"
                           disabled={unavailable}
                           key={color}
-                          onClick={() =>
+                          onClick={() => {
                             save({
                               cinemaColor: color,
                               cinemaColorCustom: false,
-                            })
-                          }
+                            });
+                          }}
                           onMouseEnter={() => setHoveredPreset(name)}
                           onMouseLeave={() => setHoveredPreset(null)}
                           style={{ backgroundColor: color }}
@@ -136,12 +148,12 @@ export function YouTubeCinemaSetting({
                           aria-label="Custom Cinema Mode color"
                           className="absolute inset-0 size-full cursor-pointer opacity-0 disabled:cursor-default"
                           disabled={disabled || !ready}
-                          onChange={(event) =>
+                          onChange={(event) => {
                             save({
                               cinemaColor: event.target.value,
                               cinemaColorCustom: true,
-                            })
-                          }
+                            });
+                          }}
                           onClick={() => save({ cinemaColorCustom: true })}
                           type="color"
                           value={settings.cinemaColor}
@@ -151,9 +163,9 @@ export function YouTubeCinemaSetting({
                   </fieldset>
                 </div>
               )}
-              {error && (
+              {(error || dimmingPreview.error) && (
                 <p className="text-red-600 text-xs" role="alert">
-                  {error}
+                  {error || dimmingPreview.error}
                 </p>
               )}
             </div>
@@ -162,7 +174,9 @@ export function YouTubeCinemaSetting({
       description="Add a button to dim the page around the video"
       icon={LightbulbIcon}
       iconIsToggled={settings.youtubeCinemaEnabled}
-      title="Cinema Mode"
+      title={
+        <YouTubeFeatureTitle feature="cinema">Cinema Mode</YouTubeFeatureTitle>
+      }
     />
   );
 }

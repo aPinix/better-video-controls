@@ -1,6 +1,7 @@
 import { EXT_URL } from '@/config/variables.config';
 import { getAppLogoBase64 } from '@/helpers/logo';
 import { createNotificationFunction } from '@/helpers/notification-shared';
+import { registerPopupViewSession } from '@/helpers/popup-view-session';
 import { registerLibraryBackground } from '@/helpers/saved-media';
 import { registerYouTubePipWindowBackground } from '@/helpers/youtube-pip-window';
 
@@ -66,6 +67,7 @@ const fetchFaviconAsDataUrl = async (url: string): Promise<string | null> => {
 };
 
 export default defineBackground(() => {
+  registerPopupViewSession();
   registerLibraryBackground();
   registerYouTubePipWindowBackground();
   // Content scripts cannot reliably read pixels from cross-origin favicons.

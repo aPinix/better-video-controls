@@ -26,6 +26,7 @@ import { DomainModeControl } from './domain-mode-control';
 import { DomainName } from './domain-name';
 import { DomainRulesList } from './domain-rules-list';
 import { ItemRowText } from './item-row-text';
+import { usePopupScrollMemory } from './use-popup-view-memory';
 import { ViewTitle } from './view-title';
 
 interface DeletionHistoryEntryI {
@@ -59,9 +60,12 @@ export function SiteAccessView({
     []
   );
   const [removingDomain, setRemovingDomain] = useState('');
+  const [revealedDomain, setRevealedDomain] = useState('');
   const domainRulesRef = useRef(domainRules);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  usePopupScrollMemory(scrollAreaRef, 'domains.scroll');
   const removalTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const cancelRevealRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     domainRulesRef.current = domainRules;
@@ -70,6 +74,7 @@ export function SiteAccessView({
   useEffect(
     () => () => {
       if (removalTimerRef.current) clearTimeout(removalTimerRef.current);
+      cancelRevealRef.current?.();
     },
     []
   );
@@ -172,12 +177,41 @@ export function SiteAccessView({
         []
     ).find((element) => element.dataset.domain === currentDomain);
 
-    row?.scrollIntoView({
+    const viewport = scrollAreaRef.current?.querySelector<HTMLElement>(
+      '[data-slot="scroll-area-viewport"]'
+    );
+    if (!row || !viewport) return;
+
+    cancelRevealRef.current?.();
+    setRevealedDomain('');
+
+    let timer: ReturnType<typeof setTimeout>;
+    const stopWaiting = () => {
+      clearTimeout(timer);
+      viewport.removeEventListener('scroll', waitForScroll);
+      viewport.removeEventListener('scrollend', highlightRow);
+    };
+    const highlightRow = () => {
+      stopWaiting();
+      setRevealedDomain(currentDomain);
+      timer = setTimeout(() => setRevealedDomain(''), 1400);
+    };
+    const waitForScroll = () => {
+      clearTimeout(timer);
+      // Also handles browsers without scrollend and rows already in view.
+      timer = setTimeout(highlightRow, 150);
+    };
+
+    cancelRevealRef.current = stopWaiting;
+    viewport.addEventListener('scroll', waitForScroll, { passive: true });
+    viewport.addEventListener('scrollend', highlightRow);
+    row.scrollIntoView({
       behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
         ? 'auto'
         : 'smooth',
       block: 'center',
     });
+    waitForScroll();
   }, [currentDomain]);
   return (
     <div className="relative flex min-h-0 flex-1 flex-col bg-slate-100 dark:bg-slate-900">
@@ -341,6 +375,7 @@ export function SiteAccessView({
             onSortChange={onDomainSortChange}
             onUndo={handleUndo}
             removingDomain={removingDomain}
+            revealedDomain={revealedDomain}
             sort={domainSort}
           />
         </div>

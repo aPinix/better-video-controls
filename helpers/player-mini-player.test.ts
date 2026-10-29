@@ -16,6 +16,8 @@ let paused: boolean;
 let originalBottom: number;
 let settings: typeof DEFAULT_PLAYER_TOOLS;
 let stored: unknown;
+let originalAnimate: PropertyDescriptor | undefined;
+let motionMocked = false;
 const set = vi.fn(async () => {});
 const report = vi.fn();
 const onFloat = vi.fn();
@@ -42,6 +44,23 @@ const control = (label: string) => {
 const ready = async () => {
   await vi.waitFor(() => expect(floating.inMini).toBe(true));
 };
+const pointer = (
+  node: EventTarget,
+  type: string,
+  x: number,
+  y: number,
+  time: number
+) => {
+  const event = new MouseEvent(type, {
+    button: 0,
+    clientX: x,
+    clientY: y,
+    bubbles: true,
+    composed: true,
+  });
+  Object.defineProperty(event, 'timeStamp', { value: time });
+  node.dispatchEvent(event);
+};
 const makeFloating = () =>
   new FloatingPlayer(
     video,
@@ -53,6 +72,36 @@ const makeFloating = () =>
     () => ({ range: null, enabled: false }),
     onFloat
   );
+const mockMiniMotion = () => {
+  originalAnimate = Object.getOwnPropertyDescriptor(
+    HTMLElement.prototype,
+    'animate'
+  );
+  motionMocked = true;
+  const motions: Array<{
+    target: HTMLElement;
+    frames: Keyframe[];
+    finish: () => void;
+    cancel: ReturnType<typeof vi.fn>;
+  }> = [];
+  Object.defineProperty(HTMLElement.prototype, 'animate', {
+    configurable: true,
+    value: function (this: HTMLElement, frames: Keyframe[]) {
+      let finish = () => {};
+      const finished = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const cancel = vi.fn();
+      motions.push({ target: this, frames, finish, cancel });
+      return { finished, cancel };
+    },
+  });
+  Object.defineProperty(video, 'readyState', { value: 4, configurable: true });
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+    drawImage: vi.fn(),
+  } as unknown as CanvasRenderingContext2D);
+  return motions;
+};
 beforeEach(() => {
   vi.restoreAllMocks();
   window.history.replaceState(null, '', '/watch?v=test-video');
@@ -124,11 +173,73 @@ beforeEach(() => {
 });
 afterEach(() => {
   floating.cleanup();
+  if (motionMocked) {
+    if (originalAnimate)
+      Object.defineProperty(HTMLElement.prototype, 'animate', originalAnimate);
+    else Reflect.deleteProperty(HTMLElement.prototype, 'animate');
+    motionMocked = false;
+  }
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   document.body.replaceChildren();
 });
 describe('YouTube mini player', () => {
+  it('fades and blurs on entry and exit while restoring the same playing video immediately', async () => {
+    await ready();
+    floating.restoreMini(false);
+    const motions = mockMiniMotion();
+    const parent = player.parentNode;
+    floating.update();
+    const entry = motions.find((motion) => motion.target === player);
+    expect(entry?.frames).toEqual([
+      { opacity: 0, filter: 'blur(6px)' },
+      { opacity: 1, filter: 'blur(0px)' },
+    ]);
+    expect(player.querySelector('video')).toBe(video);
+    originalBottom = 400;
+    floating.update();
+    expect(floating.inMini).toBe(false);
+    expect(player.parentNode).toBe(parent);
+    expect(video.currentTime).toBe(30);
+    expect(video.pause).not.toHaveBeenCalled();
+    const exit = motions.find(
+      (motion) => motion.target.dataset.mfsMiniExit === 'true'
+    );
+    expect(exit?.frames).toEqual([
+      { opacity: 1, filter: 'blur(0px)' },
+      { opacity: 0, filter: 'blur(6px)' },
+    ]);
+    expect(
+      document.querySelector('[data-mfs-mini-exit] canvas')
+    ).not.toBeNull();
+    exit?.finish();
+    await Promise.resolve();
+    expect(document.querySelector('[data-mfs-mini-exit]')).toBeNull();
+  });
+  it('cleans up an unfinished exit and skips motion for reduced motion or ads', async () => {
+    await ready();
+    floating.restoreMini(false);
+    const motions = mockMiniMotion();
+    floating.update();
+    floating.restoreMini();
+    const exit = motions.find(
+      (motion) => motion.target.dataset.mfsMiniExit === 'true'
+    );
+    floating.reset();
+    expect(exit?.cancel).toHaveBeenCalledOnce();
+    expect(document.querySelector('[data-mfs-mini-exit]')).toBeNull();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const count = motions.length;
+    floating.update();
+    floating.restoreMini();
+    expect(motions).toHaveLength(count);
+    vi.stubGlobal('matchMedia', () => ({ matches: false }));
+    floating.update();
+    player.classList.add('ad-showing');
+    floating.update();
+    expect(document.querySelector('[data-mfs-mini-exit]')).toBeNull();
+    expect(floating.inMini).toBe(false);
+  });
   it.each([
     [1920, 800],
     [900, 1600],
@@ -328,9 +439,68 @@ describe('YouTube mini player', () => {
     control('Back to top').click();
     expect(window.scrollTo).toHaveBeenCalledWith({
       top: 0,
-      behavior: 'instant',
+      behavior: 'smooth',
     });
     expect(floating.inMini).toBe(false);
+  });
+  it.each(['top-left', 'top-right', 'bottom-left', 'bottom-right'])(
+    'resets and saves position and size when double-clicking the %s resize corner',
+    async (corner) => {
+      floating.cleanup();
+      stored = { x: 500, y: 200, width: 420 };
+      floating = makeFloating();
+      await ready();
+      const playbackTime = video.currentTime;
+      const handle = root.querySelector(
+        `[data-corner="${corner}"]`
+      ) as HTMLElement;
+      const event = new MouseEvent('dblclick', {
+        bubbles: true,
+        composed: true,
+        cancelable: true,
+      });
+      handle.dispatchEvent(event);
+      expect(event.defaultPrevented).toBe(true);
+      expect(player.style.left).toBe('16px');
+      expect(player.style.top).toBe('72px');
+      expect(player.style.width).toBe('360px');
+      expect(set).toHaveBeenLastCalledWith({
+        [MINI_PLAYER_GEOMETRY_KEY]: DEFAULT_MINI_PLAYER_GEOMETRY,
+      });
+      expect(video.currentTime).toBe(playbackTime);
+      expect(paused).toBe(false);
+      expect(floating.inMini).toBe(true);
+    }
+  );
+  it('does not reset when double-clicking the video or drag bar', async () => {
+    floating.cleanup();
+    stored = { x: 500, y: 200, width: 420 };
+    floating = makeFloating();
+    await ready();
+    for (const target of [
+      video,
+      root.querySelector('.mini-bar') as HTMLElement,
+    ])
+      target.dispatchEvent(
+        new MouseEvent('dblclick', { bubbles: true, composed: true })
+      );
+    expect(player.style.left).toBe('500px');
+    expect(player.style.width).toBe('420px');
+    expect(set).not.toHaveBeenCalled();
+  });
+  it('keeps the reset layout usable and reports a failed geometry save', async () => {
+    await ready();
+    set.mockRejectedValueOnce(new Error('Storage unavailable'));
+    root
+      .querySelector('[data-corner="bottom-right"]')
+      ?.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+    await vi.waitFor(() =>
+      expect(report).toHaveBeenCalledWith(
+        'Could not save mini player position and size.'
+      )
+    );
+    expect(player.style.width).toBe('360px');
+    expect(floating.inMini).toBe(true);
   });
   it('preserves saved geometry across viewport changes and accepts live resets', async () => {
     floating.cleanup();
@@ -355,6 +525,23 @@ describe('YouTube mini player', () => {
     expect(player.style.left).toBe('16px');
     expect(player.style.width).toBe('360px');
   });
+  it('stays dismissed during the smooth return to top and rearms after revisiting the original player', async () => {
+    await ready();
+    vi.mocked(window.scrollTo).mockImplementation(() => {});
+    control('Back to top').click();
+    expect(window.scrollTo).toHaveBeenCalledWith({
+      top: 0,
+      behavior: 'smooth',
+    });
+    floating.update();
+    expect(floating.inMini).toBe(false);
+    expect(video.pause).not.toHaveBeenCalled();
+    originalBottom = 400;
+    floating.update();
+    originalBottom = -40;
+    floating.update();
+    expect(floating.inMini).toBe(true);
+  });
   it('saves keyboard changes on release and reports failures visibly', async () => {
     await ready();
     const handle = control(
@@ -369,7 +556,7 @@ describe('YouTube mini player', () => {
     expect(set).toHaveBeenCalledWith({
       [MINI_PLAYER_GEOMETRY_KEY]: expect.objectContaining({ x: 26 }),
     });
-    const resize = control('Resize mini player');
+    const resize = control('Resize mini player from bottom-right');
     resize.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'ArrowRight', shiftKey: true })
     );
@@ -388,24 +575,127 @@ describe('YouTube mini player', () => {
     const handle = control(
       'Move mini player. Use arrow keys; Shift for fine adjustments.'
     );
-    handle.dispatchEvent(
-      new MouseEvent('pointerdown', { button: 0, clientX: 20, clientY: 110 })
-    );
-    handle.dispatchEvent(
-      new MouseEvent('pointermove', { clientX: 80, clientY: 150 })
-    );
+    pointer(handle, 'pointerdown', 20, 110, 0);
+    pointer(window, 'pointermove', 80, 150, 200);
     expect(player.style.left).toBe('76px');
     expect(set).not.toHaveBeenCalled();
-    handle.dispatchEvent(new MouseEvent('pointerup'));
+    pointer(window, 'pointerup', 80, 150, 400);
     expect(set).toHaveBeenCalledOnce();
-    const resize = control('Resize mini player');
-    resize.dispatchEvent(
-      new MouseEvent('pointerdown', { button: 0, clientX: 436 })
-    );
-    resize.dispatchEvent(new MouseEvent('pointermove', { clientX: 496 }));
+    const resize = control('Resize mini player from bottom-right');
+    pointer(resize, 'pointerdown', 436, 300, 500);
+    pointer(window, 'pointermove', 496, 300, 600);
     expect(player.style.width).toBe('420px');
-    resize.dispatchEvent(new MouseEvent('pointerup'));
+    pointer(window, 'pointerup', 496, 300, 700);
     expect(set).toHaveBeenCalledTimes(2);
+  });
+  it.each([
+    ['top-left', -60, -33.75, 240, 166.25],
+    ['top-right', 60, -33.75, 300, 166.25],
+    ['bottom-left', -60, 33.75, 240, 200],
+    ['bottom-right', 60, 33.75, 300, 200],
+  ])(
+    'resizes from %s while anchoring the opposite corner',
+    async (corner, dx, dy, x, y) => {
+      await ready();
+      storageChanged(
+        {
+          [MINI_PLAYER_GEOMETRY_KEY]: {
+            newValue: { x: 300, y: 200, width: 360 },
+          },
+        },
+        'local'
+      );
+      const handle = control(`Resize mini player from ${corner}`);
+      expect(handle.textContent).toBe('');
+      pointer(handle, 'pointerdown', 300, 200, 0);
+      pointer(window, 'pointermove', 300 + Number(dx), 200 + Number(dy), 30);
+      expect(Number.parseFloat(player.style.width)).toBeCloseTo(420);
+      expect(Number.parseFloat(player.style.height)).toBeCloseTo(236.25);
+      expect(Number.parseFloat(player.style.left)).toBeCloseTo(Number(x));
+      expect(Number.parseFloat(player.style.top)).toBeCloseTo(Number(y));
+      expect(set).not.toHaveBeenCalled();
+      pointer(window, 'pointerup', 300 + Number(dx), 200 + Number(dy), 40);
+      expect(set).toHaveBeenCalledOnce();
+      expect(Number.parseFloat(player.style.left)).toBeCloseTo(Number(x));
+    }
+  );
+  it.each([
+    [-60, -60, 8, 64],
+    [60, -60, 656, 64],
+    [-60, 60, 8, 557.5],
+    [60, 60, 656, 557.5],
+  ])(
+    'flicks in direction %s,%s to the matching viewport corner',
+    async (dx, dy, x, y) => {
+      await ready();
+      const handle = control(
+        'Move mini player. Use arrow keys; Shift for fine adjustments.'
+      );
+      const animate = vi.fn(() => ({ cancel: vi.fn() }));
+      player.animate = animate as unknown as typeof player.animate;
+      pointer(handle, 'pointerdown', 300, 200, 0);
+      pointer(window, 'pointermove', 300 + dx, 200 + dy, 30);
+      pointer(window, 'pointerup', 300 + dx, 200 + dy, 40);
+      expect(player.style.left).toBe(`${x}px`);
+      expect(player.style.top).toBe(`${y}px`);
+      expect(set).toHaveBeenCalledWith({
+        [MINI_PLAYER_GEOMETRY_KEY]: { x, y, width: 360 },
+      });
+      expect(animate).toHaveBeenCalledOnce();
+      expect(video.currentTime).toBe(30);
+      expect(video.pause).not.toHaveBeenCalled();
+      const animation = animate.mock.results[0]?.value;
+      floating.restoreMini();
+      expect(animation?.cancel).toHaveBeenCalledOnce();
+    }
+  );
+  it.each(['pointerup', 'pointercancel', 'lostpointercapture'])(
+    'does not flick after holding still or cancelling (%s)',
+    async (end) => {
+      await ready();
+      const handle = control(
+        'Move mini player. Use arrow keys; Shift for fine adjustments.'
+      );
+      pointer(handle, 'pointerdown', 20, 110, 0);
+      pointer(window, 'pointermove', 80, 150, 30);
+      pointer(
+        end === 'lostpointercapture' ? handle : window,
+        end,
+        80,
+        150,
+        end === 'pointerup' ? 300 : 40
+      );
+      expect(player.style.left).toBe('76px');
+      expect(set).toHaveBeenCalledOnce();
+    }
+  );
+  it('restores the original shadow and removes all resize areas on cleanup', async () => {
+    await ready();
+    floating.restoreMini();
+    player.style.boxShadow = 'red 0px 0px 2px';
+    const original = player.style.boxShadow;
+    floating.update();
+    expect(player.style.boxShadow).not.toBe(original);
+    expect(root.querySelectorAll('.mini-resize')).toHaveLength(4);
+    floating.cleanup();
+    expect(player.style.boxShadow).toBe(original);
+    expect(root.querySelector('.mini-resize')).toBeNull();
+    pointer(window, 'pointermove', 500, 500, 100);
+    expect(set).not.toHaveBeenCalled();
+  });
+  it('snaps without motion when reduced motion is requested', async () => {
+    await ready();
+    vi.stubGlobal('matchMedia', () => ({ matches: true }));
+    const animate = vi.fn();
+    player.animate = animate;
+    const handle = control(
+      'Move mini player. Use arrow keys; Shift for fine adjustments.'
+    );
+    pointer(handle, 'pointerdown', 300, 200, 0);
+    pointer(window, 'pointerup', 360, 260, 40);
+    expect(player.style.left).toBe('656px');
+    expect(player.style.top).toBe('557.5px');
+    expect(animate).not.toHaveBeenCalled();
   });
   it('keeps keyboard controls accessible without leaving pointer-clicked controls revealed', async () => {
     await ready();

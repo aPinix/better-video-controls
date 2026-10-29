@@ -46,7 +46,7 @@ header{display:flex;align-items:center;gap:10px;padding:10px 20px;font-weight:50
 input{display:block;appearance:none;width:100%;height:14px;background:transparent;margin:0;cursor:pointer}input::-webkit-slider-runnable-track{height:4px;border-radius:999px;background:var(--track)}input::-webkit-slider-thumb{appearance:none;width:12px;height:12px;margin-top:-4px;border-radius:50%;background:#fff}input::-moz-range-track{height:4px;border-radius:999px;background:var(--track)}input::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:#fff}
 .actions{margin-top:8px;padding-top:6px;border-top:1px solid #ffffff1a;font-size:13px}button{display:block;width:100%;border:0;background:transparent;color:inherit;font:inherit;text-align:left;padding:8px 20px;cursor:pointer}button:hover{background:#ffffff1a}button:disabled{opacity:.45;cursor:default}input:focus-visible,button:focus-visible{outline:2px solid #fff;outline-offset:-2px}
 .status{margin:0 0 0 auto;color:#aaa;font-size:11px;font-weight:400;line-height:1.3;text-align:right;max-width:45%}.status:empty{display:none}
-.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:12px 20px 6px}.preset{padding:0;background:none!important;font-size:11px;text-align:center}.thumbnail{display:block;aspect-ratio:16/10;width:100%;overflow:hidden;border:2px solid transparent;border-radius:5px;background:linear-gradient(160deg,#1e899a,#ac905e 55%,#25313a)}.thumbnail img{width:100%;height:100%;object-fit:cover}.preset-label{display:block;margin-top:5px}.preset:hover .thumbnail{border-color:#ffffff80}.preset[aria-pressed=true] .thumbnail{border-color:#fff}.preset[aria-pressed=true] .preset-label{font-weight:600}
+.presets{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:12px 20px 6px}.preset{padding:0;background:none!important;font-size:11px;text-align:center}.thumbnail{display:block;aspect-ratio:16/9;width:100%;overflow:hidden;border:0;border-radius:5px;background:#242424}.thumbnail img{display:block;width:100%;height:100%;object-fit:cover}.preset-label{display:block;margin-top:5px}.preset:hover .preset-label{text-decoration:underline;text-underline-offset:3px}.preset[aria-pressed=true] .preset-label{font-weight:600;text-decoration:underline;text-underline-offset:3px}
 `;
 
 /** A player-owned, nonmodal filter popup that follows YouTube into fullscreen. */
@@ -121,11 +121,23 @@ export class YouTubeFiltersMenu {
       input.max = key === 'grayscale' ? '100' : '200';
       input.step = '1';
       input.setAttribute('aria-label', name);
+      input.title = `Double-click to reset to ${DEFAULT_FILTERS[key]}%`;
       input.addEventListener('input', () => {
         if (this.disposed || !this.state.available) return;
         this.state.filters = {
           ...this.state.filters,
           [key]: input.valueAsNumber,
+        };
+        this.render();
+        actions.onChange({ ...this.state.filters });
+      });
+      input.addEventListener('dblclick', (event) => {
+        event.preventDefault();
+        if (this.disposed || !this.state.enabled || !this.state.available)
+          return;
+        this.state.filters = {
+          ...this.state.filters,
+          [key]: DEFAULT_FILTERS[key],
         };
         this.render();
         actions.onChange({ ...this.state.filters });
@@ -148,7 +160,7 @@ export class YouTubeFiltersMenu {
       const image = doc.createElement('img');
       image.alt = '';
       image.hidden = true;
-      thumbnail.style.filter = filterCSS(preset.filters);
+      image.style.filter = filterCSS(preset.filters);
       thumbnail.append(image);
       const label = doc.createElement('span');
       label.className = 'preset-label';

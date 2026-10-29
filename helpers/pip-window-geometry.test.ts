@@ -12,40 +12,41 @@ const bounds = { left: 0, top: 0, width: 1920, height: 1080 };
 const macWorkArea = { left: 0, top: 25, width: 1920, height: 995 };
 const rect = { left: 100, top: 100, width: 360, height: 237 };
 it('leaves 10px beyond the macOS menu bar and Dock', () => {
-  expect(
-    fitPipRect({ ...rect, left: -30, top: -40 }, macWorkArea, 16 / 9, 0, 34)
-  ).toEqual({ ...rect, left: 10, top: 35 });
-  expect(
-    fitPipRect({ ...rect, left: 1900, top: 1100 }, macWorkArea, 16 / 9, 0, 34)
-  ).toEqual({ ...rect, left: 1550, top: 773 });
+  expect(fitPipRect({ ...rect, left: -30, top: -40 }, macWorkArea)).toEqual({
+    ...rect,
+    left: 10,
+    top: 35,
+  });
+  expect(fitPipRect({ ...rect, left: 1900, top: 1100 }, macWorkArea)).toEqual({
+    ...rect,
+    left: 1550,
+    top: 773,
+  });
 });
 it.each([
   { left: 0, top: 0, width: 1920, height: 1032 },
   { left: 48, top: 0, width: 1872, height: 1080 },
 ])('accounts for a Windows taskbar on the bottom or side: %j', (workArea) => {
-  const result = fitPipRect(
-    { ...rect, left: -100, top: 1100 },
-    workArea,
-    16 / 9,
-    0,
-    34
-  );
+  const result = fitPipRect({ ...rect, left: -100, top: 1100 }, workArea);
   expect(result.left).toBe(workArea.left + 10);
   expect(result.top + result.height).toBe(workArea.top + workArea.height - 10);
 });
-it('preserves video aspect ratio and shrinks oversized windows to the usable area', () => {
-  const result = fitPipRect(
+it('keeps arbitrary width and height when fitting a window within the screen', () => {
+  expect(fitPipRect({ ...rect, width: 500, height: 300 }, macWorkArea)).toEqual(
+    {
+      ...rect,
+      width: 500,
+      height: 300,
+    }
+  );
+  const oversized = fitPipRect(
     { ...rect, width: 3000, height: 2000 },
-    macWorkArea,
-    9 / 16,
-    0,
-    34
+    macWorkArea
   );
-  expect(Math.abs(result.width / (result.height - 34) - 9 / 16)).toBeLessThan(
-    0.001
-  );
-  expect(result.height).toBeLessThanOrEqual(macWorkArea.height - 20);
-  expect(result.top).toBe(35);
+  expect(oversized.width).toBe(1900);
+  expect(oversized.height).toBe(975);
+  expect(oversized.left).toBe(10);
+  expect(oversized.top).toBe(35);
 });
 it('selects a monitor with negative coordinates or the nearest remaining monitor', () => {
   const secondary = {

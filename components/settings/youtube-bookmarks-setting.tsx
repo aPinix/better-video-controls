@@ -2,6 +2,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeBookmarksIcon } from '@/components/youtube-bookmarks-icon';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeBookmarksSetting({
   disabled = false,
@@ -31,7 +32,9 @@ export function YouTubeBookmarksSetting({
       description="Click to bookmark a moment. Hold to move or rename bookmarks."
       icon={YouTubeBookmarksIcon}
       iconIsToggled={settings.youtubeBookmarksEnabled}
-      title="Bookmarks"
+      title={
+        <YouTubeFeatureTitle feature="bookmarks">Bookmarks</YouTubeFeatureTitle>
+      }
     />
   );
 }

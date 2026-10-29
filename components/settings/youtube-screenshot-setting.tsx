@@ -3,6 +3,7 @@ import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeScreenshotIcon } from '@/components/youtube-screenshot-icon';
 import { usePlayerToolsPreferences } from './use-player-tools-preferences';
+import { YouTubeFeatureTitle } from './youtube-feature-title';
 
 export function YouTubeScreenshotSetting({
   disabled = false,
@@ -57,7 +58,11 @@ export function YouTubeScreenshotSetting({
       description="Add a button to save the current video frame as a PNG"
       icon={YouTubeScreenshotIcon}
       iconIsToggled={settings.youtubeScreenshotEnabled}
-      title="Screenshot"
+      title={
+        <YouTubeFeatureTitle feature="screenshot">
+          Screenshot
+        </YouTubeFeatureTitle>
+      }
     />
   );
 }

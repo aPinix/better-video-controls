@@ -12,7 +12,7 @@ interface CardListItemPropsI {
   description: React.ReactNode;
   disabled?: boolean;
   disabledSoft?: boolean;
-  onClick?: () => void;
+  onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   components?: {
     RightSlot?: React.ReactNode;
     BottomSlot?: React.ReactNode;
