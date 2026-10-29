@@ -3252,7 +3252,11 @@ ${MEDIA_OVERLAY_STYLES}
     };
     const handleMiddleDown = (event: MouseEvent): void => {
       middlePress = null;
-      if (event.button !== 1 || !canUseVideoSurface(event)) return;
+      if (
+        event.button !== 1 ||
+        !this.settingsManager.isMiddleClickPlayPauseEnabled() ||
+        !canUseVideoSurface(event)
+      ) return;
       // Cancel browser autoscroll without changing left-button gestures.
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -3261,7 +3265,11 @@ ${MEDIA_OVERLAY_STYLES}
     const handleMiddleClick = (event: MouseEvent): void => {
       const press = middlePress;
       middlePress = null;
-      if (!press || event.button !== 1 || !canUseVideoSurface(event)) return;
+      if (
+        !press || event.button !== 1 ||
+        !this.settingsManager.isMiddleClickPlayPauseEnabled() ||
+        !canUseVideoSurface(event)
+      ) return;
       event.preventDefault();
       event.stopImmediatePropagation();
       if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) return;
@@ -3359,6 +3367,25 @@ ${MEDIA_OVERLAY_STYLES}
       void toggleFullscreen();
     };
 
+    const handleKKey = (event: KeyboardEvent): void => {
+      if (event.key.toLowerCase() !== 'k' || event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !this.settingsManager.isKKeyPlayPauseEnabled?.()) return;
+      if (event.composedPath().some(target => target instanceof ownerWindow.HTMLElement && (target.matches('input,textarea,select,button,[role="textbox"],dialog,[role="dialog"]') || target.isContentEditable))) return;
+      let selected: HTMLVideoElement | undefined;
+      let best = -1;
+      this.videoStateManager.forEach((state, candidate) => {
+        const rect = candidate.getBoundingClientRect();
+        if (candidate.ownerDocument !== ownerDocument || !candidate.isConnected || candidate.readyState < 1 || DOMUtils.isYouTubeHoverPreview(candidate) || candidate.closest('.ad-showing') || rect.width <= 0 || rect.height <= 0 || rect.bottom <= 0 || rect.top >= ownerWindow.innerHeight || rect.right <= 0 || rect.left >= ownerWindow.innerWidth) return;
+        const player = this.findPlayerControlsContainer(candidate);
+        const focused = candidate === ownerDocument.activeElement || (player && player !== ownerDocument.body && player !== ownerDocument.documentElement && player.contains(ownerDocument.activeElement));
+        const score = (focused ? 1e12 : 0) + (state.isHovering ? 1e10 : 0) + (!candidate.paused ? 1e8 : 0) + rect.width * rect.height;
+        if (score > best) { best = score; selected = candidate; }
+      });
+      if (selected !== video) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!event.repeat) { clearScheduledPlaybackToggle(); setPlayback(video.paused, false); }
+    };
+    ownerDocument.addEventListener('keydown', handleKKey, true);
     scrubOverlay.addEventListener('click', handleClick);
     scrubOverlay.addEventListener('dblclick', handleDoubleClick);
     ownerDocument.addEventListener('mousedown', handleMiddleDown, true);
@@ -3382,6 +3409,7 @@ ${MEDIA_OVERLAY_STYLES}
     return {
       cleanup: () => {
         clearScheduledPlaybackToggle();
+        ownerDocument.removeEventListener('keydown', handleKKey, true);
         scrubOverlay.removeEventListener('click', handleClick);
         scrubOverlay.removeEventListener('dblclick', handleDoubleClick);
         ownerDocument.removeEventListener('mousedown', handleMiddleDown, true);
@@ -4202,10 +4230,12 @@ ${MEDIA_OVERLAY_STYLES}
     let lastScrollGeometry = `${overlay.offsetWidth}:${scrollContent.offsetWidth}`;
     let resizedScrollPosition: number | null = null;
 
-    const canHandleScrollSeeking = (): boolean =>
+    const canHandleWheelInput = (): boolean =>
       !this.isKeyboardSuspended &&
       !this.isMinimalPlayerBypassActive &&
-      video.dataset.mfsPip !== 'true' &&
+      video.dataset.mfsPip !== 'true';
+    const canHandleScrollSeeking = (): boolean =>
+      canHandleWheelInput() &&
       this.settingsManager.isScrollSeekingEnabled();
 
     const clearSeekCommitTimeout = (): void => {
@@ -4305,7 +4335,7 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const handleWheelAction = (event: WheelEvent): boolean => {
-      if (!canHandleScrollSeeking()) return false;
+      if (!canHandleWheelInput()) return false;
 
       const isPrimaryPlayPauseInput =
         this.settingsManager.isPlayPauseWheelEnabled() &&
@@ -4361,8 +4391,8 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const handleOverlayWheel = (event: WheelEvent): void => {
-      if (!canHandleScrollSeeking()) return;
       if (handleWheelAction(event)) return;
+      if (!canHandleScrollSeeking()) return;
 
       const fastScrollHotkey = this.settingsManager.getFastScrollHotkey();
       const slowScrollHotkey = this.settingsManager.getSlowScrollHotkey();
@@ -4410,7 +4440,7 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const handlePlayerLayerWheel = (event: WheelEvent): void => {
-      if (!canHandleScrollSeeking()) return;
+      if (!canHandleWheelInput()) return;
 
       // Custom players such as Vimeo put their controls and interaction target
       // above the <video>. Listen at the document boundary so horizontal wheel
@@ -4433,6 +4463,7 @@ ${MEDIA_OVERLAY_STYLES}
       if (!isInsideActionArea) return;
 
       if (handleWheelAction(event)) return;
+      if (!canHandleScrollSeeking()) return;
 
       const fastScrollHotkey = this.settingsManager.getFastScrollHotkey();
       const slowScrollHotkey = this.settingsManager.getSlowScrollHotkey();

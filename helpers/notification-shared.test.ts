@@ -115,13 +115,13 @@ describe('toggle notification', () => {
     );
     expect(
       fakeDocument.getElementById('mfs-notification-styles')?.textContent
-    ).toContain('backdrop-filter: saturate(180%) blur(20px)');
+    ).toContain('backdrop-filter: saturate(180%) blur(24px)');
     expect(
       fakeDocument.getElementById('mfs-notification-styles')?.textContent
-    ).toContain('background: rgb(255 255 255 / 0.8)');
+    ).toContain('background: rgb(255 255 255 / 0.2)');
     expect(
       fakeDocument.getElementById('mfs-notification-styles')?.textContent
-    ).toContain('background: rgb(51 51 51 / 0.8)');
+    ).toContain('background: rgb(24 24 27 / 0.15)');
     expect(
       fakeDocument.getElementById('mfs-notification-styles')?.textContent
     ).toContain('border-radius: 9999px');

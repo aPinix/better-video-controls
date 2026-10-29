@@ -79,7 +79,8 @@ export class MessageHandler {
         break;
 
       case 'updateWheelActions':
-        this.handleUpdateWheelActions(message, sendResponse);
+      case 'updatePlaybackActions':
+        this.handleUpdatePlaybackActions(message, sendResponse);
         break;
 
       case 'updateTimelineHover':
@@ -295,19 +296,22 @@ export class MessageHandler {
     sendResponse({ success: true });
   }
 
-  private handleUpdateWheelActions(
+  private handleUpdatePlaybackActions(
     message: ChromeMessageT,
     sendResponse: SendResponse
   ): void {
     const { settingsManager } = this.dependencies;
 
-    if (typeof message.isPlayPauseWheelEnabled === 'boolean') {
-      settingsManager.updateSetting(
-        'isPlayPauseWheelEnabled',
-        message.isPlayPauseWheelEnabled
-      );
+    for (const key of [
+      'isPlayPauseEnabled',
+      'isMiddleClickPlayPauseEnabled',
+      'isKKeyPlayPauseEnabled',
+      'isPlayPauseWheelEnabled',
+    ] as const) {
+      if (typeof message[key] === 'boolean')
+        settingsManager.updateSetting(key, message[key]);
     }
-
+    this.reconcileOverlayPresence();
     sendResponse({ success: true });
   }
 
@@ -750,11 +754,15 @@ export class MessageHandler {
           hotkeys.slowScrollHotkey
         );
       }
-      if (typeof settings.isPlayPauseWheelEnabled === 'boolean') {
-        settingsManager.updateSetting(
-          'isPlayPauseWheelEnabled',
-          settings.isPlayPauseWheelEnabled
-        );
+      for (const key of [
+        'isPlayPauseEnabled',
+        'isMiddleClickPlayPauseEnabled',
+        'isKKeyPlayPauseEnabled',
+        'isPlayPauseWheelEnabled',
+      ] as const) {
+        if (typeof settings[key] !== 'boolean') continue;
+        settingsManager.updateSetting(key, settings[key]);
+        shouldUpdateTimelineSeeking = true;
       }
       if (typeof settings.showTimelineOnHover === 'boolean') {
         settingsManager.updateSetting(

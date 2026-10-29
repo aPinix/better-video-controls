@@ -4,6 +4,17 @@ import {
   normalizePlayerTools,
 } from './player-tools-settings';
 
+it('defaults arrows to five seconds and J/L to ten while preserving custom intervals', () => {
+  const defaults = normalizePlayerTools({});
+  expect(defaults.backward).toBe(5);
+  expect(defaults.forward).toBe(5);
+  expect(defaults.jlSeekInterval).toBe(10);
+  const saved = normalizePlayerTools({ backward: 7, jlSeekInterval: 15 });
+  expect(saved.backward).toBe(7);
+  expect(saved.forward).toBe(7);
+  expect(saved.jlSeekInterval).toBe(15);
+});
+
 it('caps saved boosts at 5 times while retaining the 2 times default', () => {
   expect(DEFAULT_PLAYER_TOOLS.youtubeBoost).toBe(2);
   for (const youtubeBoost of [2, 3, 4, 5])

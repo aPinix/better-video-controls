@@ -31,7 +31,7 @@ afterEach(() => {
 it('saves one interval for both directions without overwriting other preferences', async () => {
   render(<ArrowSeekSettings />);
   const rewind = screen.getByLabelText(
-    'Seek interval (secs)'
+    'Arrow keys seek interval (secs)'
   ) as HTMLInputElement;
   await waitFor(() => expect(rewind.value).toBe('3'));
   fireEvent.change(rewind, { target: { value: '7' } });
@@ -39,12 +39,37 @@ it('saves one interval for both directions without overwriting other preferences
   await waitFor(() => expect(preferences.backward).toBe(7));
   expect(preferences.forward).toBe(7);
   expect(preferences.miniPlayer).toBe(true);
+  const letters = screen.getByLabelText(
+    'J and L keys seek interval (secs)'
+  ) as HTMLInputElement;
+  expect(letters.value).toBe('10');
+  fireEvent.change(letters, { target: { value: '15' } });
+  fireEvent.blur(letters);
+  await waitFor(() => expect(preferences.jlSeekInterval).toBe(15));
+  expect(preferences.backward).toBe(7);
+});
+
+it('saves arrow and J/L switches independently without making their labels clickable', async () => {
+  render(<ArrowSeekSettings />);
+  const arrows = screen.getByRole('switch', { name: 'Seek with arrow keys' });
+  const jl = screen.getByRole('switch', { name: 'Seek with J and L keys' });
+  await waitFor(() =>
+    expect(arrows.getAttribute('aria-disabled')).not.toBe('true')
+  );
+  fireEvent.click(screen.getByText('Arrow keys'));
+  expect(set).not.toHaveBeenCalled();
+  fireEvent.click(arrows);
+  await waitFor(() => expect(preferences.arrowKeysEnabled).toBe(false));
+  expect(preferences.jlKeysEnabled).toBe(true);
+  fireEvent.click(jl);
+  await waitFor(() => expect(preferences.jlKeysEnabled).toBe(false));
+  expect(preferences.arrowKeysEnabled).toBe(false);
 });
 
 it('restores the default on blur for empty or invalid intervals', async () => {
   render(<ArrowSeekSettings />);
   const forward = screen.getByLabelText(
-    'Seek interval (secs)'
+    'Arrow keys seek interval (secs)'
   ) as HTMLInputElement;
   await waitFor(() => expect(forward.disabled).toBe(false));
   for (const value of ['', '0', '-5', '86401', '1.5']) {
@@ -57,16 +82,22 @@ it('restores the default on blur for empty or invalid intervals', async () => {
   expect(screen.queryByRole('alert')).toBeNull();
 });
 
-it('resets both directions to five seconds from the single input', async () => {
+it('resets arrow directions to five seconds independently of J/L', async () => {
   render(<ArrowSeekSettings />);
   await waitFor(() =>
     expect(
-      (screen.getByLabelText('Seek interval (secs)') as HTMLInputElement).value
+      (
+        screen.getByLabelText(
+          'Arrow keys seek interval (secs)'
+        ) as HTMLInputElement
+      ).value
     ).toBe('3')
   );
-  expect(screen.getAllByRole('spinbutton')).toHaveLength(1);
+  expect(screen.getAllByRole('spinbutton')).toHaveLength(2);
   fireEvent.click(
-    screen.getByRole('button', { name: 'Reset seek interval to 5 seconds' })
+    screen.getByRole('button', {
+      name: 'Reset arrow keys seek interval to 5 seconds',
+    })
   );
   await waitFor(() => expect(preferences.backward).toBe(5));
   expect(preferences.forward).toBe(5);
@@ -75,10 +106,10 @@ it('resets both directions to five seconds from the single input', async () => {
 it('hides the interval when disabled and restores its value when enabled', async () => {
   render(<ArrowSeekSettings />);
   const toggle = screen.getByRole('switch', {
-    name: 'Enable Arrow Key Seeking',
+    name: 'Enable Arrow Key Seeking Override',
   });
   const interval = screen.getByLabelText(
-    'Seek interval (secs)'
+    'Arrow keys seek interval (secs)'
   ) as HTMLInputElement;
   await waitFor(() => expect(interval.value).toBe('3'));
   fireEvent.click(toggle);
@@ -89,13 +120,13 @@ it('hides the interval when disabled and restores its value when enabled', async
   expect(preferences.miniPlayer).toBe(true);
   expect(
     screen.queryByRole('button', {
-      name: 'Reset seek interval to 5 seconds',
+      name: 'Reset arrow keys seek interval to 5 seconds',
     })
   ).toBeNull();
   fireEvent.click(toggle);
   await waitFor(() => expect(preferences.arrowKeySeekingEnabled).toBe(true));
   const restoredInterval = (await screen.findByRole('spinbutton', {
-    name: 'Seek interval (secs)',
+    name: 'Arrow keys seek interval (secs)',
   })) as HTMLInputElement;
   expect(restoredInterval.disabled).toBe(false);
   expect(restoredInterval.value).toBe('3');
@@ -105,13 +136,15 @@ it('loads a saved disabled preference and respects the extension state', async (
   preferences.arrowKeySeekingEnabled = false;
   const { rerender } = render(<ArrowSeekSettings />);
   const toggle = screen.getByRole('switch', {
-    name: 'Enable Arrow Key Seeking',
+    name: 'Enable Arrow Key Seeking Override',
   });
   await waitFor(() =>
     expect(toggle.getAttribute('aria-checked')).toBe('false')
   );
   await waitFor(() =>
-    expect(screen.queryByLabelText('Seek interval (secs)')).toBeNull()
+    expect(
+      screen.queryByLabelText('Arrow keys seek interval (secs)')
+    ).toBeNull()
   );
   expect(screen.queryByRole('spinbutton')).toBeNull();
   rerender(<ArrowSeekSettings disabled />);
@@ -122,7 +155,7 @@ it('keeps storage errors visible when the interval is collapsed', async () => {
   set.mockRejectedValueOnce(new Error('Storage unavailable'));
   render(<ArrowSeekSettings />);
   const toggle = screen.getByRole('switch', {
-    name: 'Enable Arrow Key Seeking',
+    name: 'Enable Arrow Key Seeking Override',
   });
   await waitFor(() =>
     expect(toggle.getAttribute('aria-disabled')).not.toBe('true')

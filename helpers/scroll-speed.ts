@@ -7,7 +7,6 @@ export const SCROLL_SPEED_FACTOR_STEP = 0.25;
 
 export const ScrollHotkeyE = {
   Alt: 'alt',
-  Shift: 'shift',
   AltShift: 'alt+shift',
 } as const;
 export type ScrollHotkeyT = (typeof ScrollHotkeyE)[keyof typeof ScrollHotkeyE];
@@ -44,21 +43,22 @@ export const normalizeScrollHotkeys = (
   fastScrollHotkey: unknown,
   slowScrollHotkey: unknown
 ): ScrollHotkeyConfigT => {
-  const fast = isScrollHotkey(fastScrollHotkey)
-    ? fastScrollHotkey
-    : DEFAULT_FAST_SCROLL_HOTKEY;
-  const slow = isScrollHotkey(slowScrollHotkey)
-    ? slowScrollHotkey
-    : DEFAULT_SLOW_SCROLL_HOTKEY;
-
-  if (fast === slow) {
-    return {
-      fastScrollHotkey: DEFAULT_FAST_SCROLL_HOTKEY,
-      slowScrollHotkey: DEFAULT_SLOW_SCROLL_HOTKEY,
-    };
+  const opposite = (hotkey: ScrollHotkeyT): ScrollHotkeyT =>
+    hotkey === ScrollHotkeyE.Alt ? ScrollHotkeyE.AltShift : ScrollHotkeyE.Alt;
+  // Retain the supported half of an older pair that used Shift alone.
+  if (
+    isScrollHotkey(fastScrollHotkey) &&
+    fastScrollHotkey !== slowScrollHotkey
+  ) {
+    return { fastScrollHotkey, slowScrollHotkey: opposite(fastScrollHotkey) };
   }
-
-  return { fastScrollHotkey: fast, slowScrollHotkey: slow };
+  if (!isScrollHotkey(fastScrollHotkey) && isScrollHotkey(slowScrollHotkey)) {
+    return { fastScrollHotkey: opposite(slowScrollHotkey), slowScrollHotkey };
+  }
+  return {
+    fastScrollHotkey: DEFAULT_FAST_SCROLL_HOTKEY,
+    slowScrollHotkey: DEFAULT_SLOW_SCROLL_HOTKEY,
+  };
 };
 
 const hotkeyUsesCode = (hotkey: ScrollHotkeyT, code: string): boolean => {
@@ -66,8 +66,7 @@ const hotkeyUsesCode = (hotkey: ScrollHotkeyT, code: string): boolean => {
   const isShift = code === 'ShiftLeft' || code === 'ShiftRight';
 
   if (hotkey === ScrollHotkeyE.Alt) return isAlt;
-  if (hotkey === ScrollHotkeyE.Shift) return isShift;
-  return isAlt || isShift;
+  return hotkey === ScrollHotkeyE.AltShift && (isAlt || isShift);
 };
 
 export const isScrollSpeedHotkeyCode = (
@@ -85,10 +84,7 @@ const matchesHotkey = (
   if (hotkey === ScrollHotkeyE.Alt) {
     return state.altKey && !state.shiftKey;
   }
-  if (hotkey === ScrollHotkeyE.Shift) {
-    return state.shiftKey && !state.altKey;
-  }
-  return state.altKey && state.shiftKey;
+  return hotkey === ScrollHotkeyE.AltShift && state.altKey && state.shiftKey;
 };
 
 export const hasScrollSpeedHotkey = (

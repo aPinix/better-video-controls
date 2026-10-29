@@ -78,6 +78,7 @@ describe('SettingsManager seek mode gates', () => {
       vi.stubGlobal('window', { location: new URL(url) });
       const settings = new SettingsManager();
       settings.updateSetting('isScrollSeekingEnabled', false);
+      settings.updateSetting('isPlayPauseEnabled', false);
       settings.updateSetting('isTimelineSeekingEnabled', false);
       settings.updateSetting('dragVideoToSeek', false);
       settings.updateSetting('hideVideoControls', false);
@@ -105,7 +106,7 @@ describe('SettingsManager seek mode gates', () => {
     }
   );
 
-  it('gates wheel actions and overlay activation with the Scroll parent', () => {
+  it('runs playback gestures independently of Scroll and preserves children when the Play / Pause parent is off', () => {
     const settings = new SettingsManager();
     settings.updateSetting('domainRules', [
       createDomainRule('*', DomainModeE.On),
@@ -117,9 +118,24 @@ describe('SettingsManager seek mode gates', () => {
     settings.updateSetting('showTimelineOnHover', false);
     settings.updateSetting('hideVideoControls', false);
 
+    expect(settings.isPlayPauseWheelEnabled()).toBe(true);
+    expect(settings.isMiddleClickPlayPauseEnabled()).toBe(true);
+    expect(settings.hasActiveVideoFeatures()).toBe(true);
+    expect(settings.shouldRun()).toBe(true);
+
+    settings.updateSetting('isPlayPauseEnabled', false);
     expect(settings.isPlayPauseWheelEnabled()).toBe(false);
+    expect(settings.isMiddleClickPlayPauseEnabled()).toBe(false);
     expect(settings.hasActiveVideoFeatures()).toBe(false);
     expect(settings.shouldRun()).toBe(false);
+
+    settings.updateSetting('isPlayPauseEnabled', true);
+    settings.updateSetting('isMiddleClickPlayPauseEnabled', false);
+    expect(settings.isPlayPauseWheelEnabled()).toBe(true);
+    expect(settings.isMiddleClickPlayPauseEnabled()).toBe(false);
+    settings.updateSetting('isPlayPauseWheelEnabled', false);
+    settings.updateSetting('isKKeyPlayPauseEnabled', false);
+    expect(settings.hasActiveVideoFeatures()).toBe(false);
 
     settings.updateSetting('hideVideoControls', true);
     expect(settings.hasActiveVideoFeatures()).toBe(true);

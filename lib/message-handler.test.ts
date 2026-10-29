@@ -7,6 +7,46 @@ import { MessageHandler } from '@/lib/message-handler';
 import type { ChromeMessageT } from '@/types/content';
 
 describe('MessageHandler timeline seeking updates', () => {
+  it('applies playback settings immediately and reconciles videos when the gestures are enabled', () => {
+    const updateSetting = vi.fn();
+    const checkForVideos = vi.fn();
+    const handler = new MessageHandler({
+      checkForVideos,
+      getDebugColorBackground: () => '',
+      getDebugImageBackground: () => '',
+      overlayCreator: {} as OverlayCreator,
+      settingsManager: {
+        isDebugEnabled: () => false,
+        shouldRun: () => true,
+        updateSetting,
+      } as unknown as SettingsManager,
+      videoStateManager: {} as VideoStateManager,
+    });
+    const sendResponse = vi.fn();
+    const testHandler = handler as unknown as {
+      handleMessage: (
+        message: ChromeMessageT,
+        respond: typeof sendResponse
+      ) => void;
+    };
+    testHandler.handleMessage(
+      {
+        action: 'updatePlaybackActions',
+        isPlayPauseEnabled: false,
+        isMiddleClickPlayPauseEnabled: true,
+        isPlayPauseWheelEnabled: false,
+      } as ChromeMessageT,
+      sendResponse
+    );
+    expect(updateSetting.mock.calls).toEqual([
+      ['isPlayPauseEnabled', false],
+      ['isMiddleClickPlayPauseEnabled', true],
+      ['isPlayPauseWheelEnabled', false],
+    ]);
+    expect(checkForVideos).toHaveBeenCalledOnce();
+    expect(sendResponse).toHaveBeenCalledWith({ success: true });
+  });
+
   it('previews committed action-area changes on existing page videos', () => {
     const updateSetting = vi.fn();
     const updateAllOverlaysForActionArea = vi.fn();

@@ -28,11 +28,25 @@ const groupStyle =
 const buttonStyle =
   'position:relative;align-items:center;justify-content:center;width:48px;height:100%;padding:0;border:0;background:transparent;color:inherit;cursor:pointer;';
 const controlStyles = `
-  .mfs-youtube-controls[data-stacked=true]{position:absolute!important;height:auto!important;flex-wrap:wrap;justify-content:flex-end;box-sizing:border-box;padding:4px;border-radius:20px;background:rgba(0,0,0,.45);backdrop-filter:blur(16px);white-space:normal;z-index:1}
+  .mfs-youtube-controls{background:transparent!important;box-shadow:none!important;border:0!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  .mfs-youtube-controls::before,.mfs-youtube-controls::after{display:none!important}
+  .mfs-youtube-actions{background:transparent!important;box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+  .mfs-youtube-controls[data-stacked=true]{position:absolute!important;height:auto!important;flex-wrap:wrap;justify-content:flex-end;box-sizing:border-box;padding:4px;border-radius:20px;white-space:normal;z-index:1}
+  .mfs-toolbar-background{position:absolute;left:0;right:0;top:50%;height:32px;transform:translateY(-50%);border-radius:999px;background:rgba(0,0,0,.45);backdrop-filter:blur(16px);pointer-events:none}
+  .mfs-youtube-controls[data-stacked=true] > .mfs-toolbar-background{top:0;bottom:0;height:auto!important;transform:none;border-radius:inherit}
+  .mfs-youtube-controls[data-collapsed=true] .mfs-toolbar-background{display:none}
+  .mfs-native-pill{position:absolute;pointer-events:none}
+  .ytp-right-controls[data-mfs-morphing=true]{background:transparent!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
   .mfs-youtube-controls[data-stacked=true] > span,.mfs-youtube-controls[data-stacked=true] .mfs-player-button{height:32px!important;flex-shrink:0}
+  .mfs-youtube-controls [data-action][hidden],.mfs-youtube-actions[hidden],.mfs-native-pill[hidden]{display:none!important}
+  .mfs-youtube-controls[data-stacked=true] .mfs-youtube-actions{height:auto!important;flex:1!important;min-width:0;flex-wrap:wrap;justify-content:flex-end}
+  .mfs-youtube-controls[data-stacked=true] .mfs-youtube-actions > span{height:32px!important}
   .mfs-player-button.ytp-button::after{display:none!important}
   .mfs-player-button.ytp-button{display:inline-flex}
   .mfs-player-button.ytp-button,.mfs-player-button.ytp-button:hover,.mfs-player-button.ytp-button:focus-visible{background:transparent!important;box-shadow:none!important;border-radius:0!important}
+  .mfs-player-button.ytp-button.mfs-collapse-button{border-radius:50%!important}
+  .mfs-collapse-button.ytp-button::before{content:"";display:block;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:32px!important;height:32px!important;box-sizing:border-box;border-radius:50%!important;pointer-events:none}
+  .mfs-collapse-button.ytp-button:hover::before{background:rgba(255,255,255,.1)!important}
   .mfs-player-button[aria-pressed=true] .mfs-loop-frame{fill:#fff;stroke:#fff}
   .mfs-player-button[aria-pressed=true] .mfs-loop-arrows{stroke:#222}
   .mfs-player-button[aria-pressed=true] .mfs-toggle-fill{fill:currentColor}
@@ -52,7 +66,7 @@ const controlStyles = `
   .mfs-tooltip-hint{font-size:85%;font-weight:400;line-height:1.25;color:rgba(255,255,255,.65)}
   .mfs-loop-tooltip[hidden]{display:none!important}
   .mfs-player-button:hover + .mfs-loop-tooltip,.mfs-player-button:focus-visible + .mfs-loop-tooltip{opacity:1;visibility:visible}
-  .mfs-player-button[aria-expanded=true] + .mfs-loop-tooltip{opacity:0;visibility:hidden}
+  .mfs-player-button[aria-expanded=true]:not(.mfs-collapse-button) + .mfs-loop-tooltip{opacity:0;visibility:hidden}
   .mfs-screenshot-status{bottom:calc(100% + 24px);left:auto;right:0;transform:none;opacity:1;visibility:visible;max-width:260px;white-space:normal}
   .mfs-bookmark-status{width:max-content;font-size:12px}
   .mfs-filters-open,.mfs-advanced-open{cursor:auto!important}.mfs-filters-open .ytp-chrome-bottom,.mfs-advanced-open .ytp-chrome-bottom{opacity:1!important;visibility:visible!important;pointer-events:auto!important;transform:none!important}
@@ -70,6 +84,17 @@ export class YouTubePlayerButtons {
   readonly filtersButton: HTMLButtonElement;
   readonly pipButton: HTMLButtonElement;
   readonly bookmarksButton: HTMLButtonElement;
+  readonly collapseButton: HTMLButtonElement;
+  private collapseContainer: HTMLSpanElement;
+  private actionContainer: HTMLSpanElement;
+  private collapsed = false;
+  private collapseTimer: ReturnType<typeof setTimeout> | undefined;
+  private collapseAnimation: Animation | undefined;
+  private collapseAuxAnimations: Animation[] = [];
+  private collapseTransition = false;
+  private background: HTMLSpanElement;
+  private nativePill: HTMLSpanElement;
+  private morphingControls: HTMLElement | undefined;
   private boostContainer: HTMLSpanElement;
   private cinemaContainer: HTMLSpanElement;
   private infoCardsContainer: HTMLSpanElement;
@@ -105,6 +130,7 @@ export class YouTubePlayerButtons {
       onBookmarks: () => void;
       onEditBookmarks: () => void;
       onAdvanced?: (kind: YouTubeAdvancedControl) => void;
+      onCollapse?: () => void;
     }
   ) {
     const doc = video.ownerDocument;
@@ -116,6 +142,17 @@ export class YouTubePlayerButtons {
     const style = doc.createElement('style');
     style.textContent = controlStyles;
     this.toolbar.append(style);
+    this.nativePill = doc.createElement('span');
+    this.nativePill.className = 'mfs-native-pill';
+    this.nativePill.setAttribute('aria-hidden', 'true');
+    this.nativePill.hidden = true;
+    this.toolbar.append(this.nativePill);
+    this.background = doc.createElement('span');
+    this.background.className = 'mfs-toolbar-background';
+    this.background.setAttribute('aria-hidden', 'true');
+    this.toolbar.append(this.background);
+    this.actionContainer = this.group('mfs-youtube-actions');
+    this.toolbar.append(this.actionContainer);
     this.boostContainer = this.group('mfs-youtube-boost');
     this.cinemaContainer = this.group('mfs-youtube-cinema');
     this.container = this.group('mfs-youtube-buttons');
@@ -168,6 +205,18 @@ export class YouTubePlayerButtons {
     );
     this.filtersButton.setAttribute('aria-haspopup', 'dialog');
     this.pipButton = this.control('pip', this.pipContainer, actions.onPip);
+    this.collapseContainer = this.group('mfs-youtube-collapse');
+    this.collapseButton = this.control(
+      'collapse',
+      this.collapseContainer,
+      (event) => {
+        this.setCollapsed(!this.collapsed, event.detail > 0);
+        if (this.collapsed) actions.onCollapse?.();
+      }
+    );
+    this.collapseButton.style.width = '40px';
+    this.collapseButton.setAttribute('aria-expanded', 'true');
+    this.toolbar.append(this.collapseContainer);
     for (const [kind, button] of [
       ['boost', this.boostButton],
       ['cinema', this.cinemaButton],
@@ -256,13 +305,393 @@ export class YouTubePlayerButtons {
     const group = this.video.ownerDocument.createElement('span');
     group.className = className;
     group.style.cssText = groupStyle;
+    if (!['mfs-youtube-collapse', 'mfs-youtube-actions'].includes(className))
+      group.dataset.action = '';
     return group;
   }
 
+  expand(): void {
+    if (this.collapsed && !this.disposed) this.setCollapsed(false, false);
+  }
+
+  private setCollapsed(collapsed: boolean, motion: boolean): void {
+    const win = this.video.ownerDocument.defaultView;
+    const surface = this.actionContainer;
+    const groups = [
+      ...surface.querySelectorAll<HTMLElement>(':scope > [data-action]'),
+    ];
+    const interrupted = this.collapseTimer !== undefined;
+    const duration = interrupted ? 220 : 400;
+    const visible = !surface.hidden;
+    // Capture presentation before cancelling so a second click reverses from
+    // the currently painted frame, including the moving chevron.
+    const before = surface.getBoundingClientRect();
+    const anchor = this.collapseContainer.getBoundingClientRect();
+    const toolbarRect = this.toolbar.getBoundingClientRect();
+    const shellClip = win?.getComputedStyle(this.toolbar).clipPath;
+    const scale = this.toolbar.offsetWidth
+      ? toolbarRect.width / this.toolbar.offsetWidth || 1
+      : 1;
+    const presentations = groups.map((group) => {
+      const style = win?.getComputedStyle(group);
+      return {
+        opacity: visible ? style?.opacity || '1' : '0',
+        transform: visible ? style?.transform || 'none' : 'scale(0.9)',
+      };
+    });
+    const backgroundBefore = this.background.getBoundingClientRect();
+    const backgroundStyle = win?.getComputedStyle(this.background);
+    const backgroundClip = backgroundStyle?.clipPath;
+    const backgroundOpacity = visible ? backgroundStyle?.opacity || '1' : '0';
+    const controls = this.observedControls;
+    const controlsBefore = controls?.getBoundingClientRect();
+    const nativePillClip = this.nativePill.hidden
+      ? undefined
+      : win?.getComputedStyle(this.nativePill).clipPath;
+    clearTimeout(this.collapseTimer);
+    this.collapseTimer = undefined;
+    this.collapseAnimation?.cancel();
+    for (const animation of this.collapseAuxAnimations) animation.cancel();
+    this.collapseAuxAnimations = [];
+    this.collapseAnimation = undefined;
+    this.collapseTransition = false;
+    this.releaseNativePill();
+    const animate =
+      motion && !win?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (collapsed && surface.contains(this.video.ownerDocument.activeElement))
+      this.collapseButton.focus();
+    const label = collapsed
+      ? 'Expand custom actions'
+      : 'Collapse custom actions';
+    this.collapseButton.setAttribute('aria-expanded', String(!collapsed));
+    this.collapseButton.setAttribute('aria-label', label);
+    this.collapseButton
+      .querySelector('path')
+      ?.setAttribute('d', collapsed ? 'm14 5-5 5 5 5' : 'm9 5 5 5-5 5');
+    this.tooltip(this.collapseButton, label);
+
+    let destination = anchor;
+    let controlsDestination: DOMRect | undefined;
+    if (collapsed && animate && controls) {
+      // Measure the docked position without painting that intermediate layout.
+      const css = this.toolbar.style.cssText;
+      const stacked = this.toolbar.dataset.stacked;
+      this.collapsed = true;
+      surface.hidden = true;
+      this.mount(controls);
+      this.layout();
+      destination = this.collapseContainer.getBoundingClientRect();
+      controlsDestination = controls.getBoundingClientRect();
+      this.collapsed = false;
+      surface.hidden = false;
+      this.mount(controls);
+      this.toolbar.style.cssText = css;
+      this.toolbar.dataset.stacked = stacked;
+    }
+    this.collapsed = collapsed;
+    this.collapseTransition = animate;
+    this.toolbar.dataset.collapsed = 'false';
+    surface.inert = collapsed;
+    surface.hidden = false;
+    for (const group of groups) {
+      group.inert = collapsed;
+      group.hidden = false;
+    }
+    if (!collapsed) {
+      if (this.observedControls) this.mount(this.observedControls);
+      this.collapseTransition = false;
+      this.layoutExtra = 0;
+      this.layout();
+      this.collapseTransition = animate;
+    }
+    const target = surface.getBoundingClientRect();
+    const chevron = this.collapseContainer.getBoundingClientRect();
+    const animateShell = this.toolbar.dataset.stacked === 'true';
+    const finish = () => {
+      this.collapseTimer = undefined;
+      if (this.disposed || this.collapsed !== collapsed) return;
+      surface.hidden = collapsed;
+      for (const group of surface.querySelectorAll<HTMLElement>(
+        ':scope > [data-action]'
+      ))
+        group.hidden = collapsed;
+      this.collapseTransition = false;
+      this.toolbar.dataset.collapsed = String(collapsed);
+      if (this.observedControls) this.mount(this.observedControls);
+      this.layoutExtra = 0;
+      this.layout();
+      this.collapseAnimation?.cancel();
+      this.collapseAnimation = undefined;
+      for (const animation of this.collapseAuxAnimations) animation.cancel();
+      this.collapseAuxAnimations = [];
+      this.releaseNativePill();
+    };
+    if (!animate) {
+      finish();
+      return;
+    }
+    const options: KeyframeAnimationOptions = {
+      duration,
+      easing: 'cubic-bezier(.32,.72,0,1)',
+      fill: 'both',
+    };
+    const fromX = visible
+      ? (before.left - target.left) / scale
+      : (anchor.left - target.right) / scale;
+    const fromY = visible
+      ? (before.top - target.top) / scale
+      : (anchor.top + anchor.height / 2 - target.top - target.height / 2) /
+        scale;
+    const toX = collapsed ? (destination.left - target.right) / scale : 0;
+    const toY = collapsed
+      ? (destination.top +
+          destination.height / 2 -
+          target.top -
+          target.height / 2) /
+        scale
+      : 0;
+    this.collapseAnimation = surface.animate?.(
+      [
+        {
+          transform: animateShell
+            ? 'translate(0px,0px)'
+            : `translate(${fromX}px,${fromY}px)`,
+        },
+        {
+          transform: animateShell
+            ? 'translate(0px,0px)'
+            : `translate(${toX}px,${toY}px)`,
+        },
+      ],
+      options
+    );
+    // Native and upper-row buttons can have different heights. Match their
+    // centers so the icon does not jump a few pixels when it docks.
+    const chevronTranslation = (rect: DOMRect) =>
+      `translate(${(rect.left + rect.width / 2 - chevron.left - chevron.width / 2) / scale}px,${(rect.top + rect.height / 2 - chevron.top - chevron.height / 2) / scale}px)`;
+    const chevronAnimation = this.collapseContainer.animate?.(
+      [
+        {
+          transform: animateShell
+            ? 'translate(0px,0px)'
+            : chevronTranslation(anchor),
+        },
+        {
+          transform:
+            collapsed && !animateShell
+              ? chevronTranslation(destination)
+              : 'translate(0px,0px)',
+        },
+      ],
+      options
+    );
+    const backgroundBounds = this.background.getBoundingClientRect();
+    const baseTransform =
+      win?.getComputedStyle(this.background).transform || 'none';
+    const translateBackground = (x: number, y: number) =>
+      `${baseTransform === 'none' ? '' : baseTransform} translate(${x}px,${y}px)`;
+    const centerX =
+      (chevron.left + chevron.width / 2 - backgroundBounds.left) / scale;
+    const centerY =
+      (chevron.top + chevron.height / 2 - backgroundBounds.top) / scale;
+    const closedClip = `inset(${centerY - 16}px ${backgroundBounds.width / scale - centerX - 16}px ${backgroundBounds.height / scale - centerY - 16}px ${centerX - 16}px round 16px)`;
+    const openClip = 'inset(0px 0px 0px 0px round 16px)';
+    const chevronToX =
+      (destination.left +
+        destination.width / 2 -
+        chevron.left -
+        chevron.width / 2) /
+      scale;
+    const chevronToY =
+      (destination.top +
+        destination.height / 2 -
+        chevron.top -
+        chevron.height / 2) /
+      scale;
+    const backgroundAnimation = this.background.animate?.(
+      [
+        {
+          transform: translateBackground(
+            animateShell
+              ? 0
+              : visible
+                ? (backgroundBefore.left - backgroundBounds.left) / scale
+                : (anchor.left - chevron.left) / scale,
+            animateShell
+              ? 0
+              : visible
+                ? (backgroundBefore.top - backgroundBounds.top) / scale
+                : (anchor.top +
+                    anchor.height / 2 -
+                    chevron.top -
+                    chevron.height / 2) /
+                  scale
+          ),
+          opacity: backgroundOpacity,
+        },
+        { offset: collapsed ? 0.85 : 0.15, opacity: 1 },
+        {
+          transform: translateBackground(
+            collapsed && !animateShell ? chevronToX : 0,
+            collapsed && !animateShell ? chevronToY : 0
+          ),
+          opacity: collapsed ? 0 : 1,
+        },
+      ],
+      options
+    );
+    // Retraction follows the stagger rather than outrunning the disappearing
+    // buttons; the pill's position still follows the same easing as the chevron.
+    const backgroundShapeAnimation = !animateShell
+      ? this.background.animate?.(
+          [
+            {
+              clipPath:
+                visible && backgroundClip && backgroundClip !== 'none'
+                  ? backgroundClip
+                  : visible
+                    ? openClip
+                    : closedClip,
+            },
+            { clipPath: collapsed ? closedClip : openClip },
+          ],
+          { ...options, easing: collapsed ? 'linear' : options.easing }
+        )
+      : undefined;
+    // In the upper layout the wrapper itself owns the silhouette. Masking only
+    // its background leaves native container styling at its full static size.
+    const shellBounds = this.toolbar.getBoundingClientRect();
+    const shellCenterX =
+      (chevron.left + chevron.width / 2 - shellBounds.left) / scale;
+    const shellCenterY =
+      (chevron.top + chevron.height / 2 - shellBounds.top) / scale;
+    const shellClosed = `inset(${shellCenterY - 16}px ${shellBounds.width / scale - shellCenterX - 16}px ${shellBounds.height / scale - shellCenterY - 16}px ${shellCenterX - 16}px round 16px)`;
+    const shellOpen = 'inset(0px 0px 0px 0px round 20px)';
+    const shellMotion = animateShell
+      ? this.toolbar.animate?.(
+          [
+            { transform: chevronTranslation(anchor) },
+            {
+              transform: collapsed
+                ? chevronTranslation(destination)
+                : 'translate(0px,0px)',
+            },
+          ],
+          options
+        )
+      : undefined;
+    const shellShape = animateShell
+      ? this.toolbar.animate?.(
+          [
+            {
+              clipPath:
+                visible && shellClip && shellClip !== 'none'
+                  ? shellClip
+                  : visible
+                    ? shellOpen
+                    : shellClosed,
+            },
+            { clipPath: collapsed ? shellClosed : shellOpen },
+          ],
+          { ...options, easing: collapsed ? 'linear' : options.easing }
+        )
+      : undefined;
+    const buttonAnimations = groups.map((group, index) => {
+      const rank = collapsed ? index : groups.length - 1 - index;
+      return group.animate?.(
+        [
+          presentations[index]!,
+          {
+            opacity: collapsed ? 0 : 1,
+            transform: collapsed ? 'scale(0.9)' : 'scale(1)',
+          },
+        ],
+        {
+          duration: collapsed ? 140 : 160,
+          delay: interrupted ? 0 : (collapsed ? 0 : 30) + rank * 30,
+          easing: 'cubic-bezier(.23,1,.32,1)',
+          fill: 'both',
+        }
+      );
+    });
+    // On the same row, YouTube's own right-controls pill wraps the toolbar and
+    // would snap to its final width. Paint a stand-in for it and morph that
+    // between the docked and expanded silhouettes alongside our background.
+    let nativePillAnimation: Animation | undefined;
+    const controlsStyle =
+      !animateShell && controls?.contains(this.toolbar)
+        ? win?.getComputedStyle(controls)
+        : undefined;
+    if (
+      controls &&
+      controlsStyle &&
+      (!['', 'transparent', 'rgba(0, 0, 0, 0)'].includes(
+        controlsStyle.backgroundColor
+      ) ||
+        !['', 'none'].includes(controlsStyle.backgroundImage) ||
+        !['', 'none'].includes(controlsStyle.backdropFilter))
+    ) {
+      const live = controls.getBoundingClientRect();
+      const box = this.toolbar.getBoundingClientRect();
+      const radius = Number.parseFloat(controlsStyle.borderRadius) || 0;
+      const silhouette = (rect: DOMRect) =>
+        `inset(${(rect.top - live.top) / scale}px ${(live.right - rect.right) / scale}px ${(live.bottom - rect.bottom) / scale}px ${(rect.left - live.left) / scale}px round ${radius}px)`;
+      for (const property of [
+        'background-color',
+        'background-image',
+        'backdrop-filter',
+        'border-radius',
+      ])
+        this.nativePill.style.setProperty(
+          property,
+          controlsStyle.getPropertyValue(property)
+        );
+      this.nativePill.style.left = `${(live.left - box.left) / scale}px`;
+      this.nativePill.style.top = `${(live.top - box.top) / scale}px`;
+      this.nativePill.style.width = `${live.width / scale}px`;
+      this.nativePill.style.height = `${live.height / scale}px`;
+      this.nativePill.hidden = false;
+      controls.dataset.mfsMorphing = 'true';
+      this.morphingControls = controls;
+      nativePillAnimation = this.nativePill.animate?.(
+        [
+          {
+            clipPath:
+              nativePillClip && nativePillClip !== 'none'
+                ? nativePillClip
+                : silhouette(controlsBefore ?? live),
+          },
+          {
+            clipPath: silhouette(
+              collapsed ? (controlsDestination ?? live) : live
+            ),
+          },
+        ],
+        { ...options, easing: collapsed ? 'linear' : options.easing }
+      );
+    }
+    this.collapseAuxAnimations = [
+      chevronAnimation,
+      backgroundAnimation,
+      backgroundShapeAnimation,
+      shellMotion,
+      shellShape,
+      nativePillAnimation,
+      ...buttonAnimations,
+    ].filter((animation): animation is Animation => !!animation);
+    this.collapseTimer = setTimeout(finish, duration);
+  }
+
+  private releaseNativePill(): void {
+    this.nativePill.hidden = true;
+    if (this.morphingControls) delete this.morphingControls.dataset.mfsMorphing;
+    this.morphingControls = undefined;
+  }
+
   private control(
-    kind: YouTubeControl | 'edit',
+    kind: YouTubeControl | 'edit' | 'collapse',
     group: HTMLSpanElement,
-    action: () => void
+    action: (event: MouseEvent) => void
   ) {
     const doc = this.video.ownerDocument;
     const button = doc.createElement('button');
@@ -270,10 +699,14 @@ export class YouTubePlayerButtons {
     button.className = `ytp-button mfs-player-button mfs-${kind === 'infoCards' ? 'info-cards' : kind}-button`;
     button.setAttribute(
       'aria-label',
-      kind === 'edit' ? 'Edit loop sections' : YOUTUBE_CONTROL_LABELS[kind]
+      kind === 'edit'
+        ? 'Edit loop sections'
+        : kind === 'collapse'
+          ? 'Collapse custom actions'
+          : YOUTUBE_CONTROL_LABELS[kind]
     );
     button.style.cssText = buttonStyle;
-    if (kind !== 'edit') {
+    if (kind !== 'edit' && kind !== 'collapse') {
       const key = YOUTUBE_CONTROL_SHORTCUTS[kind].toUpperCase();
       const advanced = [
         'boost',
@@ -312,7 +745,7 @@ export class YouTubePlayerButtons {
     button.addEventListener('click', (event) => {
       event.preventDefault();
       event.stopPropagation();
-      if (!this.disposed && !button.disabled) action();
+      if (!this.disposed && !button.disabled) action(event);
     });
     const syncTooltip = () => {
       const player = this.video.closest('#movie_player, .html5-video-player');
@@ -428,9 +861,15 @@ export class YouTubePlayerButtons {
   }
 
   private layout(): void {
+    if (this.collapseTransition) return;
     const controls = this.observedControls;
-    if (this.disposed || !controls || this.toolbar.parentElement !== controls)
+    if (this.disposed || !controls || !controls.contains(this.toolbar)) return;
+    if (this.collapsed) {
+      this.toolbar.dataset.stacked = 'false';
+      for (const property of ['bottom', 'right', 'max-width', 'width'])
+        this.toolbar.style.removeProperty(property);
       return;
+    }
     const chrome = controls.closest<HTMLElement>('.ytp-chrome-bottom');
     if (!chrome || chrome.clientWidth <= 0) return;
     const win = this.video.ownerDocument.defaultView;
@@ -516,7 +955,10 @@ export class YouTubePlayerButtons {
       0
     );
     const customWidth = [...this.tips.keys()]
-      .filter((button) => this.toolbar.contains(button))
+      .filter(
+        (button) =>
+          this.toolbar.contains(button) && !button.parentElement?.hidden
+      )
       .reduce((total, button) => total + width(button), 0);
     const controlsStyle = win.getComputedStyle(controls);
     const chromeStyle = win.getComputedStyle(chrome);
@@ -677,7 +1119,7 @@ export class YouTubePlayerButtons {
     text.textContent = label;
     const hintText =
       button.dataset.advanced === 'true'
-        ? button.dataset.advancedHint ?? 'Hold for options'
+        ? (button.dataset.advancedHint ?? 'Hold for options')
         : actionHint;
     let hint = tip.querySelector<HTMLElement>('.mfs-tooltip-hint');
     if (hintText && !hint) {
@@ -690,6 +1132,32 @@ export class YouTubePlayerButtons {
       hint.hidden = !hintText;
     }
     tip.dataset.multiline = String(!!hintText);
+  }
+
+  private mount(controls: HTMLElement): void {
+    // Modern YouTube gives captions/settings their own pill. Tuck the remaining
+    // chevron into that pill instead of leaving an empty custom row above it.
+    const parent =
+      (this.collapsed && !this.collapseTransition
+        ? controls.querySelector<HTMLElement>('.ytp-right-controls-left')
+        : null) ?? controls;
+    let anchor = parent.querySelector(
+      '.ytp-autonav-toggle, .ytp-autonav-toggle-button, .ytp-subtitles-button, .ytp-settings-button'
+    );
+    while (anchor && anchor.parentElement !== parent)
+      anchor = anchor.parentElement;
+    anchor ??=
+      [...parent.children].find((node) => node !== this.toolbar) ?? null;
+    if (
+      this.toolbar.parentElement !== parent ||
+      this.toolbar.nextElementSibling !== anchor
+    ) {
+      const focused = this.video.ownerDocument
+        .activeElement as HTMLElement | null;
+      const restoreFocus = focused && this.toolbar.contains(focused);
+      parent.insertBefore(this.toolbar, anchor);
+      if (restoreFocus) focused.focus({ preventScroll: true });
+    }
   }
 
   update({
@@ -730,27 +1198,25 @@ export class YouTubePlayerButtons {
       return;
     }
     // Move only when order changes so focus and native hover state survive updates.
-    let previous: Element = this.toolbar.firstElementChild as Element;
+    let previous: Element | null = null;
     for (const [group, enabled] of groups) {
       if (!enabled) {
         group.remove();
         continue;
       }
-      if (previous.nextElementSibling !== group) previous.after(group);
+      if (
+        previous
+          ? previous.nextElementSibling !== group
+          : this.actionContainer.firstElementChild !== group
+      ) {
+        if (previous) previous.after(group);
+        else this.actionContainer.prepend(group);
+      }
+      group.inert = this.collapsed;
+      group.hidden = this.actionContainer.hidden;
       previous = group;
     }
-    let anchor = controls.querySelector(
-      '.ytp-autonav-toggle, .ytp-autonav-toggle-button, .ytp-subtitles-button'
-    );
-    while (anchor && anchor.parentElement !== controls)
-      anchor = anchor.parentElement;
-    anchor ??=
-      [...controls.children].find((node) => node !== this.toolbar) ?? null;
-    if (
-      this.toolbar.parentElement !== controls ||
-      this.toolbar.nextElementSibling !== anchor
-    )
-      controls.insertBefore(this.toolbar, anchor);
+    this.mount(controls);
     const native = controls.querySelector<HTMLButtonElement>(
       '.ytp-settings-button, .ytp-subtitles-button'
     );
@@ -759,7 +1225,8 @@ export class YouTubePlayerButtons {
         this.video.ownerDocument.defaultView?.getComputedStyle(native);
       if (nativeStyle && Number.parseFloat(nativeStyle.width) > 0) {
         for (const button of this.tips.keys()) {
-          button.style.width = nativeStyle.width;
+          if (button !== this.collapseButton)
+            button.style.width = nativeStyle.width;
           button.style.height = nativeStyle.height;
         }
       }
@@ -872,6 +1339,10 @@ export class YouTubePlayerButtons {
     clearTimeout(this.statusTimer);
     clearTimeout(this.bookmarkStatusTimer);
     clearTimeout(this.holdTimer);
+    clearTimeout(this.collapseTimer);
+    this.collapseAnimation?.cancel();
+    for (const animation of this.collapseAuxAnimations) animation.cancel();
+    this.releaseNativePill();
     for (const cleanup of this.cleanups) cleanup();
     this.resizeObserver?.disconnect();
     this.controlsObserver?.disconnect();

@@ -45,9 +45,12 @@ export type YouTubeAdvancedControl = 'boost' | 'cinema' | 'screenshot' | 'pip';
 
 type IconShape = { tag: 'path' | 'rect'; attributes: Record<string, string> };
 export const YOUTUBE_CONTROL_ICONS: Record<
-  YouTubeControl | 'edit',
+  YouTubeControl | 'edit' | 'collapse',
   IconShape[]
 > = {
+  collapse: [
+    { tag: 'path', attributes: { d: 'm9 5 5 5-5 5', strokeWidth: '2' } },
+  ],
   bookmarks: [
     {
       tag: 'path',
@@ -202,7 +205,7 @@ export const YOUTUBE_CONTROL_ICONS: Record<
 
 export function createYouTubeControlIcon(
   doc: Document,
-  control: YouTubeControl | 'edit'
+  control: YouTubeControl | 'edit' | 'collapse'
 ) {
   const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg');
   for (const [key, value] of Object.entries({

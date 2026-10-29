@@ -9,7 +9,7 @@ import { type ReactNode, useState } from 'react';
 
 import { AppBetaBadge } from '@/components/app/app-beta-badge';
 import { AppKbd } from '@/components/app/app-kbd';
-import { AppSelect } from '@/components/app/app-select';
+import { AppSegment } from '@/components/app/app-segment';
 import { AppSwitch } from '@/components/app/app-switch';
 import { ScrollSpeedFactorControl } from '@/components/scroll-speed-factor-control';
 import {
@@ -17,23 +17,17 @@ import {
   SeekControlsPreview,
 } from '@/components/settings/seek-controls-preview';
 import { VideoLayoutSettings } from '@/components/settings/video-layout-settings';
-import {
-  isScrollHotkey,
-  ScrollHotkeyE,
-  type ScrollHotkeyT,
-} from '@/helpers/scroll-speed';
-import { getPrimaryModifierLabel } from '@/helpers/wheel-actions';
+import { ScrollHotkeyE, type ScrollHotkeyT } from '@/helpers/scroll-speed';
 import { cn } from '@/lib/utils';
 import type { ActionAreaT } from '@/types/content';
 import { SubOptionsCard } from './sub-options-card';
 
 const scrollHotkeyItems = [
   { label: 'Alt', value: ScrollHotkeyE.Alt },
-  { label: 'Shift', value: ScrollHotkeyE.Shift },
   { label: 'Alt + Shift', value: ScrollHotkeyE.AltShift },
 ];
 
-function ScrollHotkeySelect({
+function ScrollHotkeyControl({
   label,
   onChange,
   value,
@@ -43,13 +37,11 @@ function ScrollHotkeySelect({
   value: ScrollHotkeyT;
 }) {
   return (
-    <AppSelect
-      className="min-w-28"
-      items={scrollHotkeyItems}
+    <AppSegment
+      className="w-full"
+      options={scrollHotkeyItems}
       label={label}
-      onValueChange={(nextValue) => {
-        if (isScrollHotkey(nextValue)) onChange(nextValue);
-      }}
+      onValueChange={onChange}
       value={value}
     />
   );
@@ -148,7 +140,6 @@ interface SeekControlsSettingsPropsI {
   colorizedTimeline: boolean;
   fastScrollHotkey: ScrollHotkeyT;
   isDragSeekingEnabled: boolean;
-  isPlayPauseWheelEnabled: boolean;
   isScrollSeekingEnabled: boolean;
   isSeekbarSeekingEnabled: boolean;
   onActionAreaChange: (actionArea: ActionAreaT) => void;
@@ -160,7 +151,6 @@ interface SeekControlsSettingsPropsI {
   onFastScrollHotkeyChange: (hotkey: ScrollHotkeyT) => void;
   onHeightChange: (height: number) => void;
   onHeightReset: () => void;
-  onPlayPauseWheelEnabledChange: (enabled: boolean) => void;
   onPositionChange: (position: 'top' | 'bottom') => void;
   onPositionReset: () => void;
   onScrollInversionChange: (enabled: boolean) => void;
@@ -184,7 +174,6 @@ export function SeekControlsSettings({
   colorizedTimeline,
   fastScrollHotkey,
   isDragSeekingEnabled,
-  isPlayPauseWheelEnabled,
   isScrollSeekingEnabled,
   isSeekbarSeekingEnabled,
   onActionAreaChange,
@@ -196,7 +185,6 @@ export function SeekControlsSettings({
   onFastScrollHotkeyChange,
   onHeightChange,
   onHeightReset,
-  onPlayPauseWheelEnabledChange,
   onPositionChange,
   onPositionReset,
   onScrollInversionChange,
@@ -214,9 +202,6 @@ export function SeekControlsSettings({
 }: SeekControlsSettingsPropsI) {
   const [focusedMethod, setFocusedMethod] =
     useState<SeekControlMethodT>('scroll');
-  const primaryModifierLabel = getPrimaryModifierLabel();
-  const primaryModifierKey =
-    primaryModifierLabel === 'Command' ? '⌘' : primaryModifierLabel;
   const hasEnabledMethod =
     isScrollSeekingEnabled || isDragSeekingEnabled || isSeekbarSeekingEnabled;
 
@@ -295,62 +280,47 @@ export function SeekControlsSettings({
               value={scrollSpeedFactor}
             />
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between gap-3">
+            <div className="space-y-4">
+              <div className="space-y-2">
                 <div>
-                  <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="flex items-center justify-between gap-2 font-medium text-slate-700 text-sm dark:text-slate-300">
                     Fast Scroll
+                    <span className="text-brand-600 text-xs dark:text-brand-300">
+                      3×
+                    </span>
                   </div>
                   <p className="text-slate-500 text-xs dark:text-slate-400">
-                    Hold while scrolling for 3× seeking
+                    Hold while scrolling to seek faster
                   </p>
                 </div>
-                <ScrollHotkeySelect
+                <ScrollHotkeyControl
                   label="Fast scroll hotkey"
                   onChange={onFastScrollHotkeyChange}
                   value={fastScrollHotkey}
                 />
               </div>
-              <div className="flex items-center justify-between gap-3">
+              <div className="space-y-2">
                 <div>
-                  <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="flex items-center justify-between gap-2 font-medium text-slate-700 text-sm dark:text-slate-300">
                     Slow Scroll
+                    <span className="text-brand-600 text-xs dark:text-brand-300">
+                      ¼×
+                    </span>
                   </div>
                   <p className="text-slate-500 text-xs dark:text-slate-400">
-                    Hold while scrolling for 1/4x precision
+                    Hold while scrolling for precise seeking
                   </p>
                 </div>
-                <ScrollHotkeySelect
+                <ScrollHotkeyControl
                   label="Slow scroll hotkey"
                   onChange={onSlowScrollHotkeyChange}
                   value={slowScrollHotkey}
                 />
               </div>
-            </div>
-
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
-                  Play / Pause
-                </div>
-                <p className="text-slate-500 text-xs dark:text-slate-400">
-                  Hold{' '}
-                  <AppKbd aria-label={`${primaryModifierKey} + Scroll Left`}>
-                    {primaryModifierKey} + Scroll Left
-                  </AppKbd>{' '}
-                  to pause,{' '}
-                  <AppKbd aria-label={`${primaryModifierKey} + Scroll Right`}>
-                    {primaryModifierKey} + Scroll Right
-                  </AppKbd>{' '}
-                  to play
-                </p>
-              </div>
-              <AppSwitch
-                aria-label="Enable directional play pause wheel actions"
-                checked={isPlayPauseWheelEnabled}
-                onCheckedChange={onPlayPauseWheelEnabledChange}
-                size="sm"
-              />
+              <p className="text-slate-500 text-xs leading-relaxed dark:text-slate-400">
+                Changing one shortcut swaps the other. Hold{' '}
+                <AppKbd>Shift</AppKbd> alone to temporarily hide controls.
+              </p>
             </div>
           </fieldset>
         </SeekMethodCard>

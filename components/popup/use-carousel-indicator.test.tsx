@@ -6,6 +6,7 @@ import { useCarouselIndicator } from './use-carousel-indicator';
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -15,6 +16,7 @@ function Fixture({ initial = 0 }: { initial?: number }) {
   useLayoutEffect(() => {
     if (!carousel.current) return;
     Object.defineProperty(carousel.current, 'clientWidth', { value: 400 });
+    Object.defineProperty(carousel.current, 'scrollWidth', { value: 800 });
     carousel.current.scrollLeft = initial;
   }, [initial]);
   useCarouselIndicator(carousel, indicator);
@@ -35,7 +37,9 @@ it('tracks fractional drag positions in both directions, including before the ha
   for (const position of [0, 40, 100, 200, 300, 400, 300, 100, 0]) {
     carousel.scrollLeft = position;
     fireEvent.scroll(carousel);
-    expect(indicator.style.transform).toBe(`translateX(${position / 4}%)`);
+    expect(indicator.style.transform).toBe(
+      `translateX(${(position / 400) * 100}%)`
+    );
   }
 });
 
@@ -55,52 +59,31 @@ it('restores the Domains highlight, ignores nested scrolling and follows native 
   expect(indicator.style.transform).toBe('translateX(-5%)');
 });
 
-it('adds a settling spring and interrupts it immediately on a new drag', () => {
-  const { getByTestId } = render(<Fixture />);
-  const carousel = getByTestId('carousel');
-  const indicator = getByTestId('indicator');
-  const cancel = vi.fn();
-  const animate = vi.fn((_frames: Keyframe[]) => ({ cancel }));
-  Object.defineProperty(indicator, 'animate', { value: animate });
-  carousel.scrollLeft = 400;
-  fireEvent.scroll(carousel);
-  fireEvent(carousel, new Event('scrollend'));
-  expect(animate).toHaveBeenCalledOnce();
-  const frames = animate.mock.calls[0]?.[0] as unknown as Keyframe[];
-  expect(frames[0]?.transform).toBe('translateX(100%)');
-  expect(frames.at(-1)?.transform).toBe('translateX(100%)');
-  carousel.scrollLeft = 200;
-  fireEvent.scroll(carousel);
-  expect(cancel).toHaveBeenCalledOnce();
-  expect(indicator.style.transform).toBe('translateX(50%)');
-});
-
-it('skips the extra bounce with reduced motion', () => {
-  vi.stubGlobal('matchMedia', () => ({ matches: true }));
+it('stays at the actual position when scrolling pauses or ends', async () => {
+  vi.useFakeTimers();
   const { getByTestId } = render(<Fixture />);
   const carousel = getByTestId('carousel');
   const indicator = getByTestId('indicator');
   const animate = vi.fn();
   Object.defineProperty(indicator, 'animate', { value: animate });
-  carousel.scrollLeft = 450;
-  fireEvent.scroll(carousel);
-  fireEvent(carousel, new Event('scrollend'));
-  expect(animate).not.toHaveBeenCalled();
-  expect(indicator.style.transform).toBe('translateX(100%)');
-});
-
-it('does not add another spring after a native overscroll bounce', () => {
-  const { getByTestId } = render(<Fixture />);
-  const carousel = getByTestId('carousel');
-  const indicator = getByTestId('indicator');
-  const animate = vi.fn();
-  Object.defineProperty(indicator, 'animate', { value: animate });
-  for (const position of [400, 440, 420, 400]) {
+  for (const position of [120, 240, 440, 400, -24, 0]) {
     carousel.scrollLeft = position;
     fireEvent.scroll(carousel);
+    fireEvent(carousel, new Event('scrollend'));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(indicator.style.transform).toBe(
+      `translateX(${(position / 400) * 100}%)`
+    );
   }
-  fireEvent(carousel, new Event('scrollend'));
-  fireEvent(carousel, new Event('scrollend'));
   expect(animate).not.toHaveBeenCalled();
-  expect(indicator.style.transform).toBe('translateX(100%)');
+});
+
+it('does not move independently in response to wheel input', async () => {
+  vi.useFakeTimers();
+  const { getByTestId } = render(<Fixture />);
+  const carousel = getByTestId('carousel');
+  const indicator = getByTestId('indicator');
+  fireEvent.wheel(carousel, { deltaX: -80 });
+  await vi.advanceTimersByTimeAsync(1000);
+  expect(indicator.style.transform).toBe('translateX(0%)');
 });

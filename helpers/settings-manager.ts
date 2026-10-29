@@ -42,6 +42,9 @@ export class SettingsManager {
           'scrollSpeedFactor',
           'fastScrollHotkey',
           'slowScrollHotkey',
+          'isPlayPauseEnabled',
+          'isMiddleClickPlayPauseEnabled',
+          'isKKeyPlayPauseEnabled',
           'isPlayPauseWheelEnabled',
           'showTimelineOnHover',
           'isTimelineSeekingEnabled',
@@ -98,6 +101,15 @@ export class SettingsManager {
               stored.scrollSpeedFactor
             ),
             ...scrollHotkeys,
+            isPlayPauseEnabled:
+              stored.isPlayPauseEnabled ??
+              this.defaultSettings.isPlayPauseEnabled,
+            isKKeyPlayPauseEnabled:
+              stored.isKKeyPlayPauseEnabled ??
+              this.defaultSettings.isKKeyPlayPauseEnabled,
+            isMiddleClickPlayPauseEnabled:
+              stored.isMiddleClickPlayPauseEnabled ??
+              this.defaultSettings.isMiddleClickPlayPauseEnabled,
             isPlayPauseWheelEnabled:
               stored.isPlayPauseWheelEnabled ??
               this.defaultSettings.isPlayPauseWheelEnabled,
@@ -235,8 +247,20 @@ export class SettingsManager {
 
   isPlayPauseWheelEnabled(): boolean {
     return (
-      this.settings.isScrollSeekingEnabled &&
-      this.settings.isPlayPauseWheelEnabled
+      this.settings.isPlayPauseEnabled && this.settings.isPlayPauseWheelEnabled
+    );
+  }
+
+  isKKeyPlayPauseEnabled(): boolean {
+    return (
+      this.settings.isPlayPauseEnabled && this.settings.isKKeyPlayPauseEnabled
+    );
+  }
+
+  isMiddleClickPlayPauseEnabled(): boolean {
+    return (
+      this.settings.isPlayPauseEnabled &&
+      this.settings.isMiddleClickPlayPauseEnabled
     );
   }
 
@@ -262,6 +286,9 @@ export class SettingsManager {
 
   hasActiveVideoFeatures(): boolean {
     return (
+      this.isPlayPauseWheelEnabled() ||
+      this.isMiddleClickPlayPauseEnabled() ||
+      this.isKKeyPlayPauseEnabled() ||
       this.settings.isScrollSeekingEnabled ||
       this.settings.dragVideoToSeek ||
       this.settings.isTimelineSeekingEnabled ||

@@ -11,6 +11,26 @@ import { SETTINGS_SCHEMA_VERSION } from '@/helpers/settings-migration';
 import { DomainSortE } from '@/types/domains';
 
 describe('timeline seeking storage', () => {
+  it('migrates a saved Shift-only scroll shortcut consistently in popup and content settings', async () => {
+    vi.stubGlobal('chrome', {
+      storage: {
+        sync: {
+          get: vi.fn((_keys, callback) =>
+            callback({ fastScrollHotkey: 'shift', slowScrollHotkey: 'alt' })
+          ),
+          set: vi.fn(),
+        },
+      },
+    });
+    for (const settings of [
+      await loadPopupSettings(),
+      await new SettingsManager().initialize(),
+    ]) {
+      expect(settings.fastScrollHotkey).toBe('alt+shift');
+      expect(settings.slowScrollHotkey).toBe('alt');
+    }
+  });
+
   it.each([undefined, 'none', 'time', 'remaining', 'both', 'invalid'])(
     'normalizes thumbnail time preference %s in popup and content storage',
     async (value) => {
@@ -96,6 +116,8 @@ describe('timeline seeking storage', () => {
       expect(settings.tiktokPlaybackSpeed).toBe(1);
       expect(DEFAULT_SETTINGS.isPlayPauseWheelEnabled).toBe(true);
       expect(settings.isPlayPauseWheelEnabled).toBe(true);
+      expect(settings.isPlayPauseEnabled).toBe(true);
+      expect(settings.isMiddleClickPlayPauseEnabled).toBe(true);
       expect(DEFAULT_SETTINGS.scrollSpeedFactor).toBe(1);
       expect(settings.scrollSpeedFactor).toBe(1);
       expect(DEFAULT_SETTINGS.actionAreaSizeUnit).toBe('%');
@@ -103,6 +125,41 @@ describe('timeline seeking storage', () => {
       expect(DEFAULT_SETTINGS.domainSort).toBe(DomainSortE.Custom);
       if ('domainSort' in settings) {
         expect(settings.domainSort).toBe(DomainSortE.Custom);
+      }
+    }
+  );
+
+  it.each([
+    { isPlayPauseWheelEnabled: false },
+    {
+      isPlayPauseEnabled: false,
+      isMiddleClickPlayPauseEnabled: false,
+      isPlayPauseWheelEnabled: true,
+    },
+  ])(
+    'preserves playback gesture preferences in popup and content storage: %o',
+    async (stored) => {
+      vi.stubGlobal('chrome', {
+        storage: {
+          sync: {
+            get: vi.fn((_keys, callback) => callback(stored)),
+            set: vi.fn(),
+          },
+        },
+      });
+      for (const settings of [
+        await loadPopupSettings(),
+        await new SettingsManager().initialize(),
+      ]) {
+        expect(settings.isPlayPauseEnabled).toBe(
+          stored.isPlayPauseEnabled ?? true
+        );
+        expect(settings.isMiddleClickPlayPauseEnabled).toBe(
+          stored.isMiddleClickPlayPauseEnabled ?? true
+        );
+        expect(settings.isPlayPauseWheelEnabled).toBe(
+          stored.isPlayPauseWheelEnabled
+        );
       }
     }
   );

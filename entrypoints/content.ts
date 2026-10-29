@@ -156,6 +156,17 @@ export default defineContentScript({
         shouldReconcileOverlays = true;
       }
 
+      for (const key of [
+        'isPlayPauseEnabled',
+        'isMiddleClickPlayPauseEnabled',
+        'isKKeyPlayPauseEnabled',
+        'isPlayPauseWheelEnabled',
+      ] as const) {
+        if (typeof changes[key]?.newValue !== 'boolean') continue;
+        settingsManager.updateSetting(key, changes[key].newValue);
+        shouldReconcileOverlays = true;
+      }
+
       const isTimelineSeekingEnabled =
         changes.isTimelineSeekingEnabled?.newValue;
       if (typeof isTimelineSeekingEnabled === 'boolean') {

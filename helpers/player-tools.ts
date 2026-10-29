@@ -268,9 +268,16 @@ export class PlayerTools {
               if (this.open) this.closeToolsPanel();
               this.setLoopOpen(false);
             }
+            this.youtubeButtons.expand();
             this.filtersMenu?.toggle(this.youtubeButtons.filtersButton);
           },
           onAdvanced: (kind) => this.openAdvanced(kind),
+          onCollapse: () => {
+            this.advancedMenu?.close();
+            this.filtersMenu?.close();
+            this.bookmarksEditor?.close();
+            this.setLoopOpen(false);
+          },
           onPip: () => {
             this.cinema = false;
             this.layout();
@@ -1062,6 +1069,7 @@ export class PlayerTools {
       }
     }
     if (value) {
+      this.youtubeButtons?.expand();
       this.filtersMenu?.close();
       this.advancedMenu?.close();
       this.bookmarksEditor?.close();
@@ -1591,6 +1599,7 @@ export class PlayerTools {
   private openBookmarks(selectedId?: string): void {
     const anchor = this.youtubeButtons?.bookmarksButton;
     if (!anchor || anchor.disabled || !this.settings.youtubeBookmarksEnabled) return;
+    this.youtubeButtons?.expand();
     this.filtersMenu?.close();
     this.advancedMenu?.close();
     if (this.open) this.closeToolsPanel();
@@ -2049,8 +2058,11 @@ export class PlayerTools {
       event.isComposing
     )
       return;
-    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     if (!this.settings.arrowKeySeekingEnabled) return;
+    const key = event.key.toLowerCase();
+    const arrow = event.key === 'ArrowLeft' || event.key === 'ArrowRight';
+    const jl = key === 'j' || key === 'l';
+    if ((!arrow || !this.settings.arrowKeysEnabled) && (!jl || !this.settings.jlKeysEnabled)) return;
     const candidates = [...PlayerTools.instances].filter((tools) => {
       const rect = tools.video.getBoundingClientRect();
       return (
@@ -2085,9 +2097,9 @@ export class PlayerTools {
     event.stopImmediatePropagation();
     skipVideo(
       this.video,
-      event.key === 'ArrowLeft'
-        ? -this.settings.backward
-        : this.settings.forward
+      event.key === 'ArrowLeft' || key === 'j'
+        ? -(jl ? this.settings.jlSeekInterval : this.settings.backward)
+        : (jl ? this.settings.jlSeekInterval : this.settings.forward)
     );
   }
 
@@ -2378,6 +2390,7 @@ export class PlayerTools {
   private openAdvanced(kind: YouTubeAdvancedControl): void {
     const anchor = this.youtubeControl(kind);
     if (!anchor || !this.advancedMenu || anchor.disabled) return;
+    this.youtubeButtons?.expand();
     this.filtersMenu?.close();
     this.bookmarksEditor?.close();
     if (this.open) this.closeToolsPanel();

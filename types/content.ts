@@ -44,6 +44,9 @@ export type ContentSettingsT = {
   scrollSpeedFactor: number;
   fastScrollHotkey: ScrollHotkeyT;
   slowScrollHotkey: ScrollHotkeyT;
+  isPlayPauseEnabled: boolean;
+  isMiddleClickPlayPauseEnabled: boolean;
+  isKKeyPlayPauseEnabled: boolean;
   isPlayPauseWheelEnabled: boolean;
   showTimelineOnHover: boolean;
   isTimelineSeekingEnabled: boolean;
@@ -95,6 +98,9 @@ export type ChromeMessageT = {
   scrollSpeedFactor?: number;
   fastScrollHotkey?: ContentSettingsT['fastScrollHotkey'];
   slowScrollHotkey?: ContentSettingsT['slowScrollHotkey'];
+  isPlayPauseEnabled?: boolean;
+  isMiddleClickPlayPauseEnabled?: boolean;
+  isKKeyPlayPauseEnabled?: boolean;
   isPlayPauseWheelEnabled?: boolean;
   isScrollSeekingEnabled?: boolean;
   showTimelineOnHover: boolean;

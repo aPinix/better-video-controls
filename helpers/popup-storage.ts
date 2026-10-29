@@ -30,6 +30,9 @@ export type PopupSettings = {
   scrollSpeedFactor: number;
   fastScrollHotkey: ScrollHotkeyT;
   slowScrollHotkey: ScrollHotkeyT;
+  isPlayPauseEnabled: boolean;
+  isMiddleClickPlayPauseEnabled: boolean;
+  isKKeyPlayPauseEnabled: boolean;
   isPlayPauseWheelEnabled: boolean;
   showTimelineOnHover: boolean;
   isTimelineSeekingEnabled: boolean;
@@ -69,6 +72,9 @@ export const DEFAULT_SETTINGS: Omit<PopupSettings, 'domainRules'> = {
   scrollSpeedFactor: DEFAULT_SCROLL_SPEED_FACTOR,
   fastScrollHotkey: DEFAULT_FAST_SCROLL_HOTKEY,
   slowScrollHotkey: DEFAULT_SLOW_SCROLL_HOTKEY,
+  isPlayPauseEnabled: true,
+  isMiddleClickPlayPauseEnabled: true,
+  isKKeyPlayPauseEnabled: true,
   isPlayPauseWheelEnabled: true,
   showTimelineOnHover: false,
   isTimelineSeekingEnabled: true,
@@ -121,6 +127,9 @@ export const loadPopupSettings = (): Promise<PopupSettings> => {
         'scrollSpeedFactor',
         'fastScrollHotkey',
         'slowScrollHotkey',
+        'isPlayPauseEnabled',
+        'isMiddleClickPlayPauseEnabled',
+        'isKKeyPlayPauseEnabled',
         'isPlayPauseWheelEnabled',
         'showTimelineOnHover',
         'isTimelineSeekingEnabled',
@@ -201,6 +210,14 @@ export const loadPopupSettings = (): Promise<PopupSettings> => {
             stored.scrollSpeedFactor
           ),
           ...scrollHotkeys,
+          isPlayPauseEnabled:
+            stored.isPlayPauseEnabled ?? DEFAULT_SETTINGS.isPlayPauseEnabled,
+          isKKeyPlayPauseEnabled:
+            stored.isKKeyPlayPauseEnabled ??
+            DEFAULT_SETTINGS.isKKeyPlayPauseEnabled,
+          isMiddleClickPlayPauseEnabled:
+            stored.isMiddleClickPlayPauseEnabled ??
+            DEFAULT_SETTINGS.isMiddleClickPlayPauseEnabled,
           isPlayPauseWheelEnabled:
             stored.isPlayPauseWheelEnabled ??
             DEFAULT_SETTINGS.isPlayPauseWheelEnabled,

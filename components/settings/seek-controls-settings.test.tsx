@@ -24,7 +24,6 @@ const createProps = () => ({
   colorizedTimeline: false,
   fastScrollHotkey: ScrollHotkeyE.Alt,
   isDragSeekingEnabled: false,
-  isPlayPauseWheelEnabled: true,
   isScrollSeekingEnabled: true,
   isSeekbarSeekingEnabled: true,
   onActionAreaChange: vi.fn(),
@@ -36,7 +35,6 @@ const createProps = () => ({
   onFastScrollHotkeyChange: vi.fn(),
   onHeightChange: vi.fn(),
   onHeightReset: vi.fn(),
-  onPlayPauseWheelEnabledChange: vi.fn(),
   onPositionChange: vi.fn(),
   onPositionReset: vi.fn(),
   onScrollInversionChange: vi.fn(),
@@ -54,6 +52,43 @@ const createProps = () => ({
 });
 
 describe('SeekControlsSettings', () => {
+  it('offers only Alt and Alt + Shift for each scroll speed and explains the reserved Shift key', async () => {
+    const user = userEvent.setup();
+    const props = createProps();
+    render(<SeekControlsSettings {...props} />);
+    const fast = screen.getByRole('group', { name: 'Fast scroll hotkey' });
+    const slow = screen.getByRole('group', { name: 'Slow scroll hotkey' });
+    for (const group of [fast, slow]) {
+      expect(within(group).getAllByRole('radio')).toHaveLength(2);
+      expect(
+        within(group).queryByRole('radio', { name: 'Shift' })
+      ).toBeNull();
+    }
+    expect(
+      (
+        within(fast).getByRole('radio', {
+          name: 'Alt',
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(true);
+    expect(
+      (
+        within(slow).getByRole('radio', {
+          name: 'Alt + Shift',
+        }) as HTMLInputElement
+      ).checked
+    ).toBe(true);
+    await user.click(
+      within(fast).getByRole('radio', { name: 'Alt + Shift' })
+    );
+    expect(props.onFastScrollHotkeyChange).toHaveBeenCalledWith('alt+shift');
+    await user.click(
+      within(slow).getByRole('radio', { name: 'Alt' })
+    );
+    expect(props.onSlowScrollHotkeyChange).toHaveBeenCalledWith('alt');
+    expect(screen.getByText(/alone to temporarily hide controls/)).toBeTruthy();
+  });
+
   it('keeps the sticky video preview below the popup header gradient', () => {
     render(<SeekControlsSettings {...createProps()} />);
 
@@ -91,12 +126,7 @@ describe('SeekControlsSettings', () => {
     expect(screen.getByText('Inverse Scroll')).toBeTruthy();
     expect(screen.queryByText(/Begin with a horizontal movement/)).toBeNull();
     expect(screen.queryByText(/The timeline stays visible/)).toBeNull();
-    const primaryModifierKey = screen.getAllByLabelText(/Command|Ctrl/)[0];
-    expect(primaryModifierKey).toBeTruthy();
-    if (!primaryModifierKey) throw new Error('Expected a modifier keycap');
-    expect(primaryModifierKey.tagName).toBe('KBD');
-    expect(primaryModifierKey.className).toContain('rounded-[5px]');
-    expect(primaryModifierKey.textContent).toMatch(/⌘|Ctrl/);
+    expect(screen.queryByText('Play / Pause')).toBeNull();
     expect(screen.getByTestId('sticky-seek-preview').className).toContain(
       'sticky'
     );

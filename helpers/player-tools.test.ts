@@ -1371,6 +1371,37 @@ describe('player tools integration', () => {
     tools?.cleanup();
     expect(controls.querySelector('.mfs-youtube-buttons')).toBeNull();
   });
+  it.each([true, false])('overrides J/L and arrow seeking independently on YouTube: %s', async (youtube) => {
+    tools?.cleanup();
+    const hostname = vi.spyOn(youtubeChapters, 'isYouTubeHostname').mockReturnValue(youtube);
+    try {
+      tools = new PlayerTools(video, document.querySelector('#timeline') as HTMLElement);
+      await vi.advanceTimersByTimeAsync(0);
+      const storage = changed.addListener.mock.calls.at(-1)?.[0];
+      const key = (key: string) => {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true });
+        video.dispatchEvent(event);
+        return event;
+      };
+      expect(key('j').defaultPrevented).toBe(true);
+      expect(video.currentTime).toBe(15);
+      expect(key('l').defaultPrevented).toBe(true);
+      expect(video.currentTime).toBe(25);
+      storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, jlKeysEnabled: false } } }, 'sync');
+      expect(key('j').defaultPrevented).toBe(false);
+      expect(video.currentTime).toBe(25);
+      expect(key('ArrowRight').defaultPrevented).toBe(true);
+      expect(video.currentTime).toBe(30);
+      storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, arrowKeysEnabled: false } } }, 'sync');
+      expect(key('ArrowLeft').defaultPrevented).toBe(false);
+      expect(key('j').defaultPrevented).toBe(true);
+      expect(video.currentTime).toBe(20);
+      storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, arrowKeySeekingEnabled: false } } }, 'sync');
+      expect(key('j').defaultPrevented).toBe(false);
+      expect(key('ArrowRight').defaultPrevented).toBe(false);
+    } finally { hostname.mockRestore(); }
+  });
+
   it('leaves arrow keys to the site while disabled and resumes after a live settings change', () => {
     const storage = changed.addListener.mock.calls.at(-1)?.[0];
     storage({ playerTools: { newValue: { ...DEFAULT_PLAYER_TOOLS, arrowKeySeekingEnabled: false } } }, 'sync');

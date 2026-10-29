@@ -7,6 +7,7 @@ import {
   getScrollSpeedMultiplier,
   getWheelDeltaPixels,
   hasScrollSpeedHotkey,
+  isScrollHotkey,
   isScrollSpeedHotkeyCode,
   normalizeScrollHotkeys,
   normalizeScrollSpeedFactor,
@@ -45,15 +46,15 @@ describe('scroll speed hotkeys', () => {
   it('applies customized fast and slow hotkeys', () => {
     expect(
       getScrollSpeedMultiplier(
-        hotkeyState(false, true),
-        ScrollHotkeyE.Shift,
+        hotkeyState(true, true),
+        ScrollHotkeyE.AltShift,
         ScrollHotkeyE.Alt
       )
     ).toBe(FAST_SCROLL_MULTIPLIER);
     expect(
       getScrollSpeedMultiplier(
         hotkeyState(true),
-        ScrollHotkeyE.Shift,
+        ScrollHotkeyE.AltShift,
         ScrollHotkeyE.Alt
       )
     ).toBe(SLOW_SCROLL_MULTIPLIER);
@@ -96,15 +97,37 @@ describe('scroll speed hotkeys', () => {
   });
 
   it('normalizes invalid or conflicting stored hotkeys', () => {
-    expect(normalizeScrollHotkeys('invalid', ScrollHotkeyE.Shift)).toEqual({
-      fastScrollHotkey: ScrollHotkeyE.Alt,
-      slowScrollHotkey: ScrollHotkeyE.Shift,
-    });
-    expect(
-      normalizeScrollHotkeys(ScrollHotkeyE.Shift, ScrollHotkeyE.Shift)
-    ).toEqual({
+    expect(normalizeScrollHotkeys('invalid', 'shift')).toEqual({
       fastScrollHotkey: ScrollHotkeyE.Alt,
       slowScrollHotkey: ScrollHotkeyE.AltShift,
+    });
+    expect(normalizeScrollHotkeys('shift', 'shift')).toEqual({
+      fastScrollHotkey: ScrollHotkeyE.Alt,
+      slowScrollHotkey: ScrollHotkeyE.AltShift,
+    });
+  });
+
+  it('reserves Shift alone and migrates older assignments while retaining the supported shortcut', () => {
+    expect(isScrollHotkey('shift')).toBe(false);
+    expect(hasScrollSpeedHotkey(hotkeyState(false, true))).toBe(false);
+    expect(
+      getScrollSpeedMultiplier(
+        hotkeyState(false, true),
+        ScrollHotkeyE.AltShift,
+        ScrollHotkeyE.Alt
+      )
+    ).toBe(1);
+    expect(normalizeScrollHotkeys('shift', 'alt')).toEqual({
+      fastScrollHotkey: 'alt+shift',
+      slowScrollHotkey: 'alt',
+    });
+    expect(normalizeScrollHotkeys('alt+shift', 'shift')).toEqual({
+      fastScrollHotkey: 'alt+shift',
+      slowScrollHotkey: 'alt',
+    });
+    expect(normalizeScrollHotkeys('alt', 'alt')).toEqual({
+      fastScrollHotkey: 'alt',
+      slowScrollHotkey: 'alt+shift',
     });
   });
 });

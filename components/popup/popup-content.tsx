@@ -28,6 +28,7 @@ import { useCarouselIndicator } from '@/components/popup/use-carousel-indicator'
 import { useYouTubeLibraryPage } from '@/components/popup/use-youtube-library-page';
 import { ViewTitle } from '@/components/popup/view-title';
 import { ArrowSeekSettings } from '@/components/settings/arrow-seek-settings';
+import { PlayPauseSettings } from '@/components/settings/play-pause-settings';
 import { SeekControlsSettings } from '@/components/settings/seek-controls-settings';
 import { SharedVideoSettings } from '@/components/settings/shared-video-settings';
 import { YouTubeSettings } from '@/components/settings/youtube-settings';
@@ -297,6 +298,14 @@ export function PopupContent() {
   const [slowScrollHotkey, setSlowScrollHotkey] = useState<ScrollHotkeyT>(
     DEFAULT_SETTINGS.slowScrollHotkey
   );
+  const [isKKeyPlayPauseEnabled, setIsKKeyPlayPauseEnabled] = useState(
+    DEFAULT_SETTINGS.isKKeyPlayPauseEnabled
+  );
+  const [isPlayPauseEnabled, setIsPlayPauseEnabled] = useState(
+    DEFAULT_SETTINGS.isPlayPauseEnabled
+  );
+  const [isMiddleClickPlayPauseEnabled, setIsMiddleClickPlayPauseEnabled] =
+    useState(DEFAULT_SETTINGS.isMiddleClickPlayPauseEnabled);
   const [isPlayPauseWheelEnabled, setIsPlayPauseWheelEnabled] = useState(
     DEFAULT_SETTINGS.isPlayPauseWheelEnabled
   );
@@ -363,6 +372,10 @@ export function PopupContent() {
     scrollSpeedFactor === DEFAULT_SETTINGS.scrollSpeedFactor &&
     fastScrollHotkey === DEFAULT_SETTINGS.fastScrollHotkey &&
     slowScrollHotkey === DEFAULT_SETTINGS.slowScrollHotkey &&
+    isKKeyPlayPauseEnabled === DEFAULT_SETTINGS.isKKeyPlayPauseEnabled &&
+    isPlayPauseEnabled === DEFAULT_SETTINGS.isPlayPauseEnabled &&
+    isMiddleClickPlayPauseEnabled ===
+      DEFAULT_SETTINGS.isMiddleClickPlayPauseEnabled &&
     isPlayPauseWheelEnabled === DEFAULT_SETTINGS.isPlayPauseWheelEnabled &&
     showTimelineOnHover === DEFAULT_SETTINGS.showTimelineOnHover &&
     isTimelineSeekingEnabled === DEFAULT_SETTINGS.isTimelineSeekingEnabled &&
@@ -395,6 +408,9 @@ export function PopupContent() {
       setScrollSpeedFactor(settings.scrollSpeedFactor);
       setFastScrollHotkey(settings.fastScrollHotkey);
       setSlowScrollHotkey(settings.slowScrollHotkey);
+      setIsKKeyPlayPauseEnabled(settings.isKKeyPlayPauseEnabled);
+      setIsPlayPauseEnabled(settings.isPlayPauseEnabled);
+      setIsMiddleClickPlayPauseEnabled(settings.isMiddleClickPlayPauseEnabled);
       setIsPlayPauseWheelEnabled(settings.isPlayPauseWheelEnabled);
       setShowTimelineOnHover(settings.showTimelineOnHover);
       setIsTimelineSeekingEnabled(settings.isTimelineSeekingEnabled);
@@ -525,11 +541,38 @@ export function PopupContent() {
     );
   };
 
+  const handleKKeyPlayPauseEnabledChange = (enabled: boolean) => {
+    setIsKKeyPlayPauseEnabled(enabled);
+    saveSettings({ isKKeyPlayPauseEnabled: enabled });
+    sendMessageToCurrentTab({
+      action: 'updatePlaybackActions',
+      isKKeyPlayPauseEnabled: enabled,
+    });
+  };
+
+  const handlePlayPauseEnabledChange = (enabled: boolean) => {
+    setIsPlayPauseEnabled(enabled);
+    saveSettings({ isPlayPauseEnabled: enabled });
+    sendMessageToCurrentTab({
+      action: 'updatePlaybackActions',
+      isPlayPauseEnabled: enabled,
+    });
+  };
+
+  const handleMiddleClickPlayPauseEnabledChange = (enabled: boolean) => {
+    setIsMiddleClickPlayPauseEnabled(enabled);
+    saveSettings({ isMiddleClickPlayPauseEnabled: enabled });
+    sendMessageToCurrentTab({
+      action: 'updatePlaybackActions',
+      isMiddleClickPlayPauseEnabled: enabled,
+    });
+  };
+
   const handlePlayPauseWheelEnabledChange = (enabled: boolean) => {
     setIsPlayPauseWheelEnabled(enabled);
     saveSettings({ isPlayPauseWheelEnabled: enabled });
     sendMessageToCurrentTab({
-      action: 'updateWheelActions',
+      action: 'updatePlaybackActions',
       isPlayPauseWheelEnabled: enabled,
     });
   };
@@ -729,6 +772,11 @@ export function PopupContent() {
     setScrollSpeedFactor(defaultSettings.scrollSpeedFactor);
     setFastScrollHotkey(defaultSettings.fastScrollHotkey);
     setSlowScrollHotkey(defaultSettings.slowScrollHotkey);
+    setIsKKeyPlayPauseEnabled(defaultSettings.isKKeyPlayPauseEnabled);
+    setIsPlayPauseEnabled(defaultSettings.isPlayPauseEnabled);
+    setIsMiddleClickPlayPauseEnabled(
+      defaultSettings.isMiddleClickPlayPauseEnabled
+    );
     setIsPlayPauseWheelEnabled(defaultSettings.isPlayPauseWheelEnabled);
     setShowTimelineOnHover(defaultSettings.showTimelineOnHover);
     setIsTimelineSeekingEnabled(defaultSettings.isTimelineSeekingEnabled);
@@ -766,6 +814,10 @@ export function PopupContent() {
       scrollSpeedFactor: defaultSettings.scrollSpeedFactor,
       fastScrollHotkey: defaultSettings.fastScrollHotkey,
       slowScrollHotkey: defaultSettings.slowScrollHotkey,
+      isKKeyPlayPauseEnabled: defaultSettings.isKKeyPlayPauseEnabled,
+      isPlayPauseEnabled: defaultSettings.isPlayPauseEnabled,
+      isMiddleClickPlayPauseEnabled:
+        defaultSettings.isMiddleClickPlayPauseEnabled,
       isPlayPauseWheelEnabled: defaultSettings.isPlayPauseWheelEnabled,
       showTimelineOnHover: defaultSettings.showTimelineOnHover,
       isTimelineSeekingEnabled: defaultSettings.isTimelineSeekingEnabled,
@@ -811,7 +863,11 @@ export function PopupContent() {
       slowScrollHotkey: defaultSettings.slowScrollHotkey,
     });
     sendMessageToCurrentTab({
-      action: 'updateWheelActions',
+      action: 'updatePlaybackActions',
+      isKKeyPlayPauseEnabled: defaultSettings.isKKeyPlayPauseEnabled,
+      isPlayPauseEnabled: defaultSettings.isPlayPauseEnabled,
+      isMiddleClickPlayPauseEnabled:
+        defaultSettings.isMiddleClickPlayPauseEnabled,
       isPlayPauseWheelEnabled: defaultSettings.isPlayPauseWheelEnabled,
     });
     sendMessageToCurrentTab({
@@ -1033,6 +1089,14 @@ export function PopupContent() {
                                 />
                               </>
                             ),
+                            BottomSlot: (
+                              <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-slate-500 text-xs leading-relaxed dark:bg-slate-900/40 dark:text-slate-400">
+                                Hold{' '}
+                                <AppKbd aria-label="Shift key">⇧ Shift</AppKbd>{' '}
+                                to temporarily hide extension controls. Release
+                                to restore them.
+                              </p>
+                            ),
                           }}
                           description="Turn video seeking on/off"
                           disabledSoft={!isEnabled}
@@ -1064,7 +1128,6 @@ export function PopupContent() {
                           colorizedTimeline={colorizedTimeline}
                           fastScrollHotkey={fastScrollHotkey}
                           isDragSeekingEnabled={dragVideoToSeek}
-                          isPlayPauseWheelEnabled={isPlayPauseWheelEnabled}
                           isScrollSeekingEnabled={isScrollSeekingEnabled}
                           isSeekbarSeekingEnabled={isTimelineSeekingEnabled}
                           onActionAreaChange={applyActionArea}
@@ -1084,9 +1147,6 @@ export function PopupContent() {
                           }
                           onHeightChange={handleTimelineHeightChange}
                           onHeightReset={handleTimelineHeightReset}
-                          onPlayPauseWheelEnabledChange={
-                            handlePlayPauseWheelEnabledChange
-                          }
                           onPositionChange={handleTimelinePositionChange}
                           onPositionReset={() =>
                             handleTimelinePositionChange(
@@ -1125,6 +1185,21 @@ export function PopupContent() {
                         )}
                       >
                         <ArrowSeekSettings disabled={!isEnabled} />
+                        <PlayPauseSettings
+                          enabled={isPlayPauseEnabled}
+                          middleClickEnabled={isMiddleClickPlayPauseEnabled}
+                          wheelEnabled={isPlayPauseWheelEnabled}
+                          kKeyEnabled={isKKeyPlayPauseEnabled}
+                          onKKeyEnabledChange={handleKKeyPlayPauseEnabledChange}
+                          onEnabledChange={handlePlayPauseEnabledChange}
+                          onMiddleClickEnabledChange={
+                            handleMiddleClickPlayPauseEnabledChange
+                          }
+                          onWheelEnabledChange={
+                            handlePlayPauseWheelEnabledChange
+                          }
+                          disabled={!isEnabled}
+                        />
                       </CardListItemWrapper>
                     </div>
 

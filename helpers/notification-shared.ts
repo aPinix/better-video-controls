@@ -42,18 +42,18 @@ export const createNotificationFunction = () => {
       `;
     };
 
-    // Add styles if not already present
-    if (!document.getElementById('mfs-notification-styles')) {
-      const styles = document.createElement('style');
-      styles.id = 'mfs-notification-styles';
-      styles.textContent = `
+    // Refresh existing styles too, so an already-open page gets updated visuals.
+    const existingStyles = document.getElementById('mfs-notification-styles');
+    const styles = existingStyles ?? document.createElement('style');
+    styles.id = 'mfs-notification-styles';
+    styles.textContent = `
           .mfs-notification {
             position: fixed;
             bottom: 30px;
             left: 50%;
             transform: translateX(-50%) scale(0.94);
             transform-origin: center;
-            background: rgb(255 255 255 / 0.8);
+            background: rgb(255 255 255 / 0.2);
             color: rgb(15 23 42);
             padding: 12px 20px 12px 12px;
             border: 1px solid rgb(255 255 255 / 0.4);
@@ -64,8 +64,8 @@ export const createNotificationFunction = () => {
               0 24px 60px -24px rgb(15 23 42 / 0.28),
               inset 0 1px 0 rgb(255 255 255 / 0.72),
               inset 0 0 0 1px rgb(15 23 42 / 0.035);
-            -webkit-backdrop-filter: saturate(180%) blur(20px);
-            backdrop-filter: saturate(180%) blur(20px);
+            -webkit-backdrop-filter: saturate(180%) blur(24px);
+            backdrop-filter: saturate(180%) blur(24px);
             z-index: 999999;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             font-size: 14px;
@@ -134,7 +134,7 @@ export const createNotificationFunction = () => {
           }
           @media (prefers-color-scheme: dark) {
             .mfs-notification {
-              background: rgb(51 51 51 / 0.8);
+              background: rgb(24 24 27 / 0.15);
               color: rgb(248 250 252);
               border-color: rgb(255 255 255 / 0.14);
               box-shadow:
@@ -179,8 +179,7 @@ export const createNotificationFunction = () => {
             }
           }
         `;
-      document.head.appendChild(styles);
-    }
+    if (!existingStyles) document.head.appendChild(styles);
 
     const existingNotifications = document.querySelectorAll(
       `#${NOTIFICATION_ID}`

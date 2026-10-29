@@ -14,6 +14,9 @@ export const DEFAULT_FILTERS: VideoFilters = {
 export type PlayerToolsSettings = {
   version: 1;
   arrowKeySeekingEnabled: boolean;
+  arrowKeysEnabled: boolean;
+  jlKeysEnabled: boolean;
+  jlSeekInterval: number;
   backward: number;
   forward: number;
   backwardShortcut: string;
@@ -52,6 +55,9 @@ export const BOOST_DISTORTION_WARNING =
 export const DEFAULT_PLAYER_TOOLS: PlayerToolsSettings = {
   version: 1,
   arrowKeySeekingEnabled: true,
+  arrowKeysEnabled: true,
+  jlKeysEnabled: true,
+  jlSeekInterval: 10,
   backward: 5,
   forward: 5,
   backwardShortcut: '',
@@ -110,13 +116,26 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
         siteFilters[host] = normalizeFilters(filters);
     }
   }
-  const normalizedInterval = numeric(v.backward, 5, 1, 86400);
+  const normalizedInterval = numeric(
+    v.backward,
+    DEFAULT_PLAYER_TOOLS.backward,
+    1,
+    86400
+  );
   const seekInterval = Number.isInteger(normalizedInterval)
     ? normalizedInterval
-    : 5;
+    : DEFAULT_PLAYER_TOOLS.backward;
   return {
     version: 1,
     arrowKeySeekingEnabled: v.arrowKeySeekingEnabled !== false,
+    arrowKeysEnabled: v.arrowKeysEnabled !== false,
+    jlKeysEnabled: v.jlKeysEnabled !== false,
+    jlSeekInterval:
+      Number.isInteger(v.jlSeekInterval) &&
+      v.jlSeekInterval! >= 1 &&
+      v.jlSeekInterval! <= 86400
+        ? v.jlSeekInterval!
+        : DEFAULT_PLAYER_TOOLS.jlSeekInterval,
     youtubeCinemaEnabled: v.youtubeCinemaEnabled !== false,
     youtubeInfoCardsEnabled: v.youtubeInfoCardsEnabled !== false,
     youtubeScreenshotEnabled: v.youtubeScreenshotEnabled !== false,

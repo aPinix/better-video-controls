@@ -24,6 +24,8 @@ const createSettingsManager = ({
   actionArea = 'full',
   actionAreaSize = 30,
   actionAreaSizeUnit = '%',
+  isPlayPauseEnabled = true,
+  isMiddleClickPlayPauseEnabled = true,
   isPlayPauseWheelEnabled = true,
 }: {
   isScrollSeekingEnabled?: boolean;
@@ -41,6 +43,8 @@ const createSettingsManager = ({
   actionArea?: 'full' | 'top' | 'middle' | 'bottom';
   actionAreaSize?: number;
   actionAreaSizeUnit?: 'px' | '%';
+  isPlayPauseEnabled?: boolean;
+  isMiddleClickPlayPauseEnabled?: boolean;
   isPlayPauseWheelEnabled?: boolean;
 } = {}): SettingsManager =>
   ({
@@ -65,7 +69,8 @@ const createSettingsManager = ({
       isSeekbarThumbnailPreviewEnabled,
     getFastScrollHotkey: () => 'alt',
     getSlowScrollHotkey: () => 'alt+shift',
-    isPlayPauseWheelEnabled: () => isPlayPauseWheelEnabled,
+    isPlayPauseWheelEnabled: () => isPlayPauseEnabled && isPlayPauseWheelEnabled,
+    isMiddleClickPlayPauseEnabled: () => isPlayPauseEnabled && isMiddleClickPlayPauseEnabled,
     updateSetting: () => {},
   }) as unknown as SettingsManager;
 
@@ -1005,11 +1010,13 @@ describe('OverlayCreator scroll gesture seeking', () => {
   const setupScrollSeeking = (
     getIsSettingInitialScroll = () => false,
     isScrollSeekingEnabled = true,
-    hideVideoControls = false
+    hideVideoControls = false,
+    playbackSettings: { isPlayPauseEnabled?: boolean; isPlayPauseWheelEnabled?: boolean } = {}
   ) => {
     const settingsManager = createSettingsManager({
       hideVideoControls,
       isScrollSeekingEnabled,
+      ...playbackSettings,
     });
     const videoStateManager = new VideoStateManager();
     const overlayCreator = new OverlayCreator(
@@ -1308,17 +1315,13 @@ describe('OverlayCreator scroll gesture seeking', () => {
     cleanup();
   });
 
-  it('leaves all wheel and scroll behavior untouched when Scroll to Seek is disabled', () => {
+  it('leaves ordinary wheel and scroll behavior untouched when Scroll to Seek is disabled', () => {
     vi.useFakeTimers();
     const { cleanup, overlay, soughtTimes, video, videoState } =
       setupScrollSeeking(() => false, false);
     const play = vi.fn(() => Promise.resolve());
     Object.defineProperty(video, 'play', { configurable: true, value: play });
-    const primaryKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform)
-      ? { metaKey: true }
-      : { ctrlKey: true };
     const wheel = new WheelEvent('wheel', {
-      ...primaryKey,
       bubbles: true,
       cancelable: true,
       deltaX: 20,
@@ -1334,6 +1337,28 @@ describe('OverlayCreator scroll gesture seeking', () => {
     expect(soughtTimes).toEqual([]);
     expect(videoState.isUserScrubbing).toBe(false);
     cleanup();
+  });
+
+  it.each([
+    { parent: true, child: true },
+    { parent: false, child: true },
+    { parent: true, child: false },
+  ])('runs wheel playback independently of seeking and respects playback toggles (parent: $parent, child: $child)', ({ parent, child }) => {
+    for (const target of ['overlay', 'video'] as const) {
+      const { cleanup, overlay, video, soughtTimes } = setupScrollSeeking(() => false, false, false, { isPlayPauseEnabled: parent, isPlayPauseWheelEnabled: child });
+      overlay.getBoundingClientRect = () => new DOMRect(0, 0, 200, 100);
+      const play = vi.fn(async () => {});
+      Object.defineProperties(video, { paused: { configurable: true, value: true }, play: { configurable: true, value: play } });
+      const primaryKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
+      const wheel = new WheelEvent('wheel', { ...primaryKey, deltaX: -20, clientX: 50, clientY: 60, bubbles: true, cancelable: true });
+      (target === 'overlay' ? overlay : video).dispatchEvent(wheel);
+      expect(wheel.defaultPrevented).toBe(parent && child);
+      expect(play).toHaveBeenCalledTimes(parent && child ? 1 : 0);
+      expect(overlay.scrollLeft).toBe(0);
+      expect(soughtTimes).toEqual([]);
+      cleanup();
+      video.parentElement?.removeChild(video);
+    }
   });
 
   it('removes native horizontal scrolling while another video-surface method remains enabled', () => {
@@ -3061,9 +3086,42 @@ describe('OverlayCreator timeline seeking', () => {
     expect(getComputedStyle(state.wrapper).visibility).not.toBe('hidden');
   });
 
+  it('toggles once with K, respects typing and live disabling, and cleans up the override', () => {
+    let enabled = true;
+    const manager = new VideoStateManager();
+    const settings = { ...createSettingsManager(), isKKeyPlayPauseEnabled: () => enabled } as SettingsManager;
+    const creator = new OverlayCreator(settings, manager, () => {});
+    const { video, state } = createVideoState();
+    manager.set(video, state);
+    video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
+    let paused = true;
+    const play = vi.fn(async () => { paused = false; });
+    const pause = vi.fn(() => { paused = true; });
+    Object.defineProperties(video, { readyState: { value: 4 }, paused: { get: () => paused }, play: { value: play }, pause: { value: pause } });
+    const methods = creator as unknown as { setupPlayerClickHandling: (overlay: HTMLDivElement, video: HTMLVideoElement, debug: boolean) => { cleanup: () => void } };
+    const controller = methods.setupPlayerClickHandling(state.overlay, video, false);
+    const key = (target: HTMLElement, repeat = false) => { const event = new KeyboardEvent('keydown', { key: 'k', bubbles: true, cancelable: true, repeat }); target.dispatchEvent(event); return event; };
+    expect(key(video).defaultPrevented).toBe(true);
+    expect(play).toHaveBeenCalledOnce();
+    key(video, true);
+    expect(pause).not.toHaveBeenCalled();
+    key(video);
+    expect(pause).toHaveBeenCalledOnce();
+    const input = document.createElement('input'); document.body.append(input);
+    expect(key(input).defaultPrevented).toBe(false);
+    enabled = false;
+    expect(key(video).defaultPrevented).toBe(false);
+    enabled = true;
+    controller.cleanup();
+    expect(key(video).defaultPrevented).toBe(false);
+    expect(play).toHaveBeenCalledOnce();
+  });
+
   it.each([false, true])('middle-click toggles playback once with Minimal Player %s and restores native events on cleanup', (hideVideoControls) => {
     vi.useFakeTimers();
-    const creator = new OverlayCreator(createSettingsManager({ hideVideoControls }), new VideoStateManager(), () => {});
+    let middleClickEnabled = true;
+    const settings = { ...createSettingsManager({ hideVideoControls }), isMiddleClickPlayPauseEnabled: () => middleClickEnabled } as SettingsManager;
+    const creator = new OverlayCreator(settings, new VideoStateManager(), () => {});
     const { video, state } = createVideoState();
     video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
     let paused = true;
@@ -3105,6 +3163,13 @@ describe('OverlayCreator timeline seeking', () => {
       expect(pauseFeedback()).not.toBeNull();
       vi.advanceTimersByTime(1);
       expect(pauseFeedback()).toBeNull();
+      middleClickEnabled = false;
+      const disabled = click(video);
+      expect(disabled.down.defaultPrevented).toBe(false);
+      expect(disabled.aux.defaultPrevented).toBe(false);
+      expect(play).toHaveBeenCalledOnce();
+      expect(pause).toHaveBeenCalledOnce();
+      middleClickEnabled = true;
       expect(click(video, { button: 2 }).aux.defaultPrevented).toBe(false);
       expect(click(video, { ctrlKey: true }).down.defaultPrevented).toBe(false);
       expect(click(video, { clientX: 250 }).down.defaultPrevented).toBe(false);
