@@ -1,0 +1,197 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #1d1d1f;
+    }
+    #e-ground {
+      position: absolute;
+      inset: 0;
+      background: #f5f5f7;
+    }
+    /* Continues the studio's mini player exactly: (1264, 669), 560 x 315 */
+    #e-mini {
+      position: absolute;
+      left: 1264px;
+      top: 669px;
+      width: 560px;
+      height: 315px;
+      transform-origin: 50% 50%;
+      filter: drop-shadow(0 16.7px 18.75px rgba(0, 0, 0, 0.22));
+      z-index: 2;
+    }
+    #e-mini-in {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      border-radius: 11.67px;
+      background: #000;
+    }
+    #e-film {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .mini-btn {
+      position: absolute;
+      top: 8px;
+      width: 28px;
+      height: 28px;
+      border-radius: 6.7px;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .mini-btn svg {
+      width: 16px;
+      height: 16px;
+    }
+    #e-mini-return {
+      left: 8px;
+    }
+    #e-mini-close {
+      right: 8px;
+    }
+    #e-icon {
+      position: absolute;
+      left: 880px;
+      top: 340px;
+      width: 160px;
+      height: 160px;
+      opacity: 0;
+      z-index: 3;
+      filter: drop-shadow(0 18px 30px rgba(61, 117, 254, 0.25));
+    }
+    #e-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 548px;
+      text-align: center;
+      font-size: 76px;
+      font-weight: 700;
+      letter-spacing: -0.035em;
+      font-variation-settings: "opsz" 32;
+      white-space: nowrap;
+    }
+    #e-name .ch {
+      display: inline-block;
+      opacity: 0;
+      white-space: pre;
+    }
+    #e-avail {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 676px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      font-size: 34px;
+      font-variation-settings: "opsz" 20;
+    }
+    #e-avail .it {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+    }
+    #e-avail .lead {
+      color: #6e6e73;
+      font-weight: 500;
+      margin-right: 10px;
+    }
+    #e-avail .browser {
+      font-weight: 600;
+      margin-right: 22px;
+    }
+    #e-avail img {
+      width: 52px;
+      height: 52px;
+      display: block;
+    }
+    #e-credit {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 46px;
+      text-align: center;
+      font-size: 18px;
+      color: #8e8e93;
+      font-variation-settings: "opsz" 14;
+      opacity: 0;
+    }
+  </style>
+  <div data-hf-id="hf-32ii" id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-w90u" id="e-ground"></div>
+    <div data-hf-id="hf-l116" id="e-mini">
+      <div data-hf-id="hf-0bpa" id="e-mini-in">
+        <video data-hf-id="hf-0xs5" id="e-film" class="clip" src="assets/film-studio.mp4" muted playsinline data-start="0" data-duration="1.3" data-media-start="10.5" data-track-index="0"></video>
+        <div data-hf-id="hf-lq02" id="e-mini-return" class="mini-btn">
+          <svg data-hf-id="hf-zop5" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-7pwa" d="M7 17V7h10" /><path data-hf-id="hf-uwo5" d="M17 17 7 7" /></svg>
+        </div>
+        <div data-hf-id="hf-jqyk" id="e-mini-close" class="mini-btn">
+          <svg data-hf-id="hf-ppdp" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-t2we" d="M6 6l12 12M18 6 6 18" /></svg>
+        </div>
+      </div>
+    </div>
+    <img data-hf-id="hf-tmw0" id="e-icon" src="assets/brand/icon.png" alt="Better Video Controls" />
+    <h1 data-hf-id="hf-1km9" id="e-name">Better Video Controls</h1>
+    <div data-hf-id="hf-lboc" id="e-avail">
+      <span data-hf-id="hf-qihc" class="it lead">Available for</span>
+      <span data-hf-id="hf-il7i" class="it"><img data-hf-id="hf-xlrc" src="assets/brand/chrome.svg" alt="" /><span data-hf-id="hf-w6a1" class="browser">Chrome</span></span>
+      <span data-hf-id="hf-tqyq" class="it"><img data-hf-id="hf-wbx1" src="assets/brand/firefox.svg" alt="" /><span data-hf-id="hf-95xk" class="browser">Firefox</span></span>
+    </div>
+    <p data-hf-id="hf-qhr3" id="e-credit" data-layout-ignore>Film: “Spring” © Blender Foundation · studio.blender.org · CC BY 4.0</p>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+
+      // The mini player travels to centre and closes into a square: the app icon.
+      tl.to(".mini-btn", { opacity: 0, duration: 0.14, ease: "power2.in" }, 0.08);
+      tl.fromTo("#e-mini", { x: 0, y: 0, scale: 1 }, { x: -584, y: -406.5, scale: 0.508, duration: 0.85, ease: "power3.inOut" }, 0.1);
+      tl.fromTo(
+        "#e-mini-in",
+        { clipPath: "inset(0px 0px 0px 0px round 11.67px)" },
+        { clipPath: "inset(0px 122.5px 0px 122.5px round 70px)", duration: 0.85, ease: "power3.inOut" },
+        0.1,
+      );
+      tl.to("#e-mini", { opacity: 0, duration: 0.2, ease: "power1.inOut" }, 0.8);
+      tl.fromTo("#e-icon", { opacity: 0, scale: 1.06 }, { opacity: 1, scale: 1, duration: 0.5, ease: "expo.out" }, 0.8);
+
+      // Name, letter by letter.
+      const name = document.getElementById("e-name");
+      const letters = [...name.textContent].map((c) => {
+        const s = document.createElement("span");
+        s.className = "ch";
+        s.textContent = c;
+        return s;
+      });
+      name.textContent = "";
+      letters.forEach((s) => name.appendChild(s));
+      tl.fromTo(letters, { opacity: 0.0, filter: "blur(6px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.16, stagger: 0.028, ease: "power2.out" }, 1.08);
+
+      // Where it runs.
+      tl.fromTo("#e-avail .it", { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.2, stagger: 0.09, ease: "power2.out" }, 1.7);
+      tl.fromTo("#e-credit", { opacity: 0 }, { opacity: 1, duration: 0.3, ease: "power1.out" }, 2.1);
+
+      window.__timelines["endcard"] = tl;
+    })();
+  </script>
+</template>

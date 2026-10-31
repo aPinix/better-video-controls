@@ -1,0 +1,531 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #1d1d1f;
+    }
+    #s-ground {
+      position: absolute;
+      inset: 0;
+      background: #f5f5f7;
+    }
+    /* Cinema Mode, preset "Cinema" (#000000) */
+    #s-dark {
+      position: absolute;
+      inset: 0;
+      background: #000;
+      opacity: 0;
+    }
+    #s-player {
+      position: absolute;
+      left: 288px;
+      top: 236px;
+      width: 1344px;
+      height: 756px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 40px 90px rgba(0, 0, 0, 0.22);
+      transform-origin: 0 0;
+      z-index: 2;
+    }
+    #s-film {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .ui {
+      position: absolute;
+      color: #fff;
+      font-variation-settings: "opsz" 14;
+    }
+    /* Seek bar: helpers/timeline-appearance.ts, match-colour progress at 80% */
+    #s-bar {
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 12px;
+      background: rgb(255 255 255 / 0.2);
+      backdrop-filter: blur(8px) saturate(140%);
+      opacity: 0;
+    }
+    #s-prog {
+      position: absolute;
+      inset: 0;
+      background: rgb(234 118 0 / 0.8);
+      transform-origin: 0 50%;
+    }
+    /* Saved loop section on the bar (.saved-range) */
+    #s-range {
+      position: absolute;
+      left: 313.6px;
+      width: 304.6px;
+      top: 0;
+      bottom: 0;
+      background: #f3cd4533;
+      border: 1.5px solid #f3cd45;
+      opacity: 0;
+    }
+    /* Bookmark marker (.marker) */
+    #s-marker {
+      position: absolute;
+      left: 351px;
+      top: -12px;
+      width: 16px;
+      height: 24px;
+      border-radius: 3px;
+      background: #38d9ff;
+      border: 1.5px solid #06333f;
+      opacity: 0;
+    }
+    .label {
+      left: 0;
+      right: 0;
+      bottom: 30px;
+      text-align: center;
+      font-size: 28px;
+      font-weight: 600;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6), 0 0 12px rgba(0, 0, 0, 0.35);
+      opacity: 0;
+    }
+    /* Loop editing track (.timeline.editing) */
+    #s-edit {
+      left: 24px;
+      right: 24px;
+      bottom: 22px;
+      height: 44px;
+      border-radius: 8px;
+      background: #121a2ee8;
+      border: 1.5px solid #a4c4ff;
+      transform-origin: 50% 100%;
+      opacity: 0;
+    }
+    #s-edit-range {
+      position: absolute;
+      left: 302px;
+      width: 294px;
+      top: -3px;
+      bottom: -3px;
+      background: #f3cd4555;
+      border: 3px solid #f3cd45;
+    }
+    .handle {
+      position: absolute;
+      top: -6px;
+      bottom: -6px;
+      width: 18px;
+      background: #f3cd45;
+    }
+    .handle::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 26%;
+      bottom: 26%;
+      width: 4px;
+      margin-left: -2px;
+      border-radius: 999px;
+      background: #332b0c;
+    }
+    #s-h-start {
+      left: 284px;
+      border-radius: 6px 0 0 6px;
+    }
+    #s-h-end {
+      left: 596px;
+      border-radius: 0 6px 6px 0;
+    }
+    .pill {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 22px;
+      border-radius: 999px;
+      background: rgba(21, 26, 36, 0.92);
+      border: 1px solid #ffffff30;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
+      font-size: 28px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+    }
+    .pill svg {
+      width: 30px;
+      height: 30px;
+      flex: none;
+    }
+    #s-mark-pill {
+      left: 196px;
+      bottom: 56px;
+    }
+    /* Volume pill (.mfs-volume-pill) at 2x */
+    #s-vol {
+      right: 28px;
+      bottom: 64px;
+      width: 44px;
+      height: 150px;
+      border-radius: 22px;
+      overflow: hidden;
+      background: rgb(255 255 255 / 0.22);
+      backdrop-filter: blur(8px) saturate(140%);
+      opacity: 0;
+    }
+    #s-vol-fill {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 100%;
+      background: #fff;
+      transform-origin: 50% 100%;
+    }
+    #s-vol svg {
+      position: absolute;
+      left: 9px;
+      bottom: 10px;
+      width: 26px;
+      height: 26px;
+      z-index: 1;
+    }
+    #s-boost-pill {
+      right: 92px;
+      bottom: 106px;
+    }
+    #s-boost-pill b {
+      font-weight: 700;
+      color: #f3cd45;
+    }
+    .chip {
+      top: 26px;
+      height: 64px;
+      padding: 0 22px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-radius: 999px;
+      background: rgba(15, 15, 15, 0.82);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+      font-size: 30px;
+      font-weight: 600;
+      opacity: 0;
+    }
+    .chip svg {
+      width: 30px;
+      height: 30px;
+    }
+    .roll {
+      position: relative;
+      display: inline-block;
+      height: 40px;
+      min-width: 74px;
+      overflow: hidden;
+    }
+    .roll span {
+      position: absolute;
+      left: 0;
+      top: 0;
+      line-height: 40px;
+      font-variant-numeric: tabular-nums;
+    }
+    #s-speed {
+      right: 26px;
+    }
+    #s-filter {
+      left: 26px;
+    }
+    #s-filter .roll {
+      min-width: 92px;
+    }
+    #s-flash {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+    }
+    #s-snap-pill {
+      left: 50%;
+      bottom: 48px;
+      margin-left: -205px;
+      padding: 10px 24px 10px 10px;
+    }
+    #s-snap-pill img {
+      width: 112px;
+      height: 63px;
+      border-radius: 10px;
+      object-fit: cover;
+      display: block;
+    }
+    /* Mini player bar buttons (.mini-bar), drawn in player space at 1 / 0.4167 */
+    .mini-btn {
+      top: 19px;
+      height: 67px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+    }
+    .mini-btn svg {
+      width: 38px;
+      height: 38px;
+    }
+    #s-mini-return {
+      left: 19px;
+      width: 67px;
+    }
+    #s-mini-close {
+      right: 19px;
+      width: 67px;
+    }
+
+    #s-titles {
+      position: absolute;
+      left: 288px;
+      top: 82px;
+      width: 1100px;
+      height: 130px;
+      z-index: 3;
+    }
+    .t {
+      position: absolute;
+      left: 0;
+      top: 14px;
+      font-size: 84px;
+      font-weight: 640;
+      letter-spacing: -0.035em;
+      line-height: 1.12;
+      white-space: nowrap;
+      font-variation-settings: "opsz" 32;
+      color: #1d1d1f;
+    }
+    .t .w {
+      display: inline-block;
+      opacity: 0;
+    }
+    .verb {
+      opacity: 0;
+    }
+    .accent {
+      color: #614ff9;
+    }
+    #s-keys {
+      position: absolute;
+      right: 288px;
+      top: 104px;
+      display: flex;
+      gap: 16px;
+      z-index: 3;
+    }
+    .key {
+      width: 92px;
+      height: 92px;
+      border-radius: 20px;
+      background: #fff;
+      border: 1px solid #d9d9de;
+      box-shadow: 0 4px 0 #c9c9cf, 0 12px 26px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 44px;
+      font-weight: 500;
+      color: #1d1d1f;
+      opacity: 0;
+    }
+  </style>
+  <div data-hf-id="hf-pi3p" id="root" data-composition-id="studio" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-tbqk" id="s-ground"></div>
+    <div data-hf-id="hf-a0wp" id="s-dark"></div>
+
+    <div data-hf-id="hf-ihvv" id="s-player" data-layout-allow-overflow>
+      <video data-hf-id="hf-k3vm" id="s-film" class="clip" src="assets/film-studio.mp4" muted playsinline data-start="0" data-duration="10.5" data-track-index="0"></video>
+
+      <div data-hf-id="hf-o918" id="s-edit" class="ui">
+        <div data-hf-id="hf-amgp" id="s-edit-range"></div>
+        <div data-hf-id="hf-wgf7" id="s-h-start" class="handle"></div>
+        <div data-hf-id="hf-xjh4" id="s-h-end" class="handle"></div>
+      </div>
+
+      <div data-hf-id="hf-oq70" id="s-bar" class="ui" data-layout-allow-overflow>
+        <div data-hf-id="hf-a6hx" id="s-prog"></div>
+        <div data-hf-id="hf-4iu8" id="s-range"></div>
+        <div data-hf-id="hf-ujyz" id="s-marker"></div>
+      </div>
+
+      <div data-hf-id="hf-nh1u" id="s-fast" class="ui label">Fast seeking</div>
+      <div data-hf-id="hf-w6i0" id="s-slow" class="ui label">Slow seeking</div>
+
+      <div data-hf-id="hf-kdrq" id="s-mark-pill" class="ui pill">
+        <svg data-hf-id="hf-9mdn" viewBox="0 0 24 24" fill="none" stroke="#38d9ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-d99p" d="M17 3a2 2 0 0 1 2 2v15a1 1 0 0 1-1.496.868l-4.512-2.578a2 2 0 0 0-1.984 0l-4.512 2.578A1 1 0 0 1 5 20V5a2 2 0 0 1 2-2z" /></svg>
+        Bookmark this moment
+      </div>
+
+      <div data-hf-id="hf-a7bn" id="s-vol" class="ui">
+        <div data-hf-id="hf-fo9q" id="s-vol-fill"></div>
+        <svg data-hf-id="hf-55py" viewBox="0 0 24 24" fill="none" stroke="#1d1d1f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-ggzo" d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z" /><path data-hf-id="hf-pt57" d="M16 9a5 5 0 0 1 0 6" /><path data-hf-id="hf-5r0g" d="M19.364 18.364a9 9 0 0 0 0-12.728" /></svg>
+      </div>
+      <div data-hf-id="hf-9m5j" id="s-boost-pill" class="ui pill">Volume boost <b data-hf-id="hf-qtid">5×</b></div>
+
+      <div data-hf-id="hf-wr0j" id="s-speed" class="ui chip">
+        <svg data-hf-id="hf-zop5" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-m626" d="m12 14 4-4" /><path data-hf-id="hf-8pr1" d="M3.34 19a10 10 0 1 1 17.32 0" /></svg>
+        <span data-hf-id="hf-xw7s" class="roll"><span data-hf-id="hf-ktrg" id="s-sp1">1×</span><span data-hf-id="hf-v1aw" id="s-sp2">1.5×</span><span data-hf-id="hf-ctt9" id="s-sp3">2×</span></span>
+      </div>
+      <div data-hf-id="hf-q894" id="s-filter" class="ui chip">
+        <span data-hf-id="hf-1gog" class="roll"><span data-hf-id="hf-d8ov" id="s-f1">Vivid</span><span data-hf-id="hf-s0nd" id="s-f2">Mono</span></span>
+      </div>
+
+      <div data-hf-id="hf-eesh" id="s-flash"></div>
+      <div data-hf-id="hf-vhci" id="s-snap-pill" class="ui pill">
+        <img data-hf-id="hf-bqdz" src="assets/snap.jpg" alt="" />
+        Screenshot saved.
+      </div>
+
+      <div data-hf-id="hf-wjrq" id="s-mini-return" class="ui mini-btn">
+        <svg data-hf-id="hf-ppdp" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-7pwa" d="M7 17V7h10" /><path data-hf-id="hf-uwo5" d="M17 17 7 7" /></svg>
+      </div>
+      <div data-hf-id="hf-qd74" id="s-mini-close" class="ui mini-btn">
+        <svg data-hf-id="hf-qwas" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path data-hf-id="hf-t2we" d="M6 6l12 12M18 6 6 18" /></svg>
+      </div>
+    </div>
+
+    <div data-hf-id="hf-a7dn" id="s-titles" data-layout-allow-overflow data-layout-allow-overlap>
+      <h2 data-hf-id="hf-cshq" id="s-t1" class="t"><span data-hf-id="hf-ebkg" class="w">Seek</span> <span data-hf-id="hf-zzic" class="w accent">3×</span> <span data-hf-id="hf-vo19" class="w">faster.</span></h2>
+      <h2 data-hf-id="hf-8udp" id="s-t2" class="t"><span data-hf-id="hf-ytb9" class="w">Or</span> <span data-hf-id="hf-ct3j" class="w accent">¼×</span> <span data-hf-id="hf-zc14" class="w">finer.</span></h2>
+      <h2 data-hf-id="hf-zzy4" id="s-v-loop" class="t verb">Loop it.</h2>
+      <h2 data-hf-id="hf-t9ya" id="s-v-mark" class="t verb">Mark it.</h2>
+      <h2 data-hf-id="hf-b1xo" id="s-v-boost" class="t verb">Boost it.</h2>
+      <h2 data-hf-id="hf-8s60" id="s-v-speed" class="t verb">Speed it.</h2>
+      <h2 data-hf-id="hf-rivc" id="s-v-dim" class="t verb">Dim it.</h2>
+      <h2 data-hf-id="hf-yisa" id="s-v-tint" class="t verb">Tint it.</h2>
+      <h2 data-hf-id="hf-k7jo" id="s-v-snap" class="t verb">Snap it.</h2>
+      <h2 data-hf-id="hf-ieew" id="s-v-float" class="t verb">Float it.</h2>
+    </div>
+    <div data-hf-id="hf-y5ch" id="s-keys">
+      <div data-hf-id="hf-hsfr" id="s-key-opt" class="key">⌥</div>
+      <div data-hf-id="hf-8cwc" id="s-key-shift" class="key">⇧</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const show = (sel, at, d = 0.16) => tl.fromTo(sel, { opacity: 0 }, { opacity: 1, duration: d, ease: "power2.out" }, at);
+      const hide = (sel, at, d = 0.14) => tl.fromTo(sel, { opacity: 1 }, { opacity: 0, duration: d, ease: "power2.in", immediateRender: false }, at);
+
+      // ---- Seek modes ----------------------------------------------------------------
+      const wordsIn = (sel, at) =>
+        tl.fromTo(`${sel} .w`, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.16, stagger: 0.07, ease: "power2.out" }, at);
+      const wordsOut = (sel, at) =>
+        tl.fromTo(`${sel} .w`, { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.14, stagger: 0.03, ease: "power2.in", immediateRender: false }, at);
+      wordsIn("#s-t1", 0.42);
+      wordsOut("#s-t1", 1.72);
+      wordsIn("#s-t2", 1.86);
+      wordsOut("#s-t2", 2.9);
+
+      // Key caps: appear, press, hold while scrolling, release.
+      tl.fromTo("#s-key-opt", { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.16, ease: "expo.out" }, 0.3);
+      tl.to("#s-key-opt", { y: 4, boxShadow: "0 0px 0 #c9c9cf, 0 6px 14px rgba(0,0,0,0.1)", duration: 0.06, ease: "power2.out" }, 0.46);
+      tl.to("#s-key-opt", { y: 0, boxShadow: "0 4px 0 #c9c9cf, 0 12px 26px rgba(0,0,0,0.1)", duration: 0.08, ease: "power2.out" }, 1.32);
+      tl.fromTo("#s-key-shift", { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.16, ease: "expo.out" }, 1.7);
+      tl.to(["#s-key-opt", "#s-key-shift"], { y: 4, boxShadow: "0 0px 0 #c9c9cf, 0 6px 14px rgba(0,0,0,0.1)", duration: 0.06, ease: "power2.out" }, 1.86);
+      tl.to(["#s-key-opt", "#s-key-shift"], { opacity: 0, filter: "blur(8px)", duration: 0.16, ease: "power2.in" }, 2.92);
+
+      // The extension's bar + labels. Progress follows capture/film-map.json "studio".
+      show("#s-bar", 0.42, 0.15);
+      tl.fromTo("#s-prog", { scaleX: 0.5208 }, { scaleX: 0.5375, duration: 0.5, ease: "none" }, 0);
+      tl.to("#s-prog", { scaleX: 0.25, duration: 0.8, ease: "power3.out" }, 0.5);
+      tl.to("#s-prog", { scaleX: 0.27, duration: 0.6, ease: "none" }, 1.3);
+      tl.to("#s-prog", { scaleX: 0.2333, duration: 1.1, ease: "none" }, 1.9);
+      tl.to("#s-prog", { scaleX: 0.3333, duration: 3.0, ease: "none" }, 3.0);
+      tl.to("#s-prog", { scaleX: 0.4167, duration: 1.0, ease: "none" }, 6.0);
+      tl.to("#s-prog", { scaleX: 0.5333, duration: 3.5, ease: "none" }, 7.0);
+      show("#s-fast", 0.5, 0.1);
+      hide("#s-fast", 1.36, 0.12);
+      show("#s-slow", 1.9, 0.1);
+      hide("#s-slow", 2.9, 0.12);
+
+      // ---- Feature roll: one verb every two beats; "it." stays the same --------------
+      const verbs = [
+        ["#s-v-loop", 3.0],
+        ["#s-v-mark", 4.0],
+        ["#s-v-boost", 5.0],
+        ["#s-v-speed", 6.0],
+        ["#s-v-dim", 7.0],
+        ["#s-v-tint", 8.0],
+        ["#s-v-snap", 8.75],
+        ["#s-v-float", 9.5],
+      ];
+      verbs.forEach(([sel, at], i) => {
+        tl.fromTo(sel, { opacity: 0, yPercent: 55, filter: "blur(10px)" }, { opacity: 1, yPercent: 0, filter: "blur(0px)", duration: 0.24, ease: "expo.out" }, at);
+        const next = verbs[i + 1] ? verbs[i + 1][1] - 0.05 : 10.28;
+        tl.fromTo(sel, { opacity: 1, yPercent: 0, filter: "blur(0px)" }, { opacity: 0, yPercent: -55, filter: "blur(10px)", duration: 0.14, ease: "power2.in", immediateRender: false }, next);
+      });
+
+      // Loop: the timeline opens for editing, an A–B section is drawn, then it is saved on the bar.
+      tl.fromTo("#s-edit", { opacity: 0, scaleY: 0.4 }, { opacity: 1, scaleY: 1, duration: 0.26, ease: "expo.out" }, 3.02);
+      tl.fromTo("#s-edit-range", { clipPath: "inset(-6px 100% -6px 0px)" }, { clipPath: "inset(-6px 0% -6px 0px)", duration: 0.42, ease: "power3.out" }, 3.16);
+      tl.fromTo("#s-h-end", { x: -312 }, { x: 0, duration: 0.42, ease: "power3.out" }, 3.16);
+      tl.fromTo(["#s-h-start", "#s-h-end"], { opacity: 0 }, { opacity: 1, duration: 0.1, ease: "power2.out" }, 3.14);
+      tl.to("#s-edit", { opacity: 0, scaleY: 0.4, duration: 0.16, ease: "power2.in" }, 3.82);
+      show("#s-range", 3.86, 0.14);
+
+      // Mark: a bookmark marker drops onto the bar.
+      tl.fromTo("#s-marker", { opacity: 0, y: -46 }, { opacity: 1, y: 0, duration: 0.32, ease: "expo.out" }, 4.06);
+      tl.fromTo("#s-mark-pill", { opacity: 0, y: 12, filter: "blur(6px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.24, ease: "expo.out" }, 4.04);
+      hide("#s-mark-pill", 4.93);
+
+      // Boost: the volume pill fills past normal.
+      tl.fromTo("#s-vol", { opacity: 0, x: 18 }, { opacity: 1, x: 0, duration: 0.24, ease: "expo.out" }, 5.02);
+      tl.fromTo("#s-vol-fill", { scaleY: 0.42 }, { scaleY: 1, duration: 0.4, ease: "power3.out" }, 5.12);
+      tl.fromTo("#s-boost-pill", { opacity: 0, x: 16, filter: "blur(6px)" }, { opacity: 1, x: 0, filter: "blur(0px)", duration: 0.24, ease: "expo.out" }, 5.2);
+      hide(["#s-vol", "#s-boost-pill"], 5.86);
+
+      // Speed: the chip rolls 1× → 1.5× → 2× and the film runs at 2× (baked).
+      show("#s-speed", 6.02, 0.14);
+      const roll = (outSel, inSel, at) => {
+        tl.fromTo(outSel, { yPercent: 0, opacity: 1 }, { yPercent: -100, opacity: 0, duration: 0.1, ease: "power2.in", immediateRender: false }, at);
+        tl.fromTo(inSel, { yPercent: 100, opacity: 0 }, { yPercent: 0, opacity: 1, duration: 0.14, ease: "expo.out" }, at + 0.04);
+      };
+      tl.set(["#s-sp2", "#s-sp3", "#s-f2"], { opacity: 0 }, 0);
+      roll("#s-sp1", "#s-sp2", 6.14);
+      roll("#s-sp2", "#s-sp3", 6.3);
+      hide("#s-speed", 6.88);
+
+      // Dim: Cinema Mode turns the page around the video to black.
+      tl.fromTo("#s-dark", { opacity: 0 }, { opacity: 1, duration: 0.4, ease: "power2.inOut" }, 7.0);
+      tl.fromTo(".verb", { color: "#1d1d1f" }, { color: "#f5f5f7", duration: 0.4, ease: "power2.inOut", immediateRender: false }, 7.0);
+
+      // Tint: filter presets Vivid, then Mono (baked into the footage at the same times).
+      show("#s-filter", 8.0, 0.12);
+      roll("#s-f1", "#s-f2", 8.33);
+      hide("#s-filter", 8.68, 0.1);
+
+      // Snap: screenshot flash and the extension's confirmation.
+      tl.fromTo("#s-flash", { opacity: 0 }, { opacity: 0.85, duration: 0.03, ease: "none" }, 8.75);
+      tl.to("#s-flash", { opacity: 0, duration: 0.22, ease: "power2.out" }, 8.78);
+      tl.fromTo("#s-snap-pill", { opacity: 0, y: 14, filter: "blur(6px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.24, ease: "expo.out" }, 8.86);
+      hide("#s-snap-pill", 9.42);
+
+      // Float: Cinema ends, and the player flicks into a mini player in the corner.
+      tl.to("#s-dark", { opacity: 0, duration: 0.36, ease: "power2.inOut" }, 9.5);
+      tl.to(".verb", { color: "#1d1d1f", duration: 0.36, ease: "power2.inOut" }, 9.5);
+      hide("#s-bar", 9.46, 0.12);
+      tl.fromTo("#s-player", { x: 0, y: 0, scale: 1 }, { x: 976, y: 433, scale: 0.41667, duration: 0.9, ease: "expo.out" }, 9.55);
+      tl.fromTo([".mini-btn"], { opacity: 0 }, { opacity: 1, duration: 0.18, ease: "power2.out" }, 10.0);
+
+      window.__timelines["studio"] = tl;
+    })();
+  </script>
+</template>

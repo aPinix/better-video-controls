@@ -1,0 +1,92 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #16161d;
+    }
+    #e-icon {
+      position: absolute;
+      left: 432px;
+      top: 395px;
+      width: 150px;
+      height: 150px;
+      filter: drop-shadow(0 18px 30px rgba(61, 117, 254, 0.25));
+    }
+    #e-name {
+      position: absolute;
+      left: 618px;
+      top: 414px;
+      font-size: 88px;
+      font-weight: 640;
+      letter-spacing: -0.04em;
+      line-height: 1.2;
+      white-space: nowrap;
+      font-variation-settings: "opsz" 32;
+      --p: -18;
+      -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+      mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+    }
+    #e-avail {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 616px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      font-size: 38px;
+      font-variation-settings: "opsz" 20;
+    }
+    #e-avail .it {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      opacity: 0;
+    }
+    #e-avail .lead {
+      color: #6e6e73;
+      font-weight: 500;
+      margin-right: 10px;
+    }
+    #e-avail .browser {
+      font-weight: 600;
+      margin-right: 22px;
+    }
+    #e-avail img {
+      width: 56px;
+      height: 56px;
+      display: block;
+    }
+  </style>
+  <div data-hf-id="hf-32ii" id="root" data-composition-id="endcard" data-width="1920" data-height="1080">
+    <img data-hf-id="hf-tmw0" id="e-icon" src="assets/brand/icon.png" alt="Better Video Controls" />
+    <h1 data-hf-id="hf-1km9" id="e-name">Better Video Controls</h1>
+    <div data-hf-id="hf-lboc" id="e-avail">
+      <span data-hf-id="hf-qihc" class="it lead">Available for</span>
+      <span data-hf-id="hf-il7i" class="it"><img data-hf-id="hf-xlrc" src="assets/brand/chrome.svg" alt="" /><span data-hf-id="hf-w6a1" class="browser">Chrome</span></span>
+      <span data-hf-id="hf-tqyq" class="it"><img data-hf-id="hf-wbx1" src="assets/brand/firefox.svg" alt="" /><span data-hf-id="hf-95xk" class="browser">Firefox</span></span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      // The icon arrived from the settings scene; the name writes on beside it.
+      tl.fromTo("#e-icon", { scale: 1 }, { scale: 1.05, duration: 0.09, ease: "power2.out" }, 0);
+      tl.to("#e-icon", { scale: 1, duration: 0.3, ease: "power3.out" }, 0.09);
+      tl.fromTo("#e-name", { "--p": -18, filter: "blur(10px)" }, { "--p": 100, filter: "blur(0px)", duration: 0.6, ease: "power2.out" }, 0.06);
+      tl.fromTo("#e-avail .it", { opacity: 0, y: 16, filter: "blur(8px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.24, stagger: 0.09, ease: "expo.out" }, 0.62);
+
+      window.__timelines["endcard"] = tl;
+    })();
+  </script>
+</template>

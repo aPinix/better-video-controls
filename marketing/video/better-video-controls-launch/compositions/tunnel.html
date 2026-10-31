@@ -1,0 +1,294 @@
+<template>
+  <!-- Feature demonstrations adapted from the extension's own popup previews and control icons. -->
+  <style>
+    @font-face { font-family: "BVC Inter"; src: url("assets/fonts/inter-opsz.woff2") format("woff2"); font-weight: 100 900; font-style: normal; }
+    #root { position: absolute; inset: 0; overflow: hidden; font-family: "BVC Inter", sans-serif; color: #16161d; }
+    #t-demo { position: absolute; inset: 0; }
+    .feature-panel { position: absolute; inset: 0; opacity: 0; }
+    .headline { position: absolute; top: 112px; left: 0; right: 0; text-align: center; font-size: 104px; font-weight: 560; letter-spacing: -.035em; line-height: 1.14; font-variation-settings: "opsz" 32; z-index: 5; }
+    .accent { background: linear-gradient(90deg,#64a8fb,#3d75fe 50%,#7b34e9); background-clip: text; -webkit-background-clip: text; color: transparent; padding-right: .05em; }
+    .player { position: absolute; left: 360px; top: 280px; width: 1200px; height: 675px; border-radius: 24px; overflow: hidden; background: #000; box-shadow: 0 35px 80px rgba(40,50,120,.18); z-index: 2; }
+    .player video, .saved-frame img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .player-ui { position: absolute; inset: 0; opacity: 0; z-index: 2; }
+    .controls { position: absolute; left: 0; right: 0; bottom: 20px; height: 76px; background: linear-gradient(transparent,rgba(0,0,0,.8)); }
+    .pause { position: absolute; left: 28px; bottom: 23px; display: flex; gap: 6px; height: 24px; }
+    .pause i { width: 6px; height: 24px; background: white; }
+    .tool { position: absolute; right: 34px; bottom: 13px; width: 60px; height: 52px; border-radius: 8px; color: white; background: #181818bb; display: flex; align-items: center; justify-content: center; }
+    .tool svg { width: 40px; height: 34px; }
+    .tool-label { position: absolute; right: 20px; bottom: 104px; background: #0f0f0fe6; color: #fff; border: 1px solid #ffffff40; border-radius: 9px; font-size: 28px; font-weight: 550; padding: 10px 16px; white-space: nowrap; }
+    .timeline { position: absolute; left: 0; right: 0; bottom: 0; height: 20px; background: rgb(255 255 255 / .2); backdrop-filter: blur(8px) saturate(140%); }
+    .progress { position: absolute; inset: 0; background: rgb(255 0 51 / .8); transform-origin: 0 50%; }
+    .loop-range { position: absolute; left: 16.6667%; width: 10%; top: -2px; bottom: -2px; border: 2px solid #f3cd45; background: #f3cd4533; opacity: 0; transform-origin: 0 50%; }
+    #t-loop-range-2 { left: 56.6667%; }
+    .loop-range b { position: absolute; top: -2px; bottom: -2px; width: 13px; background: #f3cd45; display: flex; align-items: center; justify-content: center; }
+    .loop-range b:after { content: ''; width: 3px; height: 15px; border-radius: 2px; background: #262626; }
+    .loop-range .start { left: -13px; border-radius: 5px 0 0 5px; }
+    .loop-range .end { right: -13px; border-radius: 0 5px 5px 0; }
+    .result { position: absolute; top: 30px; left: 30px; padding: 13px 20px; background: #0f0f0fe8; border: 1px solid #ffffff40; color: white; border-radius: 12px; font-size: 30px; font-weight: 550; opacity: 0; }
+    .marker { position: absolute; left: 23.3333%; bottom: 0; width: 10px; height: 29px; background: #38d9ff; border-radius: 3px; opacity: 0; }
+    #t-marker-2 { left: 35%; }
+    .bookmark-label { position: absolute; bottom: 43px; left: 82px; color: white; background: #0f0f0fe8; border: 1px solid #38d9ff80; border-radius: 20px; padding: 11px 18px; font-size: 28px; opacity: 0; }
+    .bookmark-label svg { width: 24px; height: 24px; margin-right: 7px; vertical-align: -3px; color: #38d9ff; }
+    .popup { position: absolute; right: 30px; bottom: 170px; width: 480px; padding: 24px; background: #0f0f0ff2; border: 1px solid #ffffff35; border-radius: 15px; color: white; opacity: 0; }
+    .popup-heading { display: flex; justify-content: space-between; align-items: center; font-size: 29px; font-weight: 600; margin-bottom: 24px; }
+    .meter { position: relative; height: 14px; border-radius: 7px; background: #ffffff35; }
+    .meter-base { position: absolute; left: 0; top: 0; bottom: 0; width: 20%; background: #fff; border-radius: 7px 0 0 7px; }
+    .meter-boost { position: absolute; left: 20%; right: 0; top: 0; bottom: 0; background: #fbbf24; transform-origin: 0 50%; border-radius: 0 7px 7px 0; }
+    .meter-handle { position: absolute; top: -5px; left: 20%; width: 24px; height: 24px; border-radius: 50%; background: white; margin-left: -12px; }
+    .meter-labels { display: flex; justify-content: space-between; margin-top: 13px; font-size: 28px; color: #eee; }
+    .value-slot { position: relative; width: 100px; height: 36px; text-align: right; }
+    .value-slot span { position: absolute; right: 0; top: 0; }
+    .after { opacity: 0; }
+    .speed-popup { width: 470px; }
+    .speed-popup .meter-base { width: 50%; }
+    .speed-popup .meter-boost { left: 50%; background: #a78bfa; }
+    .speed-copy { position: relative; height: 38px; margin-bottom: 20px; font-size: 29px; }
+    .speed-copy span { position: absolute; inset: 0; }
+    .cinema-shade { position: absolute; inset: 0; background: black; opacity: 0; z-index: 1; }
+    .preset-options { display: flex; gap: 12px; font-size: 28px; padding-top: 4px; }
+    #t-filter-popup { width: 720px; }
+    .preset-options span { border: 1px solid #777; border-radius: 7px; padding: 12px 12px; }
+    #t-original-option { border-color: #fff; background: #555; text-decoration: underline; }
+    .saved-frame { position: absolute; right: 35px; top: 35px; width: 520px; height: 292.5px; border: 4px solid white; border-radius: 12px; overflow: hidden; box-shadow: 0 12px 35px #0007; opacity: 0; z-index: 3; }
+    .pointer { position: absolute; left: 0; top: 0; width: 46px; height: 64px; transform-origin: 10% 5%; opacity: 0; z-index: 7; filter: drop-shadow(0 3px 5px #0006); }
+    .work-page { position: absolute; left: 300px; top: 280px; width: 1320px; height: 675px; border: 1px solid #d5d5df; background: white; border-radius: 20px; overflow: hidden; }
+    .work-page .top { height: 58px; background: #efeff3; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 10px; padding-left: 22px; }
+    .work-page .top i { width: 14px; height: 14px; background: #d1d1d7; border-radius: 50%; }
+    .work-lines { padding: 40px; }
+    .work-lines i { display: block; width: 55%; height: 16px; background: #e3e4ed; border-radius: 8px; margin-bottom: 24px; }
+    .work-lines i:nth-child(2n) { width: 42%; }
+    .work-lines i:first-child { width: 32%; height: 26px; background: #c9cbd8; margin-bottom: 45px; }
+    .pip-title { position: absolute; top: 0; left: 0; right: 0; padding: 18px 26px; background: #000b; color: white; font-size: 70px; opacity: 0; z-index: 4; }
+    .pip-resize { position: absolute; right: 18px; bottom: 18px; width: 25px; height: 25px; border-right: 4px solid white; border-bottom: 4px solid white; opacity: 0; z-index: 4; }
+  </style>
+  <div data-hf-id="hf-7nkx" id="root" data-composition-id="tunnel" data-width="1920" data-height="1080">
+    <svg data-hf-id="hf-prr9" width="0" height="0" aria-hidden="true" style="position:absolute" data-layout-ignore="">
+      <defs data-hf-id="hf-mh0t">
+        <symbol data-hf-id="hf-ytvq" id="demo-pointer" viewBox="0 0 20 28"><path data-hf-id="hf-mbzd" d="M2 1.5 L2 22.5 L7.2 17.6 L10.6 25.6 L14 24.2 L10.6 16.3 L17.6 16.3 Z" fill="#000" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" /></symbol>
+        <symbol data-hf-id="hf-ddbr" id="demo-loop" viewBox="0 0 24 20"><rect data-hf-id="hf-4t91" x="1" y="1" width="22" height="18" rx="3" /><path data-hf-id="hf-4mpr" d="m17 2 4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4m14-1v2a3 3 0 0 1-3 3H3" transform="translate(4.5 2.5) scale(.625)" /></symbol>
+        <symbol data-hf-id="hf-jsyt" id="demo-bookmark" viewBox="0 0 24 20"><path data-hf-id="hf-064r" d="M6 1h12v18l-6-4-6 4Z" /></symbol>
+        <symbol data-hf-id="hf-jleo" id="demo-boost" viewBox="0 0 24 20"><path data-hf-id="hf-2pxn" d="m13 3-5 8h4l-1 6 5-8h-4Z" /><path data-hf-id="hf-vbmd" d="M6 5a9 9 0 0 0 0 10M3 2a14 14 0 0 0 0 16M18 5a9 9 0 0 1 0 10M21 2a14 14 0 0 1 0 16" /></symbol>
+        <symbol data-hf-id="hf-mxj4" id="demo-cinema" viewBox="0 0 24 20"><path data-hf-id="hf-abui" d="M8.5 12.5a6 6 0 1 1 7 0C14.5 13.3 14 14 14 16h-4c0-2-.5-2.7-1.5-3.5Z M9 16h6M10 19h4" /></symbol>
+        <symbol data-hf-id="hf-hz0r" id="demo-filter" viewBox="0 0 24 20"><path data-hf-id="hf-37gp" d="M1 4h5m4 0h13M1 10h13m4 0h5M1 16h5m4 0h13M10 4a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM18 10a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM10 16a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" /></symbol>
+        <symbol data-hf-id="hf-2rq4" id="demo-camera" viewBox="0 0 24 20"><path data-hf-id="hf-kewq" d="M3 5h4l2-3h6l2 3h4a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z M16 11a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z" /></symbol>
+        <symbol data-hf-id="hf-4nru" id="demo-pip" viewBox="0 0 24 20"><rect data-hf-id="hf-k7ru" x="1" y="1" width="22" height="18" rx="2" /><rect data-hf-id="hf-rfmy" x="12" y="10" width="8" height="6" rx="1" fill="currentColor" /></symbol>
+      </defs>
+    </svg>
+    <div data-hf-id="hf-5rvt" id="t-demo">
+      <section data-hf-id="hf-o5ne" id="t-loop" class="feature-panel">
+        <h1 data-hf-id="hf-6mvo" id="t-a0" class="headline">Loop <span data-hf-id="hf-b5qd" class="accent">your sections.</span></h1>
+        <div data-hf-id="hf-ahjb" class="player">
+          <video data-hf-id="hf-42yf" id="t-loop-lead" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="0" data-duration="0.5" data-media-start="0.5"></video>
+          <video data-hf-id="hf-6ohn" id="t-loop-first" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="0.5" data-duration="0.6" data-media-start="1"></video>
+          <video data-hf-id="hf-qz7g" id="t-loop-second" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="1.1" data-duration="0.6" data-media-start="3.4"></video>
+          <video data-hf-id="hf-znv8" id="t-loop-third" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="1.7" data-duration="0.388" data-media-start="1"></video>
+          <div data-hf-id="hf-uso6" class="player-ui"><div data-hf-id="hf-fycu" class="controls"><span data-hf-id="hf-7wrx" class="pause"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i></span><div data-hf-id="hf-wuee" id="t-loop-tool" class="tool"><svg data-hf-id="hf-u043" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use data-hf-id="hf-eios" href="#demo-loop" /></svg></div></div><span data-hf-id="hf-44c8" class="tool-label">Loop Sections</span><div data-hf-id="hf-jvx5" class="timeline"><div data-hf-id="hf-5vzw" id="t-loop-progress" class="progress"></div><div data-hf-id="hf-8gg3" id="t-loop-range" class="loop-range"><b data-hf-id="hf-tbyr" class="start"></b><b data-hf-id="hf-gryc" id="t-loop-handle" class="end"></b></div><div data-hf-id="hf-6rwe" id="t-loop-range-2" class="loop-range"><b data-hf-id="hf-4u2b" class="start"></b><b data-hf-id="hf-lai1" id="t-loop-handle-2" class="end"></b></div></div><div data-hf-id="hf-lht8" id="t-loop-result" class="result">Two loop sections</div></div>
+        </div>
+        <svg data-hf-id="hf-bxzs" id="t-loop-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-srlx" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-3ljf" id="t-mark" class="feature-panel">
+        <h1 data-hf-id="hf-2n2r" id="t-a1" class="headline">Bookmark <span data-hf-id="hf-0oq4" class="accent">your moments.</span></h1>
+        <div data-hf-id="hf-uwrr" class="player">
+          <video data-hf-id="hf-74qe" id="t-mark-before" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="2.088" data-duration="1.5" data-media-start="1"></video>
+          <video data-hf-id="hf-20tm" id="t-mark-return" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="3.588" data-duration="0.588" data-media-start="1.4"></video>
+          <div data-hf-id="hf-nsx6" class="player-ui"><div data-hf-id="hf-80j6" class="controls"><span data-hf-id="hf-ry3l" class="pause"><i data-hf-id="hf-y7e5"></i><i data-hf-id="hf-ylp6"></i></span><div data-hf-id="hf-3qe5" id="t-mark-tool" class="tool"><svg data-hf-id="hf-ejc1" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-okwi" href="#demo-bookmark" /></svg></div></div><span data-hf-id="hf-ibdr" class="tool-label">Bookmarks</span><div data-hf-id="hf-7ay5" class="timeline"><div data-hf-id="hf-q377" id="t-mark-progress" class="progress"></div><div data-hf-id="hf-0vzr" id="t-marker" class="marker"></div><div data-hf-id="hf-qfu2" id="t-marker-2" class="marker"></div></div><div data-hf-id="hf-vlsd" id="t-bookmark-label" class="bookmark-label"><svg data-hf-id="hf-z5o5" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-a2om" href="#demo-bookmark" /></svg>Mountain pass · 0:01</div><div data-hf-id="hf-727p" id="t-bookmark-label-2" class="bookmark-label" style="left:290px"><svg data-hf-id="hf-1xtc" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-agzn" href="#demo-bookmark" /></svg>Roadside turn · 0:02</div></div>
+        </div>
+        <svg data-hf-id="hf-i3bt" id="t-mark-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-vdw9" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-qflt" id="t-boost" class="feature-panel">
+        <h1 data-hf-id="hf-9sxb" id="t-a2" class="headline">Boost <span data-hf-id="hf-mroy" class="accent">the volume.</span></h1>
+        <div data-hf-id="hf-uigq" class="player">
+          <video data-hf-id="hf-2biu" id="t-boost-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="4.176" data-duration="2.088" data-media-start="0.8"></video>
+          <div data-hf-id="hf-o787" class="player-ui"><div data-hf-id="hf-8eu7" class="controls"><span data-hf-id="hf-t50o" class="pause"><i data-hf-id="hf-0l8b"></i><i data-hf-id="hf-0zjc"></i></span><div data-hf-id="hf-58rx" id="t-boost-tool" class="tool"><svg data-hf-id="hf-z7xs" fill="none" stroke="currentColor" stroke-width="1.8"><use data-hf-id="hf-xsan" href="#demo-boost" /></svg></div></div><span data-hf-id="hf-hmjl" class="tool-label">Boost Volume</span><div data-hf-id="hf-xrqf" id="t-boost-popup" class="popup"><div data-hf-id="hf-o7lq" class="popup-heading">Volume boost<div data-hf-id="hf-m46g" class="value-slot"><span data-hf-id="hf-xu0x" id="t-volume-before">100%</span><span data-hf-id="hf-yuaj" id="t-volume-after" class="after">500%</span></div></div><div data-hf-id="hf-rq4r" class="meter"><div data-hf-id="hf-rywz" class="meter-base"></div><div data-hf-id="hf-yjpq" id="t-volume-fill" class="meter-boost"></div><div data-hf-id="hf-jod2" id="t-volume-handle" class="meter-handle"></div></div><div data-hf-id="hf-4it5" class="meter-labels"><span data-hf-id="hf-k7an">100%</span><span data-hf-id="hf-smfv">500%</span></div></div></div>
+        </div>
+        <svg data-hf-id="hf-rkn1" id="t-boost-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-wktc" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-k9e9" id="t-speed" class="feature-panel">
+        <h1 data-hf-id="hf-6bfo" id="t-a3" class="headline">Play it <span data-hf-id="hf-n54d" class="accent">at 2×.</span></h1>
+        <div data-hf-id="hf-u45p" class="player">
+          <video data-hf-id="hf-86ld" id="t-speed-normal" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="6.264" data-duration="0.85" data-media-start="1"></video>
+          <video data-hf-id="hf-e8xk" id="t-speed-fast" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="7.114" data-duration="1.238" data-media-start="1.85" data-playback-rate="2"></video>
+          <div data-hf-id="hf-olj8" class="player-ui"><div data-hf-id="hf-8t58" class="controls"><span data-hf-id="hf-sqpn" class="pause"><i data-hf-id="hf-zsm9"></i><i data-hf-id="hf-06xa"></i></span></div><div data-hf-id="hf-ymer" id="t-speed-popup" class="popup speed-popup"><div data-hf-id="hf-ir29" class="popup-heading">Playback speed<div data-hf-id="hf-tpr4" class="value-slot"><span data-hf-id="hf-5o10" id="t-speed-before">1×</span><span data-hf-id="hf-ssq1" id="t-speed-after" class="after">2×</span></div></div><div data-hf-id="hf-ntrx" class="speed-copy"><span data-hf-id="hf-aijc" id="t-normal-copy">Normal speed</span><span data-hf-id="hf-9bqk" id="t-fast-copy" class="after">Twice as fast</span></div><div data-hf-id="hf-wvn9" id="t-speed-meter" class="meter"><div data-hf-id="hf-wvlv" class="meter-base"></div><div data-hf-id="hf-u817" id="t-speed-fill" class="meter-boost"></div></div></div><div data-hf-id="hf-8hv8" class="timeline"><div data-hf-id="hf-184l" id="t-speed-progress" class="progress"></div></div></div>
+        </div>
+        <svg data-hf-id="hf-fbeh" id="t-speed-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-w6ib" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-v7qq" id="t-dim" class="feature-panel">
+        <div data-hf-id="hf-u0hb" id="t-cinema-shade" class="cinema-shade"></div>
+        <h1 data-hf-id="hf-huij" id="t-b0" class="headline">Dim <span data-hf-id="hf-h2ix" class="accent">the page.</span></h1>
+        <div data-hf-id="hf-wwaw" class="player">
+          <video data-hf-id="hf-lvu2" id="t-dim-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="8.352" data-duration="2.088" data-media-start="0.7"></video>
+          <div data-hf-id="hf-ozu9" class="player-ui"><div data-hf-id="hf-97g9" class="controls"><span data-hf-id="hf-qr6i" class="pause"><i data-hf-id="hf-26gf"></i><i data-hf-id="hf-2krg"></i></span><div data-hf-id="hf-8i8g" id="t-dim-tool" class="tool"><svg data-hf-id="hf-0cl8" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-s29f" href="#demo-cinema" /></svg></div></div><span data-hf-id="hf-ilyc" class="tool-label">Cinema Mode</span><div data-hf-id="hf-6dj3" id="t-dim-result" class="result">Cinema Mode on</div></div>
+        </div>
+        <svg data-hf-id="hf-v9jy" id="t-dim-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-u6z6" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-pae7" id="t-tint" class="feature-panel">
+        <h1 data-hf-id="hf-12gm" id="t-b1" class="headline">Change <span data-hf-id="hf-3ha1" class="accent">the look.</span></h1>
+        <div data-hf-id="hf-whzv" class="player">
+          <video data-hf-id="hf-xci4" id="t-tint-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="10.44" data-duration="0.68" data-media-start="0.9"></video>
+          <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0.070389,&quot;contrast&quot;:0.15,&quot;highlights&quot;:0,&quot;shadows&quot;:0,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0,&quot;tint&quot;:0,&quot;vibrance&quot;:0,&quot;saturation&quot;:0.45},&quot;details&quot;:{&quot;vignette&quot;:0,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-xtnr" id="t-vivid-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="11.12" data-duration="0.85" data-media-start="1.58"></video>
+          <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:-0.074001,&quot;contrast&quot;:0.25,&quot;highlights&quot;:0,&quot;shadows&quot;:0,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0,&quot;tint&quot;:0,&quot;vibrance&quot;:0,&quot;saturation&quot;:-0.2},&quot;details&quot;:{&quot;vignette&quot;:0,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-qd4e" id="t-cinema-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="11.97" data-duration="0.85" data-media-start="2.43"></video>
+          <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0.111031,&quot;contrast&quot;:-0.1,&quot;highlights&quot;:0,&quot;shadows&quot;:0,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0,&quot;tint&quot;:0,&quot;vibrance&quot;:0,&quot;saturation&quot;:-0.1},&quot;details&quot;:{&quot;vignette&quot;:0,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-n5wm" id="t-soft-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="12.82" data-duration="0.85" data-media-start="3.28"></video>
+          <video data-color-grading="{&quot;preset&quot;:null,&quot;intensity&quot;:1,&quot;adjust&quot;:{&quot;exposure&quot;:0.070389,&quot;contrast&quot;:0.15,&quot;highlights&quot;:0,&quot;shadows&quot;:0,&quot;whites&quot;:0,&quot;blacks&quot;:0,&quot;temperature&quot;:0,&quot;tint&quot;:0,&quot;vibrance&quot;:0,&quot;saturation&quot;:-1},&quot;details&quot;:{&quot;vignette&quot;:0,&quot;vignetteMidpoint&quot;:0.5,&quot;vignetteRoundness&quot;:0,&quot;vignetteFeather&quot;:0.65,&quot;grain&quot;:0,&quot;grainSize&quot;:0.25,&quot;grainRoughness&quot;:0.5},&quot;effects&quot;:{&quot;blur&quot;:0,&quot;pixelate&quot;:0,&quot;chromaBleed&quot;:0,&quot;tapeDamage&quot;:0,&quot;tapeTracking&quot;:0,&quot;tapeNoise&quot;:1,&quot;tapeSpeed&quot;:0.5,&quot;filmArtifacts&quot;:0,&quot;halftone&quot;:0,&quot;halftoneSize&quot;:0,&quot;twoInkPrint&quot;:0,&quot;twoInkPrintSize&quot;:0,&quot;ascii&quot;:0,&quot;asciiSize&quot;:0.06578947368421052,&quot;asciiInvert&quot;:0,&quot;asciiStyle&quot;:0,&quot;asciiColor&quot;:1,&quot;asciiRotation&quot;:0,&quot;dither&quot;:0,&quot;ditherSize&quot;:0,&quot;bloom&quot;:0,&quot;bloomRadius&quot;:8,&quot;monoScreen&quot;:0,&quot;monoScreenSize&quot;:0,&quot;monoScreenAngle&quot;:0,&quot;monoScreenSpread&quot;:0,&quot;monoScreenShape&quot;:0,&quot;monoScreenInvert&quot;:0,&quot;scanlines&quot;:0,&quot;scanlineCount&quot;:0,&quot;scanlineSoftness&quot;:0,&quot;chromaticAberration&quot;:0,&quot;chromaticAngle&quot;:0,&quot;crtCurvature&quot;:0,&quot;digitalGlitch&quot;:0,&quot;digitalGlitchColorSplit&quot;:0,&quot;digitalGlitchLineTear&quot;:0,&quot;digitalGlitchPixelate&quot;:0,&quot;digitalGlitchBlockAmount&quot;:0,&quot;digitalGlitchBlockDisplacement&quot;:0,&quot;digitalGlitchBlockOpacity&quot;:0,&quot;digitalGlitchSpeed&quot;:0,&quot;engraving&quot;:0,&quot;engravingSpacing&quot;:0.4117647058823529,&quot;engravingMinThickness&quot;:0.2,&quot;engravingMaxThickness&quot;:0.4571428571428572,&quot;engravingAngle&quot;:0.25,&quot;engravingContrast&quot;:0.4666666666666667,&quot;engravingSharpness&quot;:0.59,&quot;engravingWave&quot;:0.2,&quot;engravingWaveFrequency&quot;:0.2222222222222222,&quot;crosshatch&quot;:0,&quot;crosshatchSpacing&quot;:0.28,&quot;crosshatchThickness&quot;:0.25,&quot;crosshatchAngle&quot;:0.25,&quot;crosshatchContrast&quot;:0.3333333333333333,&quot;crosshatchEdges&quot;:0.5,&quot;crosshatchLineWeight&quot;:0,&quot;crosshatchWave&quot;:0.33,&quot;crosshatchWaveFrequency&quot;:0.2222222222222222,&quot;kuwahara&quot;:0,&quot;kuwaharaRadius&quot;:0.14285714285714285,&quot;kuwaharaSharpness&quot;:0.3125,&quot;kuwaharaSaturation&quot;:0.5},&quot;lut&quot;:null,&quot;colorSpace&quot;:&quot;rec709&quot;}" data-hf-id="hf-xrfg" id="t-mono-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="13.67" data-duration="0.946" data-media-start="4.13"></video>
+          <div data-hf-id="hf-pe5a" class="player-ui"><div data-hf-id="hf-9lra" class="controls"><span data-hf-id="hf-qcvh" class="pause"><i data-hf-id="hf-oz7w"></i><i data-hf-id="hf-okwv"></i></span><div data-hf-id="hf-9139" id="t-tint-tool" class="tool"><svg data-hf-id="hf-zya7" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-wik8" href="#demo-filter" /></svg></div></div><span data-hf-id="hf-a97q" class="tool-label">Video Filters</span><div data-hf-id="hf-j5fe" id="t-filter-popup" class="popup"><div data-hf-id="hf-o55l" class="popup-heading">Video Filters</div><div data-hf-id="hf-asd4" class="preset-options"><span data-hf-id="hf-axeb" id="t-original-option">Original</span><span data-hf-id="hf-bno3" id="t-vivid-option">Vivid</span><span data-hf-id="hf-6dr3" id="t-cinema-option">Cinema</span><span data-hf-id="hf-f68v" id="t-soft-option">Soft</span><span data-hf-id="hf-xxk3" id="t-mono-option">Mono</span></div></div></div>
+        </div>
+        <svg data-hf-id="hf-1czh" id="t-tint-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-tso5" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-p6jw" id="t-snap" class="feature-panel">
+        <h1 data-hf-id="hf-zbj8" id="t-b2" class="headline">Save <span data-hf-id="hf-kdej" class="accent">a frame.</span></h1>
+        <div data-hf-id="hf-w3ou" class="player">
+          <video data-hf-id="hf-ijzf" id="t-snap-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="14.616" data-duration="2.088" data-media-start="0.15"></video>
+          <div data-hf-id="hf-psgb" class="player-ui"><div data-hf-id="hf-a02b" class="controls"><span data-hf-id="hf-rjsk" class="pause"><i data-hf-id="hf-o6lu"></i><i data-hf-id="hf-jqbp"></i></span><div data-hf-id="hf-w788" id="t-snap-tool" class="tool"><svg data-hf-id="hf-157a" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-ljsf" href="#demo-camera" /></svg></div></div><span data-hf-id="hf-8wga" class="tool-label">Screenshot</span><div data-hf-id="hf-1rkt" id="t-snap-result" class="result">Screenshot saved.</div></div>
+        </div>
+        <div data-hf-id="hf-gqnf" id="t-saved-frame" class="saved-frame" style="right:395px;top:315px" data-layout-allow-occlusion=""><img data-hf-id="hf-oo95" src="assets/red-car-screenshot.png" alt="The saved red car video frame"></div>
+        <svg data-hf-id="hf-5o6y" id="t-snap-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-uzl8" href="#demo-pointer" /></svg>
+      </section>
+      <section data-hf-id="hf-juxy" id="t-float" class="feature-panel">
+        <h1 data-hf-id="hf-4z02" id="t-b3" class="headline">Float <span data-hf-id="hf-g8xv" class="accent">the player.</span></h1>
+        <div data-hf-id="hf-0250" class="work-page" data-layout-ignore=""><div data-hf-id="hf-sijt" class="top"><i data-hf-id="hf-qkg0"></i><i data-hf-id="hf-q64z"></i><i data-hf-id="hf-prty"></i></div><div data-hf-id="hf-scaz" id="t-work-lines" class="work-lines"><i data-hf-id="hf-pdix"></i><i data-hf-id="hf-hqsk"></i><i data-hf-id="hf-hchj"></i><i data-hf-id="hf-8d0n"></i><i data-hf-id="hf-8rbo"></i><i data-hf-id="hf-7kel"></i><i data-hf-id="hf-7ypm"></i><i data-hf-id="hf-9y8r"></i></div></div>
+        <div data-hf-id="hf-5mcs" id="t-floating-player" class="player">
+          <video data-hf-id="hf-s2tk" id="t-float-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="16.704" data-duration="2.088" data-media-start="1.2"></video>
+          <div data-hf-id="hf-q6rc" class="player-ui"><div data-hf-id="hf-aedc" class="controls"><span data-hf-id="hf-r5hj" class="pause"><i data-hf-id="hf-acjs"></i><i data-hf-id="hf-95mp"></i></span><div data-hf-id="hf-id5o" id="t-float-tool" class="tool"><svg data-hf-id="hf-0qw9" fill="none" stroke="currentColor" stroke-width="2"><use data-hf-id="hf-gq49" href="#demo-pip" /></svg></div></div></div><div data-hf-id="hf-qqsk" id="t-pip-title" class="pip-title">Picture-in-Picture</div><div data-hf-id="hf-3p43" id="t-pip-resize" class="pip-resize"></div>
+        </div>
+        <svg data-hf-id="hf-b6le" id="t-float-pointer" class="pointer" viewBox="0 0 20 28"><use data-hf-id="hf-ula7" href="#demo-pointer" /></svg>
+      </section>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const slot = 2.088;
+      const panels = ["loop", "mark", "boost", "speed", "dim", "tint", "snap", "float"];
+      const starts = [0, 2.088, 4.176, 6.264, 8.352, 10.44, 14.616, 16.704];
+      const base = document.getElementById("t-demo").getBoundingClientRect();
+      const positions = new Map();
+      const point = (selector) => {
+        if (positions.has(selector)) return positions.get(selector);
+        const r = document.querySelector(selector).getBoundingClientRect();
+        const p = { x: r.left - base.left + r.width / 2, y: r.top - base.top + r.height / 2 };
+        positions.set(selector, p);
+        return p;
+      };
+      ["#t-loop-handle", "#t-loop-handle-2", "#t-vivid-option", "#t-cinema-option", "#t-soft-option", "#t-mark-tool", "#t-marker", "#t-boost-tool", "#t-volume-handle", "#t-speed-meter", "#t-dim-tool", "#t-tint-tool", "#t-mono-option", "#t-snap-tool", "#t-float-tool"].forEach(point);
+      const pointer = (name, target, at, offsetX = 0) => {
+        const p = point(target), id = "#t-" + name + "-pointer";
+        tl.fromTo(id, { x: p.x + 170, y: p.y + 65, opacity: 0 }, { x: p.x + offsetX, y: p.y, opacity: 1, duration: .24, ease: "power2.out" }, at);
+        return { id, x: p.x + offsetX, y: p.y };
+      };
+      const click = (id, at) => {
+        tl.to(id, { scale: .86, duration: .06, ease: "power2.out" }, at);
+        tl.to(id, { scale: 1, duration: .1, ease: "power2.out" }, at + .06);
+      };
+      const show = (selector, at, duration = .14) => tl.to(selector, { opacity: 1, duration, ease: "power2.out" }, at);
+      panels.forEach((name, i) => {
+        const at = starts[i], panel = "#t-" + name;
+        tl.set(panel, { opacity: 1 }, at);
+        tl.fromTo(panel + " .headline", { opacity: 0, filter: "blur(7px)" }, { opacity: 1, filter: "blur(0px)", duration: .22, ease: "power2.out" }, at);
+        show(panel + " .player-ui", at + .35);
+        if (i < panels.length - 1) tl.set(panel, { opacity: 0 }, starts[i + 1]);
+      });
+      tl.fromTo("#t-loop .player", { y: 110, scale: .88, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: .3, ease: "expo.out" }, 0);
+
+      // Two source intervals alternate, then playback returns to the first interval.
+      pointer("loop", "#t-loop-handle", .36, -48);
+      tl.fromTo("#t-loop-range", { opacity: 0, scaleX: .6 }, { opacity: 1, scaleX: 1, duration: .25, ease: "power2.inOut" }, .5);
+      tl.to("#t-loop-pointer", { x: point("#t-loop-handle").x, duration: .25, ease: "power2.inOut" }, .5);
+      const secondEnd = point("#t-loop-handle-2");
+      tl.to("#t-loop-pointer", { x: secondEnd.x - 48, y: secondEnd.y, duration: .2, ease: "power2.inOut" }, .76);
+      tl.fromTo("#t-loop-range-2", { opacity: 0, scaleX: .6 }, { opacity: 1, scaleX: 1, duration: .26, ease: "power2.inOut" }, .84);
+      tl.to("#t-loop-pointer", { x: secondEnd.x, duration: .14, ease: "power2.inOut" }, .96);
+      tl.fromTo("#t-loop-progress", { scaleX: .083333 }, { scaleX: .166667, duration: .5, ease: "none" }, 0);
+      [[.5,.166667,.6],[1.1,.566667,.6],[1.7,.166667,.388]].forEach(([at,from,duration]) =>
+        tl.fromTo("#t-loop-progress", { scaleX: from }, { scaleX: from + duration / 6, duration, ease: "none", immediateRender: false }, at));
+      show("#t-loop-result", .85);
+
+      // Save two different source moments, then revisit the first bookmark.
+      const mark = slot;
+      const markPointer = pointer("mark", "#t-mark-tool", mark + .1);
+      click(markPointer.id, mark + .4);
+      show("#t-marker", mark + .4);
+      show("#t-bookmark-label", mark + .44);
+      click(markPointer.id, mark + 1.1);
+      show("#t-marker-2", mark + 1.1);
+      tl.set("#t-bookmark-label", { opacity: 0 }, mark + 1.1);
+      show("#t-bookmark-label-2", mark + 1.1);
+      tl.fromTo("#t-mark-progress", { scaleX: .166667 }, { scaleX: .416667, duration: 1.5, ease: "none" }, mark);
+      const marker = point("#t-marker");
+      tl.to(markPointer.id, { x: marker.x, y: marker.y, duration: .28, ease: "power2.inOut" }, mark + 1.16);
+      click(markPointer.id, mark + 1.44);
+      tl.set("#t-bookmark-label-2", { opacity: 0 }, mark + 1.5);
+      tl.set("#t-bookmark-label", { opacity: 1 }, mark + 1.5);
+      tl.fromTo("#t-mark-progress", { scaleX: .233333 }, { scaleX: .331333, duration: .588, ease: "none", immediateRender: false }, mark + 1.5);
+
+      // The source preview's white baseline and amber boost fill rise from 100% to 500%.
+      const boost = slot * 2;
+      pointer("boost", "#t-boost-tool", boost + .08);
+      show("#t-boost-popup", boost + .34);
+      const volumeStart = point("#t-volume-handle");
+      tl.to("#t-boost-pointer", { x: volumeStart.x, y: volumeStart.y, duration: .22, ease: "power2.inOut" }, boost + .42);
+      tl.fromTo("#t-volume-fill", { scaleX: 0 }, { scaleX: 1, duration: .48, ease: "power2.inOut" }, boost + .66);
+      tl.to("#t-volume-handle", { x: 342, duration: .48, ease: "power2.inOut" }, boost + .66);
+      tl.to("#t-boost-pointer", { x: volumeStart.x + 342, duration: .48, ease: "power2.inOut" }, boost + .66);
+      tl.set("#t-volume-before", { opacity: 0 }, boost + 1.14);
+      tl.set("#t-volume-after", { opacity: 1 }, boost + 1.14);
+
+      // The second media clip really plays at twice the rate, continuing at the same source frame.
+      const speed = slot * 3;
+      tl.set("#t-speed .player-ui", { opacity: 1 }, speed);
+      show("#t-speed-popup", speed + .03);
+      pointer("speed", "#t-speed-meter", speed + .38);
+      click("#t-speed-pointer", speed + .79);
+      tl.set(["#t-speed-before", "#t-normal-copy"], { opacity: 0 }, speed + .85);
+      tl.set(["#t-speed-after", "#t-fast-copy"], { opacity: 1 }, speed + .85);
+      tl.fromTo("#t-speed-fill", { scaleX: 0 }, { scaleX: 1, duration: .22, ease: "power2.out" }, speed + .85);
+      tl.fromTo("#t-speed-progress", { scaleX: 1 / 6 }, { scaleX: 1.85 / 6, duration: .85, ease: "none" }, speed);
+      tl.to("#t-speed-progress", { scaleX: 4.326 / 6, duration: 1.238, ease: "none" }, speed + .85);
+
+      // CinemaBackdrop's black page shade leaves the video itself untouched.
+      const dim = slot * 4;
+      pointer("dim", "#t-dim-tool", dim + .2);
+      click("#t-dim-pointer", dim + .59);
+      tl.to("#t-cinema-shade", { opacity: 1, duration: .24, ease: "power1.inOut" }, dim + .65);
+      tl.to("#t-b0", { color: "#fff", duration: .24, ease: "power1.inOut" }, dim + .65);
+      show("#t-dim-result", dim + .65);
+
+      // Cycle through the popup's five actual presets; each media slice keeps source time continuous.
+      const tint = slot * 5;
+      pointer("tint", "#t-tint-tool", tint + .08);
+      show("#t-filter-popup", tint + .3);
+      const presets = [
+        ["#t-vivid-option", .68],
+        ["#t-cinema-option", 1.53],
+        ["#t-soft-option", 2.38],
+        ["#t-mono-option", 3.23]
+      ];
+      let previous = "#t-original-option";
+      presets.forEach(([selector, at]) => {
+        const p = point(selector);
+        tl.to("#t-tint-pointer", { x: p.x, y: p.y, duration: .22, ease: "power2.inOut" }, tint + at - .28);
+        click("#t-tint-pointer", tint + at - .06);
+        tl.set(previous, { borderColor: "#777", backgroundColor: "transparent", textDecoration: "none" }, tint + at);
+        tl.set(selector, { borderColor: "#fff", backgroundColor: "#555", textDecoration: "underline" }, tint + at);
+        previous = selector;
+      });
+
+      // A camera click saves a still; the saved-frame image is a clean snapshot of the same car footage.
+      const snap = slot * 7;
+      pointer("snap", "#t-snap-tool", snap + .2);
+      click("#t-snap-pointer", snap + .59);
+      show("#t-snap-result", snap + .65);
+      tl.fromTo("#t-saved-frame", { opacity: 0, scale: .92 }, { opacity: 1, scale: 1, duration: .25, ease: "power2.out" }, snap + .65);
+
+      // The playing video becomes a floating window while the page can keep scrolling.
+      const floating = slot * 8;
+      pointer("float", "#t-float-tool", floating + .2);
+      click("#t-float-pointer", floating + .59);
+      tl.to("#t-float .player-ui", { opacity: 0, duration: .12, ease: "power2.in" }, floating + .65);
+      tl.to("#t-float-pointer", { opacity: 0, duration: .12 }, floating + .65);
+      tl.to("#t-floating-player", { x: 790, y: 405, scale: .4, transformOrigin: "0 0", borderRadius: 20, duration: .52, ease: "power3.inOut" }, floating + .65);
+      show(["#t-pip-title", "#t-pip-resize"], floating + .72);
+      tl.to("#t-work-lines", { y: -70, duration: .55, ease: "power2.inOut" }, floating + 1.23);
+      tl.to("#t-demo", { opacity: 0, duration: .16, ease: "power2.in" }, 18.632);
+      window.__timelines["tunnel"] = tl;
+    })();
+  </script>
+</template>

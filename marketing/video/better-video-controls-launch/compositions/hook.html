@@ -1,0 +1,224 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #16161d;
+    }
+    .hlw {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 112px;
+      text-align: center;
+      z-index: 5;
+    }
+    /* Write-on: a soft mask edge sweeps left to right (--p), the line sharpens from a blur */
+    .hl {
+      display: inline-block;
+      font-size: 104px;
+      font-weight: 560;
+      letter-spacing: -0.035em;
+      line-height: 1.14;
+      white-space: nowrap;
+      font-variation-settings: "opsz" 32;
+      --p: -18;
+      -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+      mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+    }
+    .g {
+      background: linear-gradient(90deg, #64a8fb, #3d75fe 50%, #7b34e9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      padding: 0 0.04em 0.08em 0;
+    }
+    #h-t2 { opacity: 0; }
+    #h-sites {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 246px;
+      display: flex;
+      justify-content: center;
+      gap: 42px;
+      font-size: 38px;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      font-variation-settings: "opsz" 20;
+      z-index: 5;
+    }
+    #h-sites span {
+      opacity: 0;
+    }
+    #h-stage {
+      position: absolute;
+      inset: 0;
+      perspective: 2200px;
+      perspective-origin: 50% 38%;
+    }
+    #h-card {
+      position: absolute;
+      left: 400px;
+      top: 330px;
+      width: 1120px;
+      height: 630px;
+      border-radius: 36px;
+      overflow: hidden;
+      background: #000;
+      box-shadow: 0 50px 110px rgba(40, 50, 120, 0.22), 0 10px 30px rgba(0, 0, 0, 0.1);
+      transform-origin: 50% 50%;
+      opacity: 0;
+    }
+    #h-card .scroll-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #h-film {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* The extension's seek bar (helpers/timeline-appearance.ts); progress in match-colour mode at 80% */
+    #h-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 14px;
+      background: rgb(255 255 255 / 0.22);
+      backdrop-filter: blur(8px) saturate(140%);
+      opacity: 0;
+    }
+    #h-prog {
+      position: absolute;
+      inset: 0;
+      background: rgb(234 118 0 / 0.8);
+      transform-origin: 0 50%;
+    }
+    #h-fingers {
+      position: absolute;
+      left: 610px;
+      top: 300px;
+      display: flex;
+      gap: 16px;
+      opacity: 0;
+    }
+    #h-fingers i {
+      display: block;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.95);
+    }
+  </style>
+  <div data-hf-id="hf-ktv8" id="root" data-composition-id="hook" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-bejd" id="h-stage" data-layout-allow-overflow>
+      <div data-hf-id="hf-hwci" id="h-card">
+        <video data-hf-id="hf-pznt" id="h-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="0" data-duration="4.177" data-playback-rate="0.7" data-track-index="0"></video>
+        <img data-hf-id="hf-jzdr" id="h-scrub-00" class="clip scroll-frame" src="assets/scroll-frames/car-018.jpg" alt="" data-start="1.0442" data-duration="0.033333" />
+        <img data-hf-id="hf-ea6d" id="h-scrub-01" class="clip scroll-frame" src="assets/scroll-frames/car-018.jpg" alt="" data-start="1.077533" data-duration="0.033333" />
+        <img data-hf-id="hf-wwex" id="h-scrub-02" class="clip scroll-frame" src="assets/scroll-frames/car-017.jpg" alt="" data-start="1.110867" data-duration="0.033333" />
+        <img data-hf-id="hf-qn20" id="h-scrub-03" class="clip scroll-frame" src="assets/scroll-frames/car-017.jpg" alt="" data-start="1.1442" data-duration="0.033333" />
+        <img data-hf-id="hf-qj1g" id="h-scrub-04" class="clip scroll-frame" src="assets/scroll-frames/car-017.jpg" alt="" data-start="1.177533" data-duration="0.033333" />
+        <img data-hf-id="hf-bq1y" id="h-scrub-05" class="clip scroll-frame" src="assets/scroll-frames/car-016.jpg" alt="" data-start="1.210867" data-duration="0.033333" />
+        <img data-hf-id="hf-8x5r" id="h-scrub-06" class="clip scroll-frame" src="assets/scroll-frames/car-014.jpg" alt="" data-start="1.2442" data-duration="0.033333" />
+        <img data-hf-id="hf-u81i" id="h-scrub-07" class="clip scroll-frame" src="assets/scroll-frames/car-013.jpg" alt="" data-start="1.277533" data-duration="0.033333" />
+        <img data-hf-id="hf-fxhq" id="h-scrub-08" class="clip scroll-frame" src="assets/scroll-frames/car-010.jpg" alt="" data-start="1.310867" data-duration="0.033333" />
+        <img data-hf-id="hf-i6eo" id="h-scrub-09" class="clip scroll-frame" src="assets/scroll-frames/car-008.jpg" alt="" data-start="1.3442" data-duration="0.033333" />
+        <img data-hf-id="hf-uqyd" id="h-scrub-10" class="clip scroll-frame" src="assets/scroll-frames/car-006.jpg" alt="" data-start="1.377533" data-duration="0.033333" />
+        <img data-hf-id="hf-pec5" id="h-scrub-11" class="clip scroll-frame" src="assets/scroll-frames/car-005.jpg" alt="" data-start="1.410867" data-duration="0.033333" />
+        <img data-hf-id="hf-i58v" id="h-scrub-12" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.4442" data-duration="0.033333" />
+        <img data-hf-id="hf-8t9h" id="h-scrub-13" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.477533" data-duration="0.033333" />
+        <img data-hf-id="hf-j9kq" id="h-scrub-14" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.510867" data-duration="0.033333" />
+        <img data-hf-id="hf-ds07" id="h-scrub-15" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.5442" data-duration="0.033333" />
+        <img data-hf-id="hf-dxhb" id="h-scrub-16" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.577533" data-duration="0.033333" />
+        <img data-hf-id="hf-uh7s" id="h-scrub-17" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.610867" data-duration="0.033333" />
+        <img data-hf-id="hf-q4sz" id="h-scrub-18" class="clip scroll-frame" src="assets/scroll-frames/car-004.jpg" alt="" data-start="1.6442" data-duration="0.033333" />
+        <img data-hf-id="hf-qpz8" id="h-scrub-19" class="clip scroll-frame" src="assets/scroll-frames/car-005.jpg" alt="" data-start="1.677533" data-duration="0.033333" />
+        <img data-hf-id="hf-ry1x" id="h-scrub-20" class="clip scroll-frame" src="assets/scroll-frames/car-006.jpg" alt="" data-start="1.710867" data-duration="0.033333" />
+        <img data-hf-id="hf-8rs7" id="h-scrub-21" class="clip scroll-frame" src="assets/scroll-frames/car-009.jpg" alt="" data-start="1.7442" data-duration="0.033333" />
+        <img data-hf-id="hf-jevj" id="h-scrub-22" class="clip scroll-frame" src="assets/scroll-frames/car-012.jpg" alt="" data-start="1.777533" data-duration="0.033333" />
+        <img data-hf-id="hf-styt" id="h-scrub-23" class="clip scroll-frame" src="assets/scroll-frames/car-017.jpg" alt="" data-start="1.810867" data-duration="0.033333" />
+        <img data-hf-id="hf-vtuu" id="h-scrub-24" class="clip scroll-frame" src="assets/scroll-frames/car-022.jpg" alt="" data-start="1.8442" data-duration="0.033333" />
+        <img data-hf-id="hf-83c5" id="h-scrub-25" class="clip scroll-frame" src="assets/scroll-frames/car-027.jpg" alt="" data-start="1.877533" data-duration="0.033333" />
+        <img data-hf-id="hf-636i" id="h-scrub-26" class="clip scroll-frame" src="assets/scroll-frames/car-030.jpg" alt="" data-start="1.910867" data-duration="0.033333" />
+        <img data-hf-id="hf-vdgx" id="h-scrub-27" class="clip scroll-frame" src="assets/scroll-frames/car-032.jpg" alt="" data-start="1.9442" data-duration="0.033333" />
+        <img data-hf-id="hf-x8j3" id="h-scrub-28" class="clip scroll-frame" src="assets/scroll-frames/car-034.jpg" alt="" data-start="1.977533" data-duration="0.033333" />
+        <img data-hf-id="hf-d3sc" id="h-scrub-29" class="clip scroll-frame" src="assets/scroll-frames/car-035.jpg" alt="" data-start="2.010867" data-duration="0.033333" />
+        <img data-hf-id="hf-rdbo" id="h-scrub-30" class="clip scroll-frame" src="assets/scroll-frames/car-035.jpg" alt="" data-start="2.0442" data-duration="0.033333" />
+        <img data-hf-id="hf-gz43" id="h-scrub-31" class="clip scroll-frame" src="assets/scroll-frames/car-035.jpg" alt="" data-start="2.077533" data-duration="0.010867" />
+        <div data-hf-id="hf-h9kn" id="h-bar"><div data-hf-id="hf-g07g" id="h-prog"></div></div>
+        <div data-hf-id="hf-1rwy" id="h-fingers"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i></div>
+      </div>
+    </div>
+    <div data-hf-id="hf-i8uj" class="hlw"><h1 data-hf-id="hf-cvj2" id="h-t1" class="hl">Scroll to <span data-hf-id="hf-oo3u" class="g">seek.</span></h1></div>
+    <div data-hf-id="hf-c3or" class="hlw"><h1 data-hf-id="hf-jbcm" id="h-t2" class="hl">On <span data-hf-id="hf-38s1" class="g">any video.</span></h1></div>
+    <div data-hf-id="hf-ekgo" id="h-sites">
+      <span data-hf-id="hf-sark" id="h-s1" style="color: #ff0000">YouTube</span>
+      <span data-hf-id="hf-jzfp" id="h-s2" style="color: #1ab7ea">Vimeo</span>
+      <span data-hf-id="hf-a4q2" id="h-s3" style="color: #9146ff">Twitch</span>
+      <span data-hf-id="hf-62ih" id="h-s4" style="color: #ff0050">TikTok</span>
+      <span data-hf-id="hf-g48f" id="h-s5" style="color: #6e6e73">and more</span>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const B = 0.5221;
+      const reveal = (sel, at, d = 0.5) =>
+        tl.fromTo(sel, { "--p": -18, opacity: 0, filter: "blur(10px)" }, { "--p": 100, opacity: 1, filter: "blur(0px)", duration: d, ease: "power2.out" }, at);
+      const leave = (sel, at) =>
+        tl.fromTo(sel, { opacity: 1, y: 0, filter: "blur(0px)" }, { opacity: 0, y: -18, filter: "blur(10px)", duration: 0.16, ease: "power2.in", immediateRender: false }, at);
+
+      // The card swings up out of its tilt, then the camera orbits it slowly.
+      tl.fromTo("#h-card", { opacity: 0, rotationX: 34, y: 240, scale: 0.84 }, { opacity: 1, rotationX: 12, y: 30, scale: 1, duration: 0.95, ease: "expo.out" }, 0);
+      tl.to("#h-card", { rotationX: 5, rotationY: -9, y: 20, duration: 2.8, ease: "power1.inOut" }, 0.95);
+      // Hand-off: lands on the centered browser's player (420, 410, 820 × 461.25).
+      tl.to("#h-card", { x: -130, y: -4.375, scale: 0.732142857, rotationX: 0, rotationY: 0, duration: 0.427, ease: "power3.inOut" }, 3.75);
+
+      reveal("#h-t1", 0.05);
+      leave("#h-t1", 1.96);
+      reveal("#h-t2", 2.09);
+      leave("#h-t2", 3.7);
+
+      // Two fingers scroll; the seek bar shows and the film rewinds (baked, capture/film-map.json "hook").
+      tl.fromTo("#h-fingers", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 0.92);
+      tl.fromTo("#h-fingers", { x: 0 }, { x: -100, duration: B, ease: "power2.inOut" }, B * 2);
+      tl.to("#h-fingers", { x: 0, duration: B, ease: "power2.inOut" }, B * 3);
+      tl.to("#h-fingers", { opacity: 0, duration: 0.15, ease: "power2.in" }, B * 4 + 0.02);
+      tl.fromTo("#h-bar", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power2.out" }, 0.9);
+      tl.to("#h-bar", { opacity: 0, duration: 0.12, ease: "power2.in" }, 3.7);
+      // The picture follows the horizontal swipe backward, then forward, on the same source-time map.
+      tl.fromTo("#h-prog", { scaleX: 0 }, { scaleX: .121823, duration: B * 2, ease: "none" }, 0);
+      tl.to("#h-prog", { scaleX: .025, duration: B, ease: "power2.inOut" }, B * 2);
+      tl.to("#h-prog", { scaleX: .243647, duration: B, ease: "power2.inOut" }, B * 3);
+      tl.to("#h-prog", { scaleX: .487317, duration: 4.177 - B * 4, ease: "none" }, B * 4);
+
+      // "On any video": each platform's own seek-bar colour (README, platform-specific colours), on the beat.
+      const sites = [
+        ["#h-s1", B * 4.5, "rgb(255 0 0 / 0.8)"],
+        ["#h-s2", B * 5, "rgb(26 183 234 / 0.8)"],
+        ["#h-s3", B * 6, "rgb(145 70 255 / 0.8)"],
+        ["#h-s4", B * 6.5, "rgb(255 0 80 / 0.8)"],
+        ["#h-s5", B * 7, null],
+      ];
+      sites.forEach(([sel, at, color]) => {
+        tl.fromTo(sel, { opacity: 0, y: 14, filter: "blur(6px)" }, { opacity: 1, y: 0, filter: "blur(0px)", duration: 0.22, ease: "expo.out" }, at);
+        if (color) tl.set("#h-prog", { backgroundColor: color }, at);
+      });
+      tl.to("#h-sites span", { opacity: 0, filter: "blur(8px)", duration: 0.16, stagger: 0.02, ease: "power2.in" }, 3.7);
+
+      window.__timelines["hook"] = tl;
+    })();
+  </script>
+</template>

@@ -1,0 +1,375 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #1d1d1f;
+    }
+    #d-wall {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(130% 95% at 16% 6%, #f7f5f1 0%, #e9e6e0 72%);
+    }
+    #d-cam {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 0;
+    }
+    .win {
+      position: absolute;
+      border-radius: 14px;
+      box-shadow: 0 30px 70px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+    .lights {
+      display: flex;
+      gap: 9px;
+    }
+    .lights i {
+      display: block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #d6d4d0;
+      box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
+    }
+    .focused .lights i:nth-child(1) { background: #ff5f57; }
+    .focused .lights i:nth-child(2) { background: #febc2e; }
+    .focused .lights i:nth-child(3) { background: #28c840; }
+
+    /* Browser: behind, not focused */
+    #d-browser {
+      left: 640px;
+      top: 236px;
+      width: 1120px;
+      height: 718px;
+      background: #efeeec;
+      overflow: hidden;
+      z-index: 1;
+    }
+    #d-browser .row1 {
+      height: 46px;
+      display: flex;
+      align-items: center;
+      padding-left: 18px;
+      gap: 26px;
+    }
+    #d-browser .tab {
+      height: 34px;
+      margin-top: 8px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      border-radius: 10px 10px 0 0;
+      background: #f8f7f6;
+      font-size: 16px;
+      font-weight: 500;
+      color: #6e6e73;
+      font-variation-settings: "opsz" 14;
+    }
+    #d-browser .row2 {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      gap: 16px;
+      background: #f8f7f6;
+      border-bottom: 1px solid #e3e1dd;
+    }
+    #d-browser .nav {
+      color: #b8b6b2;
+      font-size: 22px;
+      line-height: 1;
+      letter-spacing: 10px;
+    }
+    #d-browser .url {
+      height: 30px;
+      width: 620px;
+      border-radius: 9px;
+      background: #ebe9e6;
+      display: flex;
+      align-items: center;
+      padding-left: 14px;
+      font-size: 16px;
+      color: #636366;
+      font-variation-settings: "opsz" 14;
+    }
+    #d-fill {
+      position: absolute;
+      left: -4000px;
+      top: -4000px;
+      width: 10000px;
+      height: 10000px;
+      background: #f5f5f7;
+      opacity: 0;
+      z-index: 2;
+    }
+    #d-video {
+      position: absolute;
+      left: 640px;
+      top: 324px;
+      width: 1120px;
+      height: 630px;
+      overflow: hidden;
+      border-radius: 0 0 14px 14px;
+      background: #000;
+      z-index: 3;
+    }
+    #d-film {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* The extension's seek bar (helpers/timeline-appearance.ts), match-colour progress */
+    #d-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 10px;
+      background: rgb(255 255 255 / 0.2);
+      backdrop-filter: blur(8px) saturate(140%);
+      opacity: 0;
+    }
+    #d-prog {
+      position: absolute;
+      inset: 0;
+      background: rgb(234 118 0 / 0.8);
+      transform-origin: 0 50%;
+    }
+
+    /* Notes: in front, focused */
+    #d-notes {
+      left: 170px;
+      top: 330px;
+      width: 600px;
+      height: 520px;
+      background: #ffffff;
+      overflow: hidden;
+      z-index: 4;
+    }
+    #d-notes .titlebar {
+      height: 52px;
+      display: flex;
+      align-items: center;
+      padding-left: 18px;
+      background: #f6f5f3;
+      border-bottom: 1px solid #e8e6e2;
+      position: relative;
+    }
+    #d-notes .wtitle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 600;
+      color: #3a3a3c;
+      font-variation-settings: "opsz" 14;
+    }
+    #d-notes .body {
+      padding: 30px 38px;
+      font-variation-settings: "opsz" 14;
+    }
+    #d-notes h3 {
+      font-size: 34px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      font-variation-settings: "opsz" 32;
+    }
+    #d-notes p {
+      font-size: 26px;
+      line-height: 1.6;
+      color: #1d1d1f;
+    }
+    .caret {
+      display: inline-block;
+      width: 3px;
+      height: 30px;
+      margin-left: 2px;
+      vertical-align: -5px;
+      background: #614ff9;
+    }
+    #d-typed .ch,
+    #d-typed2 .ch,
+    #d-caret2 {
+      display: none;
+    }
+
+    #d-cursor {
+      position: absolute;
+      left: 1966px;
+      top: 1127px;
+      width: 43px;
+      height: 60px;
+      z-index: 5;
+      filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.3));
+    }
+    #d-fingers {
+      position: absolute;
+      left: 1206px;
+      top: 724px;
+      display: flex;
+      gap: 14px;
+      z-index: 6;
+      opacity: 0;
+    }
+    #d-fingers i {
+      display: block;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35), inset 0 0 0 1.5px rgba(255, 255, 255, 0.9);
+    }
+
+    .line {
+      position: absolute;
+      left: 170px;
+      top: 92px;
+      font-size: 84px;
+      font-weight: 640;
+      letter-spacing: -0.035em;
+      line-height: 1.12;
+      white-space: nowrap;
+      font-variation-settings: "opsz" 32;
+      z-index: 10;
+    }
+    .line .w {
+      display: inline-block;
+      opacity: 0;
+    }
+    .grad {
+      background: linear-gradient(90deg, #3d75fe, #7b34e9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      padding-right: 0.04em;
+    }
+  </style>
+  <div data-hf-id="hf-0ftx" id="root" data-composition-id="desktop" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-0fyo" id="d-wall"></div>
+    <div data-hf-id="hf-4w72" id="d-cam" data-layout-allow-overflow>
+      <div data-hf-id="hf-m68z" id="d-browser" class="win">
+        <div data-hf-id="hf-1v45" class="row1">
+          <span data-hf-id="hf-42yy" class="lights"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i><i data-hf-id="hf-y7e5"></i></span>
+          <span data-hf-id="hf-wwnr" class="tab">Spring — Blender Studio</span>
+        </div>
+        <div data-hf-id="hf-5t86" class="row2">
+          <span data-hf-id="hf-qp7d" class="nav">‹ ›</span>
+          <span data-hf-id="hf-z3r8" class="url">studio.blender.org/films/spring</span>
+        </div>
+      </div>
+      <div data-hf-id="hf-lubz" id="d-fill"></div>
+      <div data-hf-id="hf-vtrp" id="d-video">
+        <video data-hf-id="hf-2t0x" id="d-film" class="clip" src="assets/film-desktop.mp4" muted playsinline data-start="0" data-duration="5.5" data-track-index="0"></video>
+        <div data-hf-id="hf-wlbn" id="d-bar"><div data-hf-id="hf-vqwg" id="d-prog"></div></div>
+      </div>
+      <div data-hf-id="hf-m46d" id="d-notes" class="win focused">
+        <div data-hf-id="hf-t179" class="titlebar">
+          <span data-hf-id="hf-atou" class="lights"><i data-hf-id="hf-ylp6"></i><i data-hf-id="hf-0l8b"></i><i data-hf-id="hf-0zjc"></i></span>
+          <span data-hf-id="hf-myx7" class="wtitle">Scene notes</span>
+        </div>
+        <div data-hf-id="hf-2t3w" class="body">
+          <h3 data-hf-id="hf-k0w1">Spring</h3>
+          <p data-hf-id="hf-q9pq">– Opens on the high valley</p>
+          <p data-hf-id="hf-9dm0">– The girl and her dog on the rock</p>
+          <p data-hf-id="hf-q1an"><span data-hf-id="hf-n0xy" id="d-typed">– Rewatch the light on the ridge</span><i data-hf-id="hf-tv4r" id="d-caret" class="caret"></i></p>
+          <p data-hf-id="hf-wo4v"><span data-hf-id="hf-huq7" id="d-typed2">– Found it at 0:10</span><i data-hf-id="hf-luln" id="d-caret2" class="caret"></i></p>
+        </div>
+      </div>
+      <svg data-hf-id="hf-oc01" id="d-cursor" viewBox="0 0 20 28" aria-hidden="true">
+        <path data-hf-id="hf-mbzd" d="M2 1.5 L2 22.5 L7.2 17.6 L10.6 25.6 L14 24.2 L10.6 16.3 L17.6 16.3 Z" fill="#000" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" />
+      </svg>
+      <div data-hf-id="hf-7xu6" id="d-fingers"><i data-hf-id="hf-zsm9"></i><i data-hf-id="hf-06xa"></i></div>
+    </div>
+
+    <h1 data-hf-id="hf-po2y" id="d-l1" class="line"><span data-hf-id="hf-6qaz" class="w">Video</span> <span data-hf-id="hf-gpzr" class="w">in</span> <span data-hf-id="hf-9o0j" class="w">the</span> <span data-hf-id="hf-0nja" class="w">background.</span></h1>
+    <h1 data-hf-id="hf-jid5" id="d-l2" class="line"><span data-hf-id="hf-8tku" class="w">Just</span> <span data-hf-id="hf-bdo9" class="w">scroll</span> <span data-hf-id="hf-z575" class="w">to</span> <span data-hf-id="hf-vvrz" class="w grad">rewind.</span></h1>
+    <h1 data-hf-id="hf-iqpc" id="d-l3" class="line"><span data-hf-id="hf-aopu" class="w">Never</span> <span data-hf-id="hf-ukjb" class="w">leave</span> <span data-hf-id="hf-kxir" class="w">your</span> <span data-hf-id="hf-o3f5" class="w">work.</span></h1>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+
+      // Typing: split each typed note line into characters; each one appears in turn.
+      const typeLine = (id, at, step) => {
+        const el = document.getElementById(id);
+        const text = el.textContent;
+        el.textContent = "";
+        [...text].forEach((c, i) => {
+          const s = document.createElement("span");
+          s.className = "ch";
+          s.textContent = c;
+          el.appendChild(s);
+          tl.set(s, { display: "inline" }, at + i * step);
+        });
+        return at + text.length * step;
+      };
+      const blink = (sel, from, to) => {
+        for (let t = from; t + 0.5 < to; t += 1.0) {
+          tl.set(sel, { opacity: 0 }, t);
+          tl.set(sel, { opacity: 1 }, t + 0.5);
+        }
+      };
+      typeLine("d-typed", 0.3, 0.037);
+      blink("#d-caret", 1.9, 3.7);
+      // Right after the rewind the person keeps typing: Notes never lost focus.
+      tl.set("#d-caret", { display: "none" }, 3.7);
+      tl.set("#d-caret2", { display: "inline-block" }, 3.7);
+      const typedEnd = typeLine("d-typed2", 3.72, 0.045);
+      blink("#d-caret2", typedEnd + 0.3, 5.5);
+
+      // Titles: per-word blur in, blur out.
+      const wordsIn = (sel, at) =>
+        tl.fromTo(`${sel} .w`, { opacity: 0, filter: "blur(8px)" }, { opacity: 1, filter: "blur(0px)", duration: 0.16, stagger: 0.07, ease: "power2.out" }, at);
+      const wordsOut = (sel, at) =>
+        tl.fromTo(`${sel} .w`, { opacity: 1, filter: "blur(0px)" }, { opacity: 0, filter: "blur(8px)", duration: 0.15, stagger: 0.03, ease: "power2.in", immediateRender: false }, at);
+      wordsIn("#d-l1", 0.2);
+      wordsOut("#d-l1", 1.78);
+      wordsIn("#d-l2", 1.95);
+      wordsOut("#d-l2", 3.5);
+      wordsIn("#d-l3", 3.65);
+      wordsOut("#d-l3", 5.12);
+
+      // Cursor enters from off-screen and lands on the video. It never clicks.
+      tl.fromTo("#d-cursor", { x: 0, y: 0 }, { x: -786, y: -477, duration: 0.75, ease: "expo.out" }, 1.4);
+
+      // Two fingers scroll sideways; the extension's seek bar shows and the film rewinds.
+      tl.fromTo("#d-fingers", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 2.18);
+      tl.fromTo("#d-fingers", { x: 0 }, { x: -120, duration: 1.2, ease: "power2.inOut" }, 2.3);
+      tl.to("#d-fingers", { opacity: 0, duration: 0.2, ease: "power2.in" }, 3.5);
+      tl.fromTo("#d-bar", { opacity: 0 }, { opacity: 1, duration: 0.15, ease: "power2.out" }, 2.2);
+      // Progress = (source time - 380) / 24, the same segments as capture/film-map.json "desktop".
+      tl.fromTo("#d-prog", { scaleX: 0.7625 }, { scaleX: 0.4375, duration: 1.2, ease: "power2.inOut" }, 2.3);
+      tl.to("#d-prog", { scaleX: 0.4542, duration: 0.4, ease: "none" }, 3.5);
+      tl.to("#d-bar", { opacity: 0, duration: 0.2, ease: "power2.in" }, 3.75);
+
+      // Glide onto the film: everything else falls away and the film settles into the studio player.
+      tl.to("#d-cursor", { opacity: 0, duration: 0.15, ease: "power2.in" }, 4.68);
+      tl.to("#d-notes", { opacity: 0, filter: "blur(10px)", duration: 0.3, ease: "power2.in" }, 4.7);
+      // Lands the film exactly on the studio player rect: (288, 236), 1344 x 756.
+      tl.fromTo("#d-cam", { scale: 1, x: 0, y: 0 }, { scale: 1.2, x: -480, y: -152.8, duration: 0.7, ease: "power2.inOut" }, 4.7);
+      tl.fromTo("#d-fill", { opacity: 0 }, { opacity: 1, duration: 0.45, ease: "power2.inOut" }, 4.75);
+      tl.fromTo(
+        "#d-video",
+        { borderRadius: "0px 0px 14px 14px", boxShadow: "0 33px 75px rgba(0,0,0,0)" },
+        { borderRadius: "23.33px 23.33px 23.33px 23.33px", boxShadow: "0 33px 75px rgba(0,0,0,0.22)", duration: 0.7, ease: "power2.inOut" },
+        4.7,
+      );
+
+      window.__timelines["desktop"] = tl;
+    })();
+  </script>
+</template>

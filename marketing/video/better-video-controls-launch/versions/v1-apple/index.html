@@ -1,0 +1,139 @@
+<!doctype html>
+<html
+  lang="en"
+  data-resolution="landscape"
+  data-composition-variables='[
+    {"id":"color-ground","type":"color","label":"Stage","default":"#F5F5F7"},
+    {"id":"color-ink","type":"color","label":"Text","default":"#1D1D1F"},
+    {"id":"color-accent","type":"color","label":"Accent","default":"#614FF9"},
+    {"id":"font-display","type":"string","label":"Display font","default":"BVC Inter"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Better Video Controls — film</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "BVC Inter";
+        src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+      }
+      :root {
+        --color-ground: #f5f5f7;
+        --color-ink: #1d1d1f;
+        --color-accent: #614ff9;
+        --font-display: "BVC Inter";
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--color-ground);
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: var(--font-display), sans-serif;
+      }
+      #backdrop {
+        position: absolute;
+        inset: 0;
+        background: var(--color-ground);
+      }
+    </style>
+  </head>
+  <body>
+    <div data-hf-id="hf-mpj7"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="20"
+      data-width="1920"
+      data-height="1080"
+      data-motion-blur="on"
+    >
+      <div data-hf-id="hf-o4la" id="backdrop" data-layout-ignore></div>
+
+      <div data-hf-id="hf-dwwt"
+        id="desktop"
+        class="clip"
+        data-composition-id="desktop"
+        data-composition-src="compositions/desktop.html"
+        data-start="0"
+        data-duration="5.5"
+        data-track-index="1"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 2"
+      ></div>
+      <div data-hf-id="hf-4k1w"
+        id="studio"
+        class="clip"
+        data-composition-id="studio"
+        data-composition-src="compositions/studio.html"
+        data-start="5.5"
+        data-duration="10.5"
+        data-track-index="1"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 3"
+      ></div>
+      <div data-hf-id="hf-3q6n"
+        id="endcard"
+        class="clip"
+        data-composition-id="endcard"
+        data-composition-src="compositions/endcard.html"
+        data-start="16"
+        data-duration="4"
+        data-track-index="1"
+        data-track-kind="graphics"
+        data-width="1920"
+        data-height="1080"
+        style="z-index: 4"
+      ></div>
+
+      <!-- Music: original MusicGen bed (capture/musicgen.py, take "a"), 120 BPM; first downbeat at 0.365 s -->
+      <audio data-hf-id="hf-7glz"
+        id="music"
+        class="clip"
+        src="assets/music/bed.wav"
+        data-start="0"
+        data-duration="20"
+        data-media-start="0.365"
+        data-volume="0.95"
+        data-fade-in="0.4"
+        data-fade-out="1.6"
+        data-track-index="10"
+      ></audio>
+
+      <!-- Effects: each peaks one frame after its picture -->
+      <audio data-hf-id="hf-605w" id="sfx-typing" class="clip" src="assets/sfx/typing.mp3" data-start="0.2" data-duration="1.2" data-media-start="0.3" data-volume="0.45" data-track-index="11"></audio>
+      <audio data-hf-id="hf-9zn6" id="sfx-typing-2" class="clip" src="assets/sfx/typing.mp3" data-start="3.62" data-duration="0.85" data-media-start="0.3" data-volume="0.45" data-track-index="13"></audio>
+      <audio data-hf-id="hf-x4ej" id="sfx-dive" class="clip" src="assets/sfx/whoosh-cinematic.mp3" data-start="4.2" data-duration="2" data-media-start="1.65" data-volume="0.42" data-fade-out="0.5" data-track-index="12"></audio>
+      <audio data-hf-id="hf-ppea" id="sfx-key-option" class="clip" src="assets/sfx/key-press.mp3" data-start="5.91" data-duration="0.4" data-volume="1.8" data-track-index="13"></audio>
+      <audio data-hf-id="hf-xoqy" id="sfx-key-shift" class="clip" src="assets/sfx/key-press.mp3" data-start="7.31" data-duration="0.4" data-volume="1.8" data-track-index="14"></audio>
+      <audio data-hf-id="hf-0rt2" id="sfx-mark" class="clip" src="assets/sfx/pop.mp3" data-start="9.61" data-duration="0.6" data-volume="0.8" data-track-index="11"></audio>
+      <audio data-hf-id="hf-2pqt" id="sfx-snap" class="clip" src="assets/sfx/click-soft.mp3" data-start="14.21" data-duration="0.36" data-volume="1.4" data-track-index="13"></audio>
+      <audio data-hf-id="hf-06q3" id="sfx-flick" class="clip" src="assets/sfx/whoosh-short.mp3" data-start="14.94" data-duration="0.57" data-volume="0.6" data-track-index="14"></audio>
+      <audio data-hf-id="hf-wtp5" id="sfx-riser" class="clip" src="assets/sfx/riser.mp3" data-start="15.36" data-duration="2.2" data-media-start="1.8" data-volume="0.4" data-fade-out="0.35" data-track-index="12"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

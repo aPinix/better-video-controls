@@ -1,0 +1,468 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #16161d;
+    }
+    .hlw {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 112px;
+      text-align: center;
+      z-index: 10;
+    }
+    .hl {
+      display: inline-block;
+      font-size: 104px;
+      font-weight: 560;
+      letter-spacing: -0.035em;
+      line-height: 1.14;
+      white-space: nowrap;
+      font-variation-settings: "opsz" 32;
+      --p: -18;
+      -webkit-mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+      mask-image: linear-gradient(90deg, #000 calc(var(--p) * 1%), transparent calc(var(--p) * 1% + 18%));
+    }
+    .g {
+      background: linear-gradient(90deg, #64a8fb, #3d75fe 50%, #7b34e9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      padding: 0 0.04em 0.08em 0;
+    }
+    #f-t2 { opacity: 0; }
+    .win {
+      position: absolute;
+      border-radius: 16px;
+      box-shadow: 0 40px 90px rgba(40, 50, 120, 0.2), 0 4px 12px rgba(0, 0, 0, 0.08);
+      border: 1px solid #d3d3d8;
+    }
+    .lights {
+      display: flex;
+      gap: 9px;
+    }
+    .lights i {
+      display: block;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #d6d4d0;
+    }
+    .focused .lights i:nth-child(1) { background: #ff5f57; }
+    .focused .lights i:nth-child(2) { background: #febc2e; }
+    .focused .lights i:nth-child(3) { background: #28c840; }
+    /* Browser window: behind, not focused */
+    #f-chrome {
+      left: 400px;
+      top: 270px;
+      width: 1120px;
+      height: 700px;
+      background: #efeeec;
+      overflow: hidden;
+      opacity: 0;
+      z-index: 1;
+    }
+    #f-chrome .row1 {
+      height: 46px;
+      display: flex;
+      align-items: center;
+      gap: 26px;
+      padding-left: 18px;
+    }
+    #f-chrome .tab {
+      height: 34px;
+      margin-top: 8px;
+      padding: 0 18px;
+      display: flex;
+      align-items: center;
+      border-radius: 10px 10px 0 0;
+      background: #f8f7f6;
+      font-size: 16px;
+      font-weight: 500;
+      color: #6e6e73;
+      font-variation-settings: "opsz" 14;
+    }
+    #f-chrome .row2 {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      padding: 0 18px;
+      background: #f8f7f6;
+      border-bottom: 1px solid #e3e1dd;
+    }
+    #f-chrome .url {
+      height: 30px;
+      width: 940px;
+      border-radius: 9px;
+      background: #ebe9e6;
+      display: flex;
+      align-items: center;
+      padding-left: 14px;
+      font-size: 16px;
+      color: #636366;
+      font-variation-settings: "opsz" 14;
+    }
+    #f-video {
+      position: absolute;
+      left: 420px;
+      top: 410px;
+      width: 820px;
+      height: 461.25px;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+      z-index: 2;
+    }
+    #f-video .scroll-frame { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    #f-film {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    #f-bar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 12px;
+      background: rgb(255 255 255 / 0.22);
+      backdrop-filter: blur(8px) saturate(140%);
+      opacity: 0;
+      clip-path: inset(0 0 0 200px);
+    }
+    #f-prog {
+      position: absolute;
+      inset: 0;
+      background: rgb(255 0 51 / 0.8);
+      transform-origin: 0 50%;
+    }
+    /* Notes: in front, focused */
+    #f-notes {
+      left: 110px;
+      top: 730px;
+      width: 510px;
+      height: 285px;
+      background: #fff;
+      overflow: hidden;
+      opacity: 0;
+      z-index: 3;
+    }
+    .app-window .titlebar {
+      height: 50px;
+      display: flex;
+      align-items: center;
+      padding-left: 18px;
+      background: #f6f5f3;
+      border-bottom: 1px solid #e8e6e2;
+      position: relative;
+    }
+    .app-window .wtitle {
+      position: absolute;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 17px;
+      font-weight: 600;
+      color: #3a3a3c;
+      font-variation-settings: "opsz" 14;
+    }
+    #f-notes .body {
+      padding: 18px 28px;
+      font-variation-settings: "opsz" 14;
+    }
+    #f-notes h3 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 8px;
+    }
+    #f-notes p {
+      font-size: 23px;
+      line-height: 1.55;
+    }
+    .typed .ch {
+      display: none;
+    }
+    .caret {
+      display: inline-block;
+      width: 3px;
+      height: 30px;
+      margin-left: 2px;
+      vertical-align: -5px;
+      background: #3d75fe;
+    }
+    #f-caret2 {
+      display: none;
+    }
+    #f-cursor {
+      position: absolute;
+      left: 1986px;
+      top: 1137px;
+      width: 46px;
+      height: 64px;
+      z-index: 6;
+      filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.3));
+    }
+    #f-fingers {
+      position: absolute;
+      left: 1050px;
+      top: 675px;
+      display: flex;
+      gap: 14px;
+      opacity: 0;
+      z-index: 7;
+    }
+    #f-fingers i {
+      display: block;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35), inset 0 0 0 2px rgba(255, 255, 255, 0.95);
+    }
+    /* The seek bar that becomes the next scene's progress bar (360, 640, 1200 x 56) */
+    #f-fly {
+      position: absolute;
+      left: 360px;
+      top: 640px;
+      width: 1200px;
+      height: 56px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #e6e8f5;
+      transform-origin: 0 0;
+      opacity: 0;
+      z-index: 8;
+    }
+    #f-fly-fill,
+    #f-fly-orange {
+      position: absolute;
+      inset: 0;
+      transform-origin: 0 50%;
+      border-radius: 28px;
+    }
+    #f-fly-fill {
+      background: linear-gradient(90deg, #64a8fb, #3d75fe 50%, #7b34e9);
+    }
+    #f-fly-orange {
+      background: rgb(255 0 51);
+    }
+    .app-window { overflow: hidden; background: #fff; opacity: 0; z-index: 3; }
+    #f-finder { left: 110px; top: 278px; width: 450px; height: 280px; }
+    #f-mail { left: 1370px; top: 290px; width: 440px; height: 280px; }
+    #f-calendar { left: 1370px; top: 725px; width: 440px; height: 290px; }
+    .finder-body { display: flex; height: 230px; font-size: 17px; }
+    .finder-sidebar { width: 132px; flex-shrink: 0; padding: 17px 12px; background: #f0eff2; color: #4b4b52; line-height: 2.1; }
+    .finder-sidebar strong { display: block; font-size: 13px; color: #65656b; }
+    .finder-sidebar .selected { background: #dcdce2; border-radius: 6px; padding-left: 6px; }
+    .finder-files { flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 12px; padding: 22px 16px; text-align: center; font-size: 15px; }
+    .folder { width: 65px; height: 43px; background: linear-gradient(#79c9fc, #43a8ec); border-radius: 5px; margin: 7px auto 10px; position: relative; }
+    .folder:before { content: ''; position: absolute; top: -6px; left: 0; width: 27px; height: 9px; background: #79c9fc; border-radius: 4px 4px 0 0; }
+    .mail-body { display: flex; font-size: 16px; height: 230px; }
+    .mail-sidebar { width: 120px; flex-shrink: 0; padding: 16px 10px; background: #eef1f6; line-height: 2.2; color: #424a59; }
+    .mail-sidebar b { color: #125abb; background: #dae8fb; border-radius: 5px; display: block; padding-left: 6px; }
+    .mail-list { flex: 1; }
+    .mail-message { border-bottom: 1px solid #e6e6ec; padding: 14px 16px; }
+    .mail-message strong { display: block; margin-bottom: 5px; font-size: 17px; }
+    .mail-message small { color: #606067; display: block; margin-top: 5px; }
+    .calendar-body { padding: 12px 20px; }
+    .calendar-month { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; font-size: 22px; font-weight: 650; }
+    .calendar-month span { color: #b5282b; font-size: 15px; font-weight: 500; }
+    .calendar-week, .calendar-days { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+    .calendar-week { color: #626269; font-size: 13px; margin-bottom: 5px; }
+    .calendar-days { font-size: 16px; row-gap: 3px; }
+    .calendar-days span { height: 26px; line-height: 26px; }
+    .calendar-days .today { background: #c92b30; color: white; border-radius: 50%; width: 26px; justify-self: center; }
+    .yt-page { height: 612px; background: #0f0f0f; color: #f1f1f1; position: relative; }
+    .yt-header { height: 52px; display: flex; align-items: center; gap: 16px; padding: 0 20px 0 165px; }
+    .yt-menu { font-size: 23px; color: #e5e5e5; }
+    .yt-brand { display: flex; align-items: center; gap: 5px; font-size: 22px; font-weight: 760; letter-spacing: -1px; }
+    .yt-logo { width: 30px; height: 21px; border-radius: 6px; background: #ff0033; display: inline-flex; align-items: center; justify-content: center; }
+    .yt-logo:after { content: ''; border-left: 9px solid white; border-top: 5px solid transparent; border-bottom: 5px solid transparent; margin-left: 2px; }
+    .yt-search { border: 1px solid #484848; border-radius: 22px; height: 32px; width: 350px; margin-left: 30px; padding: 5px 16px; font-size: 15px; color: #b7b7b7; }
+    .yt-create { margin-left: auto; background: #303030; border-radius: 20px; padding: 7px 12px; font-size: 14px; }
+    .yt-account { border-radius: 50%; background: #6750b8; width: 27px; height: 27px; text-align: center; line-height: 27px; font-size: 14px; }
+    .yt-recommendations { position: absolute; left: 856px; top: 52px; width: 240px; height: 497px; overflow: hidden; border-radius: 8px; }
+    .yt-recommendations img { position: absolute; width: 900px; max-width: none; left: -646px; top: -26px; }
+    .yt-details { position: absolute; top: 525px; left: 240px; width: 600px; }
+    .yt-title { font-size: 21px; font-weight: 650; margin-bottom: 12px; }
+    .yt-channel-row { display: flex; align-items: center; gap: 10px; font-size: 15px; }
+    .yt-avatar { width: 30px; height: 30px; border-radius: 50%; background: #a63430; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; }
+    .yt-subscribe { color: #111; background: #f1f1f1; border-radius: 18px; padding: 8px 13px; margin-left: 10px; font-weight: 600; }
+    .yt-actions { margin-left: auto; background: #303030; padding: 8px 14px; border-radius: 18px; }
+    .yt-controls { position: absolute; bottom: 12px; left: 0; right: 0; height: 52px; background: linear-gradient(transparent, rgb(0 0 0 / .75)); display: flex; align-items: flex-end; padding: 0 18px 10px; color: white; gap: 18px; font-size: 17px; }
+    .yt-pause { display: flex; gap: 4px; height: 16px; }
+    .yt-pause i { height: 16px; width: 4px; background: white; }
+    .yt-time { font-size: 14px; }
+    .yt-player-actions { margin-left: auto; letter-spacing: 12px; font-size: 20px; }
+  </style>
+  <div data-hf-id="hf-osxh" id="root" data-composition-id="focus" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-eidd" id="f-chrome" class="win" data-layout-allow-overlap>
+      <div data-hf-id="hf-1v45" class="row1"><span data-hf-id="hf-42yy" class="lights"><i data-hf-id="hf-wt6k"></i><i data-hf-id="hf-zeb8"></i><i data-hf-id="hf-y7e5"></i></span><span data-hf-id="hf-wwnr" class="tab">Red car on the open road — YouTube</span></div>
+      <div data-hf-id="hf-5t86" class="row2"><span data-hf-id="hf-z3r8" class="url">youtube.com/watch?v=red-car-road</span></div>
+      <div data-hf-id="hf-z655" class="yt-page">
+        <div data-hf-id="hf-d4zr" class="yt-header"><span data-hf-id="hf-m1ru" class="yt-menu">☰</span><span data-hf-id="hf-eylj" class="yt-brand"><i data-hf-id="hf-vsip" class="yt-logo"></i>YouTube</span><span data-hf-id="hf-dcbf" class="yt-search">Search</span><span data-hf-id="hf-f72w" class="yt-create">＋ Create</span><span data-hf-id="hf-gkma" class="yt-account">R</span></div>
+        <div data-hf-id="hf-xqfc" class="yt-recommendations"><img data-hf-id="hf-h4n7" src="assets/CleanShot 2026-10-30 at 22.13.44.png" alt="YouTube recommended videos from the supplied reference" /></div>
+        <div data-hf-id="hf-y9be" class="yt-details"><div data-hf-id="hf-7xw9" class="yt-title">Red car on the open road</div><div data-hf-id="hf-j7oa" class="yt-channel-row"><span data-hf-id="hf-nj6a" class="yt-avatar">R</span><strong data-hf-id="hf-rs3y">Your channel</strong><span data-hf-id="hf-7irb" class="yt-subscribe">Subscribe</span><span data-hf-id="hf-cw07" class="yt-actions">♡ Like　　↗ Share　　···</span></div></div>
+      </div>
+    </div>
+    <div data-hf-id="hf-k41n" id="f-video" data-layout-allow-overlap>
+      <video data-hf-id="hf-rf8x" id="f-film" class="clip" src="assets/red-car-road.mp4" muted playsinline data-start="0" data-duration="4.177" data-media-start="2.9239" data-playback-rate="0.7" data-track-index="0"></video>
+        <img data-hf-id="hf-u8x9" id="f-scrub-00" class="clip scroll-frame" src="assets/scroll-frames/car-091.jpg" alt="" data-start="1.223" data-duration="0.033333" />
+        <img data-hf-id="hf-ed49" id="f-scrub-01" class="clip scroll-frame" src="assets/scroll-frames/car-091.jpg" alt="" data-start="1.256333" data-duration="0.033333" />
+        <img data-hf-id="hf-vma6" id="f-scrub-02" class="clip scroll-frame" src="assets/scroll-frames/car-091.jpg" alt="" data-start="1.289667" data-duration="0.033333" />
+        <img data-hf-id="hf-pi36" id="f-scrub-03" class="clip scroll-frame" src="assets/scroll-frames/car-090.jpg" alt="" data-start="1.323" data-duration="0.033333" />
+        <img data-hf-id="hf-0d24" id="f-scrub-04" class="clip scroll-frame" src="assets/scroll-frames/car-089.jpg" alt="" data-start="1.356333" data-duration="0.033333" />
+        <img data-hf-id="hf-wvls" id="f-scrub-05" class="clip scroll-frame" src="assets/scroll-frames/car-088.jpg" alt="" data-start="1.389667" data-duration="0.033333" />
+        <img data-hf-id="hf-4t09" id="f-scrub-06" class="clip scroll-frame" src="assets/scroll-frames/car-086.jpg" alt="" data-start="1.423" data-duration="0.033333" />
+        <img data-hf-id="hf-awkw" id="f-scrub-07" class="clip scroll-frame" src="assets/scroll-frames/car-083.jpg" alt="" data-start="1.456333" data-duration="0.033333" />
+        <img data-hf-id="hf-byos" id="f-scrub-08" class="clip scroll-frame" src="assets/scroll-frames/car-079.jpg" alt="" data-start="1.489667" data-duration="0.033333" />
+        <img data-hf-id="hf-aw10" id="f-scrub-09" class="clip scroll-frame" src="assets/scroll-frames/car-074.jpg" alt="" data-start="1.523" data-duration="0.033333" />
+        <img data-hf-id="hf-sqz1" id="f-scrub-10" class="clip scroll-frame" src="assets/scroll-frames/car-069.jpg" alt="" data-start="1.556333" data-duration="0.033333" />
+        <img data-hf-id="hf-v0zo" id="f-scrub-11" class="clip scroll-frame" src="assets/scroll-frames/car-065.jpg" alt="" data-start="1.589667" data-duration="0.033333" />
+        <img data-hf-id="hf-n8z5" id="f-scrub-12" class="clip scroll-frame" src="assets/scroll-frames/car-063.jpg" alt="" data-start="1.623" data-duration="0.033333" />
+        <img data-hf-id="hf-4odq" id="f-scrub-13" class="clip scroll-frame" src="assets/scroll-frames/car-060.jpg" alt="" data-start="1.656333" data-duration="0.033333" />
+        <img data-hf-id="hf-3dfd" id="f-scrub-14" class="clip scroll-frame" src="assets/scroll-frames/car-059.jpg" alt="" data-start="1.689667" data-duration="0.033333" />
+        <img data-hf-id="hf-38cd" id="f-scrub-15" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.723" data-duration="0.033333" />
+        <img data-hf-id="hf-wspd" id="f-scrub-16" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.756333" data-duration="0.033333" />
+        <img data-hf-id="hf-mpn0" id="f-scrub-17" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.789667" data-duration="0.033333" />
+        <img data-hf-id="hf-ylf7" id="f-scrub-18" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.823" data-duration="0.033333" />
+        <img data-hf-id="hf-ldbb" id="f-scrub-19" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.856333" data-duration="0.033333" />
+        <img data-hf-id="hf-8wb1" id="f-scrub-20" class="clip scroll-frame" src="assets/scroll-frames/car-058.jpg" alt="" data-start="1.889667" data-duration="0.033333" />
+        <img data-hf-id="hf-1wj5" id="f-scrub-21" class="clip scroll-frame" src="assets/scroll-frames/car-059.jpg" alt="" data-start="1.923" data-duration="0.033333" />
+        <img data-hf-id="hf-oz59" id="f-scrub-22" class="clip scroll-frame" src="assets/scroll-frames/car-060.jpg" alt="" data-start="1.956333" data-duration="0.033333" />
+        <img data-hf-id="hf-0qke" id="f-scrub-23" class="clip scroll-frame" src="assets/scroll-frames/car-062.jpg" alt="" data-start="1.989667" data-duration="0.033333" />
+        <img data-hf-id="hf-u3rl" id="f-scrub-24" class="clip scroll-frame" src="assets/scroll-frames/car-065.jpg" alt="" data-start="2.023" data-duration="0.033333" />
+        <img data-hf-id="hf-adp9" id="f-scrub-25" class="clip scroll-frame" src="assets/scroll-frames/car-070.jpg" alt="" data-start="2.056333" data-duration="0.033333" />
+        <img data-hf-id="hf-144c" id="f-scrub-26" class="clip scroll-frame" src="assets/scroll-frames/car-076.jpg" alt="" data-start="2.089667" data-duration="0.033333" />
+        <img data-hf-id="hf-3950" id="f-scrub-27" class="clip scroll-frame" src="assets/scroll-frames/car-084.jpg" alt="" data-start="2.123" data-duration="0.033333" />
+        <img data-hf-id="hf-rjkj" id="f-scrub-28" class="clip scroll-frame" src="assets/scroll-frames/car-092.jpg" alt="" data-start="2.156333" data-duration="0.033333" />
+        <img data-hf-id="hf-6ypo" id="f-scrub-29" class="clip scroll-frame" src="assets/scroll-frames/car-098.jpg" alt="" data-start="2.189667" data-duration="0.033333" />
+        <img data-hf-id="hf-qhor" id="f-scrub-30" class="clip scroll-frame" src="assets/scroll-frames/car-103.jpg" alt="" data-start="2.223" data-duration="0.033333" />
+        <img data-hf-id="hf-huww" id="f-scrub-31" class="clip scroll-frame" src="assets/scroll-frames/car-106.jpg" alt="" data-start="2.256333" data-duration="0.033333" />
+        <img data-hf-id="hf-1xuk" id="f-scrub-32" class="clip scroll-frame" src="assets/scroll-frames/car-109.jpg" alt="" data-start="2.289667" data-duration="0.033333" />
+        <img data-hf-id="hf-x0d5" id="f-scrub-33" class="clip scroll-frame" src="assets/scroll-frames/car-110.jpg" alt="" data-start="2.323" data-duration="0.033333" />
+        <img data-hf-id="hf-wur2" id="f-scrub-34" class="clip scroll-frame" src="assets/scroll-frames/car-111.jpg" alt="" data-start="2.356333" data-duration="0.033333" />
+        <img data-hf-id="hf-e6ar" id="f-scrub-35" class="clip scroll-frame" src="assets/scroll-frames/car-111.jpg" alt="" data-start="2.389667" data-duration="0.033333" />
+      <div data-hf-id="hf-05ie" class="yt-controls"><span data-hf-id="hf-xiiv" class="yt-pause"><i data-hf-id="hf-26gf"></i><i data-hf-id="hf-2krg"></i></span><span data-hf-id="hf-dmaq">▷</span><span data-hf-id="hf-8u9j">♬</span><span data-hf-id="hf-etau" class="yt-time" id="f-time">0:02 / 0:06</span><span data-hf-id="hf-w5xq" class="yt-player-actions">⚙ ▣ ⛶</span></div>
+      <div data-hf-id="hf-jtd5" id="f-bar"><div data-hf-id="hf-byd2" id="f-prog"></div></div>
+    </div>
+    <div data-hf-id="hf-zkov" id="f-finder" class="win app-window" data-layout-allow-overlap data-layout-allow-occlusion>
+      <div data-hf-id="hf-hdop" class="titlebar"><span data-hf-id="hf-b7zv" class="lights"><i data-hf-id="hf-oz7w"></i><i data-hf-id="hf-okwv"></i><i data-hf-id="hf-o6lu"></i></span><span data-hf-id="hf-jaj8" class="wtitle">Finder — Projects</span></div>
+      <div data-hf-id="hf-4qrx" class="finder-body"><div data-hf-id="hf-rx2j" class="finder-sidebar"><strong data-hf-id="hf-ww32">Favourites</strong><div data-hf-id="hf-8154">Recents</div><div data-hf-id="hf-cph3" class="selected">Documents</div><div data-hf-id="hf-e3ix">Downloads</div><div data-hf-id="hf-9b60">Desktop</div></div><div data-hf-id="hf-c6oa" class="finder-files"><div data-hf-id="hf-jupl"><i data-hf-id="hf-r8kr" class="folder" style="display:block"></i>Road trip</div><div data-hf-id="hf-nwjb"><i data-hf-id="hf-9jij" class="folder" style="display:block"></i>Footage</div><div data-hf-id="hf-qztu"><i data-hf-id="hf-957i" class="folder" style="display:block"></i>Projects</div><div data-hf-id="hf-k15b"><i data-hf-id="hf-8qwh" class="folder" style="display:block"></i>Exports</div></div></div>
+    </div>
+    <div data-hf-id="hf-dj42" id="f-mail" class="win app-window" data-layout-allow-overlap data-layout-allow-occlusion>
+      <div data-hf-id="hf-ikls" class="titlebar"><span data-hf-id="hf-bmaw" class="lights"><i data-hf-id="hf-jqbp"></i><i data-hf-id="hf-qkg0"></i><i data-hf-id="hf-q64z"></i></span><span data-hf-id="hf-vn0l" class="wtitle">Mail — Inbox</span></div>
+      <div data-hf-id="hf-x0fa" class="mail-body"><div data-hf-id="hf-9cce" class="mail-sidebar"><b data-hf-id="hf-oaza">Inbox　3</b><div data-hf-id="hf-8n2o">Drafts</div><div data-hf-id="hf-ikpq">Sent</div><div data-hf-id="hf-xw9a">Flagged</div></div><div data-hf-id="hf-dmfy" class="mail-list"><div data-hf-id="hf-akwq" class="mail-message"><strong data-hf-id="hf-vdjk">Creative team</strong>The next road trip<small data-hf-id="hf-9qhh">Let's review the footage.</small></div><div data-hf-id="hf-rq50" class="mail-message"><strong data-hf-id="hf-tzkw">Project update</strong>Ready for your review<small data-hf-id="hf-n1gt">The latest cut is in.</small></div></div></div>
+    </div>
+    <div data-hf-id="hf-mzsl" id="f-calendar" class="win app-window" data-layout-allow-overlap data-layout-allow-occlusion>
+      <div data-hf-id="hf-i6ar" class="titlebar"><span data-hf-id="hf-8u5p" class="lights"><i data-hf-id="hf-prty"></i><i data-hf-id="hf-pdix"></i><i data-hf-id="hf-hqsk"></i></span><span data-hf-id="hf-qcgs" class="wtitle">Calendar</span></div>
+      <div data-hf-id="hf-j74z" class="calendar-body"><div data-hf-id="hf-arjt" class="calendar-month">October 2026<span data-hf-id="hf-sgqn">Today　‹　›</span></div><div data-hf-id="hf-cqsb" class="calendar-week"><span data-hf-id="hf-i0hw">M</span><span data-hf-id="hf-efqn">T</span><span data-hf-id="hf-e1fm">W</span><span data-hf-id="hf-5mxb">T</span><span data-hf-id="hf-k011">F</span><span data-hf-id="hf-fmnq">S</span><span data-hf-id="hf-wgd6">S</span></div><div data-hf-id="hf-t8ju" class="calendar-days"><span data-hf-id="hf-uckh"></span><span data-hf-id="hf-l73p"></span><span data-hf-id="hf-me0s"></span><span data-hf-id="hf-ikog">1</span><span data-hf-id="hf-hdrd">2</span><span data-hf-id="hf-hs2e">3</span><span data-hf-id="hf-gl5b">4</span><span data-hf-id="hf-gzgc">5</span><span data-hf-id="hf-fsj9">6</span><span data-hf-id="hf-g6ua">7</span><span data-hf-id="hf-ezx7">8</span><span data-hf-id="hf-fe88">9</span><span data-hf-id="hf-2xa8">10</span><span data-hf-id="hf-2iz7">11</span><span data-hf-id="hf-24o6">12</span><span data-hf-id="hf-1qd5">13</span><span data-hf-id="hf-1c24">14</span><span data-hf-id="hf-0xr3">15</span><span data-hf-id="hf-0jg2">16</span><span data-hf-id="hf-0551">17</span><span data-hf-id="hf-zqu0">18</span><span data-hf-id="hf-zciz">19</span><span data-hf-id="hf-qd23">20</span><span data-hf-id="hf-qrd4">21</span><span data-hf-id="hf-pkg1">22</span><span data-hf-id="hf-pyr2">23</span><span data-hf-id="hf-kpuv">24</span><span data-hf-id="hf-l45w">25</span><span data-hf-id="hf-jx8t">26</span><span data-hf-id="hf-kbju">27</span><span data-hf-id="hf-tjib">28</span><span data-hf-id="hf-txtc">29</span><span data-hf-id="hf-6fqr" class="today">30</span><span data-hf-id="hf-p739">31</span></div></div>
+    </div>
+    <div data-hf-id="hf-bk77" id="f-notes" class="win focused app-window" data-layout-allow-overlap data-layout-allow-occlusion>
+      <div data-hf-id="hf-t179" class="titlebar"><span data-hf-id="hf-atou" class="lights"><i data-hf-id="hf-ylp6"></i><i data-hf-id="hf-0l8b"></i><i data-hf-id="hf-0zjc"></i></span><span data-hf-id="hf-myx7" class="wtitle">Scene notes</span></div>
+      <div data-hf-id="hf-2t3w" class="body">
+        <h3 data-hf-id="hf-k0w1">Road trip</h3>
+        <p data-hf-id="hf-q9pq">– Check the winding road</p>
+        <p data-hf-id="hf-q1an"><span data-hf-id="hf-37ov" id="f-typed1" class="typed">– Rewatch the turn</span><i data-hf-id="hf-wkdq" id="f-caret1" class="caret"></i></p>
+        <p data-hf-id="hf-wo4v"><span data-hf-id="hf-7w5y" id="f-typed2" class="typed">– Found it at 0:03</span><i data-hf-id="hf-sm9p" id="f-caret2" class="caret"></i></p>
+      </div>
+    </div>
+    <svg data-hf-id="hf-8zej" id="f-cursor" viewBox="0 0 20 28" aria-hidden="true">
+      <path data-hf-id="hf-mbzd" d="M2 1.5 L2 22.5 L7.2 17.6 L10.6 25.6 L14 24.2 L10.6 16.3 L17.6 16.3 Z" fill="#000" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" />
+    </svg>
+    <div data-hf-id="hf-0src" id="f-fingers"><i data-hf-id="hf-zsm9"></i><i data-hf-id="hf-06xa"></i></div>
+    <div data-hf-id="hf-48up" id="f-fly"><div data-hf-id="hf-sgi5" id="f-fly-fill"></div><div data-hf-id="hf-n4qk" id="f-fly-orange"></div></div>
+    <div data-hf-id="hf-i8uj" class="hlw"><h1 data-hf-id="hf-gt1u" id="f-t1" class="hl">Even in the <span data-hf-id="hf-793q" class="g">background.</span></h1></div>
+    <div data-hf-id="hf-c3or" class="hlw"><h1 data-hf-id="hf-shca" id="f-t2" class="hl">Never leave <span data-hf-id="hf-2hce" class="g">your work.</span></h1></div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const reveal = (sel, at, d = 0.5) =>
+        tl.fromTo(sel, { "--p": -18, opacity: 0, filter: "blur(10px)" }, { "--p": 100, opacity: 1, filter: "blur(0px)", duration: d, ease: "power2.out" }, at);
+      const leave = (sel, at) =>
+        tl.fromTo(sel, { opacity: 1, y: 0, filter: "blur(0px)" }, { opacity: 0, y: -18, filter: "blur(10px)", duration: 0.16, ease: "power2.in", immediateRender: false }, at);
+      const typeLine = (id, at, step) => {
+        const el = document.getElementById(id);
+        const text = el.textContent;
+        el.textContent = "";
+        [...text].forEach((c, i) => {
+          const s = document.createElement("span");
+          s.className = "ch";
+          s.textContent = c;
+          el.appendChild(s);
+          tl.set(s, { display: "inline" }, at + i * step);
+        });
+        return at + text.length * step;
+      };
+      const blink = (sel, from, to) => {
+        for (let t = from; t + 0.5 < to; t += 1.0) {
+          tl.set(sel, { opacity: 0 }, t);
+          tl.set(sel, { opacity: 1 }, t + 0.5);
+        }
+      };
+
+      // The film lands in the YouTube player; four work windows overlap its corners.
+      tl.fromTo("#f-video", { borderRadius: "24px" }, { borderRadius: "12px", duration: 0.3, ease: "power2.out" }, 0.02);
+      tl.fromTo("#f-chrome", { opacity: 0, scale: 0.97 }, { opacity: 1, scale: 1, duration: 0.35, ease: "expo.out" }, 0.02);
+      tl.fromTo("#f-finder", { opacity: 0, x: -100, y: -35 }, { opacity: 1, x: 0, y: 0, duration: 0.55, ease: "expo.out" }, 0.12);
+      tl.fromTo("#f-mail", { opacity: 0, x: 100, y: -35 }, { opacity: 1, x: 0, y: 0, duration: 0.55, ease: "expo.out" }, 0.17);
+      tl.fromTo("#f-notes", { opacity: 0, x: -110, y: 35 }, { opacity: 1, x: 0, y: 0, duration: 0.55, ease: "expo.out" }, 0.2);
+      tl.fromTo("#f-calendar", { opacity: 0, x: 100, y: 35 }, { opacity: 1, x: 0, y: 0, duration: 0.55, ease: "expo.out" }, 0.24);
+      reveal("#f-t1", 0.1);
+      leave("#f-t1", 2.2);
+      reveal("#f-t2", 2.33);
+      leave("#f-t2", 3.66);
+
+      // Notes is focused and typing; the cursor never clicks the browser.
+      const end1 = typeLine("f-typed1", 0.5, 0.032);
+      blink("#f-caret1", end1 + 0.25, 2.45);
+      tl.set("#f-caret1", { display: "none" }, 2.45);
+      tl.set("#f-caret2", { display: "inline-block" }, 2.45);
+      const end2 = typeLine("f-typed2", 2.48, 0.038);
+      blink("#f-caret2", end2 + 0.2, 4.2);
+      tl.fromTo("#f-cursor", { x: 0, y: 0 }, { x: -976, y: -527, duration: 0.42, ease: "expo.out" }, 0.62);
+
+      // Scroll over the exposed video while Notes stays focused.
+      tl.fromTo("#f-fingers", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.18, ease: "power2.out" }, 1.1);
+      tl.fromTo("#f-fingers", { x: 0 }, { x: -130, duration: .6, ease: "power2.inOut" }, 1.223);
+      tl.to("#f-fingers", { x: 0, duration: .6, ease: "power2.inOut" }, 1.823);
+      tl.to("#f-fingers", { opacity: 0, duration: 0.15, ease: "power2.in" }, 2.45);
+      tl.fromTo("#f-bar", { opacity: 0 }, { opacity: 1, duration: 0.14, ease: "power2.out" }, 1.05);
+      tl.to("#f-bar", { opacity: 0, duration: 0.16, ease: "power2.in" }, 3.0);
+      // The progress and the extracted video frames share exactly the same source-time map.
+      tl.fromTo("#f-prog", { scaleX: .487317 }, { scaleX: .63, duration: 1.223, ease: "none" }, 0);
+      tl.to("#f-prog", { scaleX: .4, duration: .6, ease: "power2.inOut" }, 1.223);
+      tl.to("#f-prog", { scaleX: .77, duration: .6, ease: "power2.inOut" }, 1.823);
+      tl.to("#f-prog", { scaleX: .974633, duration: 1.754, ease: "none" }, 2.423);
+
+      // The native player counter follows the same source time as the picture and seek bar.
+      [[0,"0:02 / 0:06"],[.108715,"0:03 / 0:06"],[1.5366,"0:02 / 0:06"],
+       [2.0674,"0:03 / 0:06"],[2.1759,"0:04 / 0:06"],[2.96586,"0:05 / 0:06"]]
+        .forEach(([at, textContent]) => tl.set("#f-time", { textContent }, at));
+
+      // Out: the windows fall away and the seek bar flies up to become the speed scene's bar.
+      tl.to(["#f-chrome", ".app-window", "#f-video", "#f-cursor"], { opacity: 0, duration: 0.28, ease: "power2.in" }, 3.74);
+      tl.fromTo("#f-fly", { opacity: 0, x: 60, y: 219.25, scaleX: 0.683333, scaleY: 0.2143 }, { opacity: 1, duration: 0.06, ease: "none" }, 3.7);
+      tl.to("#f-fly", { x: 0, y: 0, scaleX: 1, scaleY: 1, duration: 0.44, ease: "power3.inOut" }, 3.737);
+      tl.fromTo(["#f-fly-fill", "#f-fly-orange"], { scaleX: 0.2188 }, { scaleX: 0.2188, duration: 0.01 }, 3.7);
+      tl.fromTo("#f-fly-orange", { opacity: 1 }, { opacity: 0, duration: 0.36, ease: "power2.inOut" }, 3.76);
+
+      window.__timelines["focus"] = tl;
+    })();
+  </script>
+</template>

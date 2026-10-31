@@ -1,0 +1,158 @@
+<template>
+  <style>
+    @font-face {
+      font-family: "BVC Inter";
+      src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+      font-weight: 100 900;
+      font-style: normal;
+    }
+    #root {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      font-family: "BVC Inter", sans-serif;
+      color: #16161d;
+    }
+    #sp-wrap {
+      position: absolute;
+      inset: 0;
+      transform-origin: 50% 56%;
+    }
+    .roll {
+      position: absolute;
+      overflow: hidden;
+    }
+    .roll span {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      white-space: nowrap;
+      opacity: 0;
+    }
+    #sp-num {
+      left: 352px;
+      top: 300px;
+      width: 360px;
+      height: 300px;
+      font-size: 260px;
+      font-weight: 640;
+      letter-spacing: -0.05em;
+      line-height: 1.1;
+      font-variation-settings: "opsz" 32;
+    }
+    #sp-num span {
+      background: linear-gradient(90deg, #64a8fb, #3d75fe 50%, #7b34e9);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      padding-right: 0.06em;
+    }
+    #sp-word {
+      left: 720px;
+      top: 440px;
+      width: 520px;
+      height: 140px;
+      font-size: 104px;
+      font-weight: 560;
+      letter-spacing: -0.035em;
+      line-height: 1.2;
+      font-variation-settings: "opsz" 32;
+    }
+    #sp-keys {
+      position: absolute;
+      right: 360px;
+      top: 478px;
+      display: flex;
+      gap: 16px;
+    }
+    .key {
+      width: 96px;
+      height: 96px;
+      border-radius: 22px;
+      background: #fff;
+      border: 1px solid #dcdce6;
+      box-shadow: 0 4px 0 #c9cada, 0 14px 30px rgba(40, 50, 120, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 46px;
+      font-weight: 500;
+      opacity: 0;
+    }
+    #sp-track {
+      position: absolute;
+      left: 360px;
+      top: 640px;
+      width: 1200px;
+      height: 56px;
+      border-radius: 28px;
+      overflow: hidden;
+      background: #e6e8f5;
+    }
+    #sp-fill {
+      position: absolute;
+      inset: 0;
+      border-radius: 28px;
+      background: linear-gradient(90deg, #64a8fb, #3d75fe 50%, #7b34e9);
+      transform-origin: 0 50%;
+    }
+    .label {
+      position: absolute;
+      left: 360px;
+      top: 728px;
+      font-size: 34px;
+      font-weight: 600;
+      color: #6e6e73;
+      font-variation-settings: "opsz" 20;
+      opacity: 0;
+    }
+  </style>
+  <div data-hf-id="hf-ch7u" id="root" data-composition-id="speed" data-width="1920" data-height="1080">
+    <div data-hf-id="hf-my2a" id="sp-wrap" data-layout-allow-overflow>
+      <div data-hf-id="hf-bfqh" id="sp-num" class="roll"><span data-hf-id="hf-r2d3" id="sp-n1">1×</span><span data-hf-id="hf-00q7" id="sp-n2">2×</span><span data-hf-id="hf-ock7" id="sp-n3">3×</span><span data-hf-id="hf-g5j3" id="sp-n4">¼×</span></div>
+      <div data-hf-id="hf-f37r" id="sp-word" class="roll"><span data-hf-id="hf-b6g1" id="sp-w1">faster</span><span data-hf-id="hf-tedf" id="sp-w2">finer</span></div>
+      <div data-hf-id="hf-6hkx" id="sp-keys"><div data-hf-id="hf-bl9y" id="sp-k1" class="key">⌥</div><div data-hf-id="hf-5exd" id="sp-k2" class="key">⇧</div></div>
+      <div data-hf-id="hf-1k9a" id="sp-track"><div data-hf-id="hf-lfkm" id="sp-fill"></div></div>
+      <div data-hf-id="hf-n946" id="sp-fast" class="label">Fast seeking</div>
+      <div data-hf-id="hf-9e64" id="sp-slow" class="label">Slow seeking</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const tl = gsap.timeline({ paused: true });
+      const B = 0.5221;
+      const rollIn = (sel, at, d = 0.16) =>
+        tl.fromTo(sel, { opacity: 0, yPercent: 70, filter: "blur(8px)" }, { opacity: 1, yPercent: 0, filter: "blur(0px)", duration: d, ease: "expo.out" }, at);
+      const rollOut = (sel, at, d = 0.08) =>
+        tl.fromTo(sel, { opacity: 1, yPercent: 0, filter: "blur(0px)" }, { opacity: 0, yPercent: -70, filter: "blur(8px)", duration: d, ease: "power2.in", immediateRender: false }, at);
+
+      // 3× — the default fast-seek modifier (Alt / Option) — races the bar full.
+      rollIn("#sp-n1", 0.02, 0.1);
+      rollOut("#sp-n1", 0.12);
+      rollIn("#sp-n2", 0.14, 0.1);
+      rollOut("#sp-n2", 0.24);
+      rollIn("#sp-n3", 0.26, 0.2);
+      rollIn("#sp-w1", 0.1, 0.24);
+      tl.fromTo("#sp-k1", { opacity: 0, y: -14 }, { opacity: 1, y: 0, duration: 0.08, ease: "power2.out" }, 0.02);
+      tl.to("#sp-k1", { y: 4, boxShadow: "0 0px 0 #c9cada, 0 6px 14px rgba(40,50,120,0.12)", duration: 0.06, ease: "power2.out" }, 0.1);
+      tl.fromTo("#sp-fill", { scaleX: 0.2188 }, { scaleX: 1, duration: 0.55, ease: "expo.out" }, 0.12);
+      tl.fromTo("#sp-fast", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, 0.16);
+
+      // ¼× — Alt + Shift — creeps.
+      rollOut("#sp-n3", B * 2 - 0.04);
+      rollIn("#sp-n4", B * 2, 0.22);
+      rollOut("#sp-w1", B * 2 - 0.04);
+      rollIn("#sp-w2", B * 2, 0.22);
+      tl.fromTo("#sp-k2", { opacity: 0, y: -14 }, { opacity: 1, y: 4, duration: 0.1, ease: "power2.out" }, B * 2 - 0.06);
+      tl.to("#sp-fast", { opacity: 0, duration: 0.08, ease: "power2.in" }, B * 2 - 0.04);
+      tl.fromTo("#sp-slow", { opacity: 0 }, { opacity: 1, duration: 0.12, ease: "power2.out" }, B * 2 + 0.02);
+      tl.to("#sp-fill", { scaleX: 0.06, duration: 0.16, ease: "power2.inOut" }, B * 2);
+      tl.to("#sp-fill", { scaleX: 0.3, duration: 0.6, ease: "none" }, B * 2 + 0.18);
+
+      // Out: zoom through into the tunnel.
+      tl.to("#sp-wrap", { scale: 2.4, opacity: 0, filter: "blur(16px)", duration: 0.32, ease: "power3.in" }, 2.088 - 0.33);
+
+      window.__timelines["speed"] = tl;
+    })();
+  </script>
+</template>

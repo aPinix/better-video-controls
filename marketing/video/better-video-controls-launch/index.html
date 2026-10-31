@@ -1,0 +1,107 @@
+<!doctype html>
+<html
+  lang="en"
+  data-resolution="landscape"
+  data-composition-variables='[
+    {"id":"color-ground","type":"color","label":"Stage","default":"#F4F4FB"},
+    {"id":"color-ink","type":"color","label":"Text","default":"#16161D"},
+    {"id":"color-accent","type":"color","label":"Accent","default":"#3D75FE"},
+    {"id":"font-display","type":"string","label":"Display font","default":"BVC Inter"}
+  ]'
+>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <title>Better Video Controls — launch film</title>
+    <script src="assets/gsap.min.js"></script>
+    <style>
+      @font-face {
+        font-family: "BVC Inter";
+        src: url("assets/fonts/inter-opsz.woff2") format("woff2");
+        font-weight: 100 900;
+        font-style: normal;
+      }
+      :root {
+        --color-ground: #f4f4fb;
+        --color-ink: #16161d;
+        --color-accent: #3d75fe;
+        --font-display: "BVC Inter";
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: var(--color-ground);
+      }
+      #root {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        font-family: var(--font-display), sans-serif;
+      }
+      #backdrop {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(110% 85% at 50% 42%, #ffffff 0%, #f4f4fb 62%, #ececf7 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Music at 115 BPM. The feature demonstration gives each action four beats. -->
+    <div data-hf-id="hf-mpj7"
+      id="root"
+      data-composition-id="main"
+      data-start="0"
+      data-duration="40.879"
+      data-width="1920"
+      data-height="1080"
+      data-motion-blur="on"
+    >
+      <div data-hf-id="hf-o4la" id="backdrop" data-layout-ignore></div>
+
+      <div data-hf-id="hf-5x3n" id="hook" class="clip" data-composition-id="hook" data-composition-src="compositions/hook.html" data-start="0" data-duration="4.177" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 2"></div>
+      <div data-hf-id="hf-mnmq" id="focus" class="clip" data-composition-id="focus" data-composition-src="compositions/focus.html" data-start="4.177" data-duration="4.177" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 3"></div>
+      <div data-hf-id="hf-iqq4" id="speed" class="clip" data-composition-id="speed" data-composition-src="compositions/speed.html" data-start="8.354" data-duration="2.088" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 4"></div>
+      <div data-hf-id="hf-awwg" id="tunnel" class="clip" data-composition-id="tunnel" data-composition-src="compositions/tunnel.html" data-start="10.442" data-duration="18.792" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 5"></div>
+      <div data-hf-id="hf-n6td" id="settings" class="clip" data-composition-id="settings" data-composition-src="compositions/settings.html" data-start="29.234" data-duration="8.352" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 6"></div>
+      <div data-hf-id="hf-uqk3" id="endcard" class="clip" data-composition-id="endcard" data-composition-src="compositions/endcard.html" data-start="37.586" data-duration="3.293" data-track-index="1" data-track-kind="graphics" data-width="1920" data-height="1080" style="z-index: 7"></div>
+
+      <!-- Music: "Stylish Funk Smooth Party" by MiroMaxMusic, Pixabay Content License. Mastered hot, so it sits at -8 dB. -->
+      <audio data-hf-id="hf-k10c" id="music" class="clip" src="assets/music/funk-party.mp3" data-start="0" data-duration="40.879" data-media-start="0.165" data-volume="0.4" data-fade-out="1.2" data-track-index="10" data-timeline-role="music"></audio>
+
+      <!-- Effects: each peaks one frame after its picture -->
+      <audio data-hf-id="hf-voac" id="sfx-card" class="clip" src="assets/sfx/whoosh-short.mp3" data-start="0" data-duration="0.57" data-volume="0.45" data-track-index="11"></audio>
+      <audio data-hf-id="hf-7sfb" id="sfx-typing" class="clip" src="assets/sfx/typing.mp3" data-start="4.58" data-duration="0.75" data-media-start="0.35" data-volume="0.35" data-track-index="12"></audio>
+      <audio data-hf-id="hf-0p14" id="sfx-typing-2" class="clip" src="assets/sfx/typing.mp3" data-start="6.56" data-duration="0.7" data-media-start="0.35" data-volume="0.35" data-track-index="11"></audio>
+      <audio data-hf-id="hf-az3y" id="sfx-fly" class="clip" src="assets/sfx/whoosh-short.mp3" data-start="7.97" data-duration="0.57" data-volume="0.5" data-track-index="13"></audio>
+      <audio data-hf-id="hf-s0n5" id="sfx-key-a" class="clip" src="assets/sfx/key-press.mp3" data-start="8.42" data-duration="0.4" data-volume="1.6" data-track-index="11"></audio>
+      <audio data-hf-id="hf-5536" id="sfx-key-b" class="clip" src="assets/sfx/key-press.mp3" data-start="9.39" data-duration="0.4" data-volume="1.6" data-track-index="12"></audio>
+      <audio data-hf-id="hf-ec7l" id="sfx-dive" class="clip" src="assets/sfx/whoosh-short.mp3" data-start="10.25" data-duration="0.57" data-volume="0.35" data-track-index="13"></audio>
+      <audio data-hf-id="hf-p10f" id="sfx-loop-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="10.942" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-t7im" id="sfx-bookmark-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="13.03" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-5q9v" id="sfx-boost-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="15.278" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-a6r7" id="sfx-speed-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="17.496" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-mo1j" id="sfx-cinema-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="19.384" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-2l8c" id="sfx-filters-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="21.502" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-4pvd" id="sfx-filter-cinema" class="clip" src="assets/sfx/click-soft.mp3" data-start="22.352" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-pk8b" id="sfx-filter-soft" class="clip" src="assets/sfx/click-soft.mp3" data-start="23.202" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-e7f4" id="sfx-filter-mono" class="clip" src="assets/sfx/click-soft.mp3" data-start="24.052" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-78h3" id="sfx-screenshot-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="25.648" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-0any" id="sfx-floating-demo" class="clip" src="assets/sfx/click-soft.mp3" data-start="27.736" data-duration="0.36" data-volume="0.65" data-track-index="11"></audio>
+      <audio data-hf-id="hf-ndte" id="sfx-click" class="clip" src="assets/sfx/click-soft.mp3" data-start="30.295" data-duration="0.36" data-volume="1.3" data-track-index="11"></audio>
+      <audio data-hf-id="hf-sbem" id="sfx-riser" class="clip" src="assets/sfx/riser.mp3" data-start="36.464" data-duration="1.9" data-media-start="2.0" data-volume="0.3" data-fade-out="0.3" data-track-index="12"></audio>
+    </div>
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>
