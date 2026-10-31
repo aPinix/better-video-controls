@@ -11,7 +11,7 @@ export function SiteColorPreview({ index }: { index: number }) {
   const site = SITE_COLOR_EXAMPLES[index] ?? SITE_COLOR_EXAMPLES[0];
   const gradientId = useId();
   return (
-    <div className="absolute right-2 bottom-6 flex items-center gap-1.5 rounded-lg bg-black/45 px-2 py-1.5 font-medium text-[10px] text-white backdrop-blur-md">
+    <div className="absolute right-2 bottom-6 flex items-center gap-1.5 rounded-lg bg-black/45 px-2 py-1.5 text-[10px] font-medium text-white backdrop-blur-md">
       <span
         className="feature-preview-site-badge flex items-center gap-1.5"
         key={site.name}

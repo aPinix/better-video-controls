@@ -8,15 +8,15 @@ import { CardListItemWrapper } from './card-list-item-wrapper';
 
 afterEach(cleanup);
 
+const Harness = ({ showDebug }: { showDebug: boolean }) => (
+  <CardListItemWrapper>
+    <CardListItem description="Only row" title="Extension" />
+    {showDebug ? <CardListItem description="Hidden" title="Debug" /> : null}
+  </CardListItemWrapper>
+);
+
 describe('CardListItemWrapper', () => {
   it('keeps a single visible row fully rounded when another row is omitted', () => {
-    const Harness = ({ showDebug }: { showDebug: boolean }) => (
-      <CardListItemWrapper>
-        <CardListItem description="Only row" title="Extension" />
-        {showDebug ? <CardListItem description="Hidden" title="Debug" /> : null}
-      </CardListItemWrapper>
-    );
-
     render(<Harness showDebug={false} />);
 
     const card = screen.getByText('Extension').closest('.card-list-item');

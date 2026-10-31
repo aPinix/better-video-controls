@@ -18,7 +18,7 @@ export function ScrollSpeedFactorControl({
     <div>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <span className="font-medium text-slate-700 text-sm dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Base speed
           </span>
           <SliderResetButton
@@ -27,7 +27,7 @@ export function ScrollSpeedFactorControl({
             onClick={() => onChange(DEFAULT_SCROLL_SPEED_FACTOR)}
           />
         </div>
-        <span className="min-w-10 text-right font-semibold text-brand text-sm tabular-nums dark:text-brand-300">
+        <span className="min-w-10 text-right text-sm font-semibold text-brand tabular-nums dark:text-brand-300">
           {value}×
         </span>
       </div>

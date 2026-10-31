@@ -60,9 +60,7 @@ describe('SeekControlsSettings', () => {
     const slow = screen.getByRole('group', { name: 'Slow scroll hotkey' });
     for (const group of [fast, slow]) {
       expect(within(group).getAllByRole('radio')).toHaveLength(2);
-      expect(
-        within(group).queryByRole('radio', { name: 'Shift' })
-      ).toBeNull();
+      expect(within(group).queryByRole('radio', { name: 'Shift' })).toBeNull();
     }
     expect(
       (
@@ -78,13 +76,9 @@ describe('SeekControlsSettings', () => {
         }) as HTMLInputElement
       ).checked
     ).toBe(true);
-    await user.click(
-      within(fast).getByRole('radio', { name: 'Alt + Shift' })
-    );
+    await user.click(within(fast).getByRole('radio', { name: 'Alt + Shift' }));
     expect(props.onFastScrollHotkeyChange).toHaveBeenCalledWith('alt+shift');
-    await user.click(
-      within(slow).getByRole('radio', { name: 'Alt' })
-    );
+    await user.click(within(slow).getByRole('radio', { name: 'Alt' }));
     expect(props.onSlowScrollHotkeyChange).toHaveBeenCalledWith('alt');
     expect(screen.getByText(/alone to temporarily hide controls/)).toBeTruthy();
   });

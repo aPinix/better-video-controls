@@ -23,7 +23,7 @@ export function ItemRowText({
     <div className={cn('flex min-w-0 flex-col', className)}>
       <span
         className={cn(
-          'truncate font-medium text-slate-900 text-sm dark:text-white',
+          'truncate text-sm font-medium text-slate-900 dark:text-white',
           titleClassName
         )}
         title={titleTooltip}
@@ -33,7 +33,7 @@ export function ItemRowText({
       {description ? (
         <div
           className={cn(
-            'whitespace-normal break-words text-muted-foreground text-xs leading-snug',
+            'text-xs leading-snug break-words whitespace-normal text-muted-foreground',
             descriptionClassName
           )}
         >

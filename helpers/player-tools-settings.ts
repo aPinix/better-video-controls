@@ -131,10 +131,11 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
     arrowKeysEnabled: v.arrowKeysEnabled !== false,
     jlKeysEnabled: v.jlKeysEnabled !== false,
     jlSeekInterval:
+      typeof v.jlSeekInterval === 'number' &&
       Number.isInteger(v.jlSeekInterval) &&
-      v.jlSeekInterval! >= 1 &&
-      v.jlSeekInterval! <= 86400
-        ? v.jlSeekInterval!
+      v.jlSeekInterval >= 1 &&
+      v.jlSeekInterval <= 86400
+        ? v.jlSeekInterval
         : DEFAULT_PLAYER_TOOLS.jlSeekInterval,
     youtubeCinemaEnabled: v.youtubeCinemaEnabled !== false,
     youtubeInfoCardsEnabled: v.youtubeInfoCardsEnabled !== false,
@@ -148,9 +149,10 @@ export function normalizePlayerTools(value: unknown): PlayerToolsSettings {
     youtubeBookmarksEnabled: v.youtubeBookmarksEnabled !== false,
     youtubeAutoBoost: v.youtubeAutoBoost === true,
     youtubeBoostEnabled: v.youtubeBoostEnabled !== false,
-    youtubeBoost: Number.isInteger(v.youtubeBoost)
-      ? clamp(v.youtubeBoost!, 2, MAX_VOLUME_BOOST)
-      : 2,
+    youtubeBoost:
+      typeof v.youtubeBoost === 'number' && Number.isInteger(v.youtubeBoost)
+        ? clamp(v.youtubeBoost, 2, MAX_VOLUME_BOOST)
+        : 2,
     rememberYoutubeLoops: v.rememberYoutubeLoops !== false,
     backward: seekInterval,
     // Migrate independent intervals to the existing rewind value for both keys.

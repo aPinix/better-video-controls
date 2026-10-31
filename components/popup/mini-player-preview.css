@@ -4,7 +4,8 @@
 
 .mini-player-preview-floating {
   opacity: 0;
-  animation: mini-player-preview-appear 4.5s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+  animation: mini-player-preview-appear 4.5s cubic-bezier(0.23, 1, 0.32, 1)
+    infinite;
 }
 
 .mini-player-preview-scrollbar {

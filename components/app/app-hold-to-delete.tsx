@@ -75,7 +75,7 @@ export function AppHoldToDelete({
     <Button
       aria-description="Press and hold for 2 seconds to delete. Release to cancel."
       aria-label={label}
-      className="hold-to-delete relative overflow-hidden rounded-full p-0 touch-pan-y"
+      className="hold-to-delete relative touch-pan-y overflow-hidden rounded-full p-0"
       data-holding={holding || undefined}
       disabled={disabled}
       onBlur={cancelHold}

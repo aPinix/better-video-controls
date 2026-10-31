@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://www.instagram.com/reels/example/"}
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterEach,
+  assert,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import type { ContentSettingsT } from '@/types/content';
 
 describe('social video preferences', () => {
@@ -319,15 +327,17 @@ describe('social video preferences', () => {
     const button = document.createElement('button');
     button.innerHTML =
       '<svg aria-label="Audio is muted"><title>Audio is muted</title></svg>';
-    const icon = button.querySelector('svg')!;
+    const icon = button.querySelector('svg');
+    const title = icon?.querySelector('title');
+    assert.exists(icon);
+    assert.exists(title);
     const click = vi.fn(() => {
       video.muted = icon.getAttribute('aria-label') !== 'Audio is muted';
       icon.setAttribute(
         'aria-label',
         video.muted ? 'Audio is muted' : 'Audio is playing'
       );
-      icon.querySelector('title')!.textContent =
-        icon.getAttribute('aria-label');
+      title.textContent = icon.getAttribute('aria-label');
       video.dispatchEvent(new Event('volumechange'));
     });
     button.addEventListener('click', click);
@@ -395,15 +405,17 @@ describe('social video preferences', () => {
     const button = document.createElement('button');
     button.innerHTML =
       '<svg aria-label="Audio is muted"><title>Audio is muted</title></svg>';
-    const icon = button.querySelector('svg')!;
+    const icon = button.querySelector('svg');
+    const title = icon?.querySelector('title');
+    assert.exists(icon);
+    assert.exists(title);
     const click = vi.fn(() => {
       video.muted = icon.getAttribute('aria-label') !== 'Audio is muted';
       icon.setAttribute(
         'aria-label',
         video.muted ? 'Audio is muted' : 'Audio is playing'
       );
-      icon.querySelector('title')!.textContent =
-        icon.getAttribute('aria-label');
+      title.textContent = icon.getAttribute('aria-label');
       video.dispatchEvent(new Event('volumechange'));
     });
     button.addEventListener('click', click);

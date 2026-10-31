@@ -78,13 +78,16 @@ export function AutoSkipPreview() {
                   autoPlay={!reducedMotion}
                   className="absolute inset-0 size-full object-cover"
                   muted
-                  onLoadedMetadata={(event) => prepare(event.currentTarget)}
                   onEnded={enabled ? finish : undefined}
+                  onLoadedMetadata={(event) => prepare(event.currentTarget)}
                   onTimeUpdate={
                     enabled
                       ? (event) => {
                           const video = event.currentTarget;
-                        if (Number.isFinite(video.duration) && video.duration > 0)
+                          if (
+                            Number.isFinite(video.duration) &&
+                            video.duration > 0
+                          )
                             setProgress(
                               Math.max(
                                 0,

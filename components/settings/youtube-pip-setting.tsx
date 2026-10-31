@@ -35,12 +35,10 @@ export function YouTubePipSetting({
           />
         ),
         BottomSlot: (
-          <SettingsExpansion open={settings.youtubePipOverride} error={error}>
+          <SettingsExpansion error={error} open={settings.youtubePipOverride}>
             <SubOptionsCard>
               <div className="flex items-center justify-between gap-3">
-                <span
-                  className="font-medium text-slate-700 text-xs dark:text-slate-300"
-                >
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Open PiP when switching tabs
                 </span>
                 <AppSwitch
@@ -53,7 +51,7 @@ export function YouTubePipSetting({
                   size="sm"
                 />
               </div>
-              <p className="mt-2 text-slate-500 text-xs dark:text-slate-400">
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                 Returns to the page when you switch back.
               </p>
             </SubOptionsCard>

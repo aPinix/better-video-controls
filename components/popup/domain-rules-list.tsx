@@ -577,7 +577,7 @@ function SortableDomainRulesList({
               >
                 <Button
                   aria-label="Undo website removal"
-                  className="size-5 shrink-0 rounded-full bg-amber-500/15 p-0 text-amber-600 transition-colors hover:bg-amber-500/25 hover:text-amber-700 disabled:bg-slate-300 disabled:text-slate-500 dark:bg-amber-400/15 dark:text-amber-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 dark:hover:bg-amber-400/25 dark:hover:text-amber-200"
+                  className="size-5 shrink-0 rounded-full bg-amber-500/15 p-0 text-amber-600 transition-colors hover:bg-amber-500/25 hover:text-amber-700 disabled:bg-slate-300 disabled:text-slate-500 dark:bg-amber-400/15 dark:text-amber-300 dark:hover:bg-amber-400/25 dark:hover:text-amber-200 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
                   disabled={!canUndo || Boolean(removingDomain)}
                   onClick={onUndo}
                   size="icon-xs"
@@ -607,7 +607,7 @@ function SortableDomainRulesList({
               >
                 <Button
                   aria-label="Redo website removal"
-                  className="size-5 shrink-0 rounded-full bg-amber-500/15 p-0 text-amber-600 transition-colors hover:bg-amber-500/25 hover:text-amber-700 disabled:bg-slate-300 disabled:text-slate-500 dark:bg-amber-400/15 dark:text-amber-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 dark:hover:bg-amber-400/25 dark:hover:text-amber-200"
+                  className="size-5 shrink-0 rounded-full bg-amber-500/15 p-0 text-amber-600 transition-colors hover:bg-amber-500/25 hover:text-amber-700 disabled:bg-slate-300 disabled:text-slate-500 dark:bg-amber-400/15 dark:text-amber-300 dark:hover:bg-amber-400/25 dark:hover:text-amber-200 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
                   disabled={!canRedo || Boolean(removingDomain)}
                   onClick={onRedo}
                   size="icon-xs"
@@ -677,7 +677,7 @@ function SortableDomainRulesList({
               render={
                 <AppButton
                   aria-label="Add website"
-                  className="absolute top-1/2 right-1 size-8 -translate-y-1/2 rounded-full bg-lime-400 p-0 text-lime-950 shadow-sm ring-1 ring-lime-500/40 transition-[background-color,box-shadow,transform] hover:bg-lime-300 hover:text-lime-950 hover:shadow-md disabled:bg-slate-300 disabled:text-slate-500 disabled:ring-transparent dark:bg-lime-400 dark:text-lime-950 dark:disabled:bg-slate-700 dark:disabled:text-slate-400 dark:hover:bg-lime-300"
+                  className="absolute top-1/2 right-1 size-8 -translate-y-1/2 rounded-full bg-lime-400 p-0 text-lime-950 shadow-sm ring-1 ring-lime-500/40 transition-[background-color,box-shadow,transform] hover:bg-lime-300 hover:text-lime-950 hover:shadow-md disabled:bg-slate-300 disabled:text-slate-500 disabled:ring-transparent dark:bg-lime-400 dark:text-lime-950 dark:hover:bg-lime-300 dark:disabled:bg-slate-700 dark:disabled:text-slate-400"
                   disabled={!canAddSearchDomain}
                   size="sm"
                   type="submit"
@@ -725,7 +725,7 @@ function SortableDomainRulesList({
           {historyControls}
           {isFiltering && (
             <span
-              className="ml-1 whitespace-nowrap text-xs font-normal normal-case text-muted-foreground"
+              className="ml-1 text-xs font-normal whitespace-nowrap text-muted-foreground normal-case"
               role="status"
             >
               {visibleSiteRules.length} found
@@ -772,7 +772,7 @@ function SortableDomainRulesList({
           </ul>
         ) : (
           <div className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-white px-6 text-center dark:bg-slate-800/70">
-            <p className="font-medium text-slate-700 text-xs dark:text-slate-200">
+            <p className="text-xs font-medium text-slate-700 dark:text-slate-200">
               {siteRules.length ? 'No matching websites' : 'No custom websites'}
             </p>
             <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">

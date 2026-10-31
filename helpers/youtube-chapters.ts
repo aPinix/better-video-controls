@@ -352,12 +352,13 @@ export const extractYouTubeChapterModel = ({
   const description = ownerDocument.querySelector<HTMLElement>(
     'ytd-watch-metadata #description-inline-expander, ytd-watch-metadata #description, ytd-video-secondary-info-renderer #description'
   );
-  return description
-    ? extractDescriptionChapters(
-        description.innerText || description.textContent || '',
-        duration
-      )
-    : null;
+  if (!description) return null;
+  const content = description.cloneNode(true) as HTMLElement;
+  for (const line of content.querySelectorAll('br, div, p, li')) {
+    line.before('\n');
+    line.after('\n');
+  }
+  return extractDescriptionChapters(content.textContent ?? '', duration);
 };
 
 /** Local fallback only: descriptions containing at least two titled timestamps. */

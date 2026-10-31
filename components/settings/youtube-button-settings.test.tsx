@@ -65,12 +65,18 @@ describe('YouTube button settings', () => {
     preferences.youtubeBoost = 2;
     render(<YouTubeBoostSetting />);
     await readySwitch('Show Boost Volume button on YouTube');
-    const slider = screen.getByRole('slider', { name: 'Volume boost multiplier' });
-    expect(slider.getAttribute('max') ?? slider.getAttribute('aria-valuemax')).toBe('5');
+    const slider = screen.getByRole('slider', {
+      name: 'Volume boost multiplier',
+    });
+    expect(
+      slider.getAttribute('max') ?? slider.getAttribute('aria-valuemax')
+    ).toBe('5');
     expect(screen.queryByText(/High boost may distort the sound/)).toBeNull();
     fireEvent.keyDown(slider, { key: 'ArrowRight' });
     await waitFor(() => expect(preferences.youtubeBoost).toBe(3));
-    expect(screen.getByRole('status').textContent).toContain('High boost may distort the sound');
+    expect(screen.getByRole('status').textContent).toContain(
+      'High boost may distort the sound'
+    );
     expect(slider.getAttribute('aria-valuetext')).toContain('may distort');
     await readySwitch('Show Boost Volume button on YouTube');
     fireEvent.keyDown(slider, { key: 'Home' });
@@ -396,9 +402,9 @@ describe('YouTube button settings', () => {
       )
     ).toBe('false');
     expect(
-      (await readySwitch('Show End-screen cards button on YouTube')).getAttribute(
-        'aria-checked'
-      )
+      (
+        await readySwitch('Show End-screen cards button on YouTube')
+      ).getAttribute('aria-checked')
     ).toBe('false');
   });
   it('resets saved dimming to 90 without changing card visibility or availability', async () => {

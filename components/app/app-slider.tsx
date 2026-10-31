@@ -39,17 +39,17 @@ export function AppSlider({
       value={value}
       {...props}
     >
-      <SliderPrimitive.Control className="relative flex h-8 w-full touch-none select-none items-center data-disabled:opacity-50">
+      <SliderPrimitive.Control className="relative flex h-8 w-full touch-none items-center select-none data-disabled:opacity-50">
         <SliderPrimitive.Track
           className={cn(
-            'relative h-2 w-full grow select-none overflow-hidden rounded-full transition-[scale,background-color] duration-150 ease-out group-hover/app-slider:scale-y-[1.15] group-hover/app-slider:bg-slate-300 group-active/app-slider:scale-y-125 dark:group-hover/app-slider:bg-slate-700',
+            'relative h-2 w-full grow overflow-hidden rounded-full transition-[scale,background-color] duration-150 ease-out select-none group-hover/app-slider:scale-y-[1.15] group-hover/app-slider:bg-slate-300 group-active/app-slider:scale-y-125 dark:group-hover/app-slider:bg-slate-700',
             APP_SEGMENT_INACTIVE_SURFACE,
             trackClassName
           )}
           data-slot="app-slider-track"
         >
           <SliderPrimitive.Indicator
-            className="h-full select-none bg-brand-500 transition-[width,inset-inline-start,height,bottom,background-color] duration-200 ease-out group-hover/app-slider:bg-brand-400 group-active/app-slider:bg-brand-300 data-dragging:transition-none"
+            className="h-full bg-brand-500 transition-[width,inset-inline-start,height,bottom,background-color] duration-200 ease-out select-none group-hover/app-slider:bg-brand-400 group-active/app-slider:bg-brand-300 data-dragging:transition-none"
             data-slot="app-slider-range"
           />
         </SliderPrimitive.Track>

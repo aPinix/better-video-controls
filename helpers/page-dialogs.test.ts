@@ -9,7 +9,8 @@ it('ignores offscreen dialogs but blocks visible unrelated dialogs', () => {
   const dialog = document.createElement('div');
   dialog.setAttribute('role', 'dialog');
   document.body.append(video, dialog);
-  dialog.getBoundingClientRect = () => new DOMRect(0, window.innerHeight, 550, 64);
+  dialog.getBoundingClientRect = () =>
+    new DOMRect(0, window.innerHeight, 550, 64);
   expect(isVideoBlockedByDialog(video)).toBe(false);
   dialog.getBoundingClientRect = () => new DOMRect(0, 20, 550, 64);
   expect(isVideoBlockedByDialog(video)).toBe(true);

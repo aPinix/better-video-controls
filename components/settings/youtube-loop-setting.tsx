@@ -28,17 +28,17 @@ export function YouTubeLoopSetting({
           />
         ),
         BottomSlot: (
-          <SettingsExpansion open={settings.youtubeLoop} error={error}>
+          <SettingsExpansion error={error} open={settings.youtubeLoop}>
             <div
               className={cn(
                 SUB_OPTIONS_CARD_CLASS_NAME,
-                'flex items-center justify-between gap-3 text-slate-600 text-xs dark:text-slate-300'
+                'flex items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-300'
               )}
               data-slot="settings-sub-options"
             >
               <span aria-hidden="true">
                 <span className="block">Remember loops in videos</span>
-                <span className="mt-1 block text-muted-foreground text-xs">
+                <span className="mt-1 block text-xs text-muted-foreground">
                   Save sections for your next visit.
                 </span>
               </span>

@@ -22,7 +22,11 @@ export function DomainName({ domain, searchQuery }: DomainNamePropsI) {
     let index = text.toLowerCase().indexOf(term);
     while (index !== -1) {
       parts.push(text.slice(offset, index));
-      parts.push(<mark key={index} className="rounded-sm bg-[#F3CD45] text-neutral-900">{text.slice(index, index + term.length)}</mark>);
+      parts.push(
+        <mark className="rounded-sm bg-[#F3CD45] text-neutral-900" key={index}>
+          {text.slice(index, index + term.length)}
+        </mark>
+      );
       offset = index + term.length;
       index = text.toLowerCase().indexOf(term, offset);
     }

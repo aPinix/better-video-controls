@@ -69,13 +69,13 @@ export function SavedLibraryToolbar({
             aria-label={`${label} ${count}`}
             aria-pressed={filter === id}
             className={cn(
-              'focus-visible:ring-brand/40 h-7 cursor-pointer rounded-full px-2 text-[10px] font-medium transition-colors outline-none focus-visible:ring-2 disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none',
+              'h-7 cursor-pointer rounded-full px-2 text-[10px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-brand/40 disabled:pointer-events-none disabled:cursor-default disabled:opacity-50 motion-reduce:transition-none',
               filter === id
                 ? id === 'moments'
                   ? 'bg-sky-100 text-sky-700 ring-1 ring-sky-300 dark:bg-sky-900/60 dark:text-sky-300 dark:ring-sky-600'
                   : id === 'loops'
                     ? 'bg-yellow-100 text-yellow-800 ring-1 ring-yellow-300 dark:bg-yellow-900/60 dark:text-yellow-300 dark:ring-yellow-600'
-                    : 'bg-brand/15 text-brand ring-brand/25 dark:bg-brand-400/20 dark:text-brand-200 ring-1'
+                    : 'bg-brand/15 text-brand ring-1 ring-brand/25 dark:bg-brand-400/20 dark:text-brand-200'
                 : cn(
                     'bg-white/80 ring-1 ring-slate-300/50 hover:bg-slate-50 dark:bg-slate-700/70 dark:ring-slate-600/40 dark:hover:bg-slate-600',
                     id === 'moments'

@@ -39,9 +39,9 @@ function ScrollHotkeyControl({
   return (
     <AppSegment
       className="w-full"
-      options={scrollHotkeyItems}
       label={label}
       onValueChange={onChange}
+      options={scrollHotkeyItems}
       value={value}
     />
   );
@@ -93,10 +93,10 @@ function SeekMethodCard({
             <Icon className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-2 font-semibold text-slate-900 text-sm dark:text-white">
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
               {title}
             </span>
-            <span className="mt-0.5 block text-slate-500 text-xs leading-snug dark:text-slate-400">
+            <span className="mt-0.5 block text-xs leading-snug text-slate-500 dark:text-slate-400">
               {description}
             </span>
           </span>
@@ -111,7 +111,7 @@ function SeekMethodCard({
             aria-label={`Preview ${accessibleTitle}`}
             aria-pressed={focused}
             className={cn(
-              'inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-2 font-semibold text-[10px] text-slate-500 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-brand-500 focus-visible:outline-offset-2 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-400',
+              'inline-flex h-6 cursor-pointer items-center gap-1 rounded-md border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-500 transition-colors hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950 dark:hover:text-brand-400',
               focused &&
                 'border-brand-300 bg-brand-50 text-brand-600 dark:border-brand-700 dark:bg-brand-950 dark:text-brand-400'
             )}
@@ -229,7 +229,7 @@ export function SeekControlsSettings({
 
       {!hasEnabledMethod ? (
         <div
-          className="mb-3 rounded-lg border border-slate-300 border-dashed bg-white/55 px-3 py-2 text-center text-slate-500 text-xs dark:border-slate-500 dark:bg-slate-800/35 dark:text-slate-400"
+          className="mb-3 rounded-lg border border-dashed border-slate-300 bg-white/55 px-3 py-2 text-center text-xs text-slate-500 dark:border-slate-500 dark:bg-slate-800/35 dark:text-slate-400"
           role="status"
         >
           No seek controls enabled. Player appearance options can still run.
@@ -260,10 +260,10 @@ export function SeekControlsSettings({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Inverse Scroll
                 </div>
-                <p className="text-slate-500 text-xs dark:text-slate-400">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   Reverse the horizontal seek direction
                 </p>
               </div>
@@ -283,13 +283,13 @@ export function SeekControlsSettings({
             <div className="space-y-4">
               <div className="space-y-2">
                 <div>
-                  <div className="flex items-center justify-between gap-2 font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="flex items-center justify-between gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                     Fast Scroll
-                    <span className="text-brand-600 text-xs dark:text-brand-300">
+                    <span className="text-xs text-brand-600 dark:text-brand-300">
                       3×
                     </span>
                   </div>
-                  <p className="text-slate-500 text-xs dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Hold while scrolling to seek faster
                   </p>
                 </div>
@@ -301,13 +301,13 @@ export function SeekControlsSettings({
               </div>
               <div className="space-y-2">
                 <div>
-                  <div className="flex items-center justify-between gap-2 font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="flex items-center justify-between gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
                     Slow Scroll
-                    <span className="text-brand-600 text-xs dark:text-brand-300">
+                    <span className="text-xs text-brand-600 dark:text-brand-300">
                       ¼×
                     </span>
                   </div>
-                  <p className="text-slate-500 text-xs dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Hold while scrolling for precise seeking
                   </p>
                 </div>
@@ -317,7 +317,7 @@ export function SeekControlsSettings({
                   value={slowScrollHotkey}
                 />
               </div>
-              <p className="text-slate-500 text-xs leading-relaxed dark:text-slate-400">
+              <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">
                 Changing one shortcut swaps the other. Hold{' '}
                 <AppKbd>Shift</AppKbd> alone to temporarily hide controls.
               </p>
@@ -375,10 +375,10 @@ export function SeekControlsSettings({
             <LayoutTemplateIcon className="size-4" />
           </span>
           <div>
-            <h4 className="font-semibold text-slate-900 text-sm dark:text-white">
+            <h4 className="text-sm font-semibold text-slate-900 dark:text-white">
               Video Layout
             </h4>
-            <p className="text-slate-500 text-xs dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               Shared active area and timeline appearance
             </p>
           </div>

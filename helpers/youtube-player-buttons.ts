@@ -335,8 +335,11 @@ export class YouTubePlayerButtons {
     const presentations = groups.map((group) => {
       const style = win?.getComputedStyle(group);
       return {
-        opacity: visible ? style?.opacity || '1' : '0',
-        transform: visible ? style?.transform || 'none' : 'scale(0.9)',
+        group,
+        keyframe: {
+          opacity: visible ? style?.opacity || '1' : '0',
+          transform: visible ? style?.transform || 'none' : 'scale(0.9)',
+        },
       };
     });
     const backgroundBefore = this.background.getBoundingClientRect();
@@ -596,11 +599,11 @@ export class YouTubePlayerButtons {
           { ...options, easing: collapsed ? 'linear' : options.easing }
         )
       : undefined;
-    const buttonAnimations = groups.map((group, index) => {
+    const buttonAnimations = presentations.map(({ group, keyframe }, index) => {
       const rank = collapsed ? index : groups.length - 1 - index;
       return group.animate?.(
         [
-          presentations[index]!,
+          keyframe,
           {
             opacity: collapsed ? 0 : 1,
             transform: collapsed ? 'scale(0.9)' : 'scale(1)',

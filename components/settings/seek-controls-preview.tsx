@@ -676,7 +676,7 @@ export function SeekControlsPreview({
             className={cn(
               'absolute inset-0 grid place-items-center transition-[opacity,transform,filter] duration-300 ease-out motion-reduce:transition-none',
               focusedMethod === 'scroll'
-                ? 'scale-100 opacity-100 blur-0'
+                ? 'blur-0 scale-100 opacity-100'
                 : 'pointer-events-none scale-90 opacity-0 blur-sm'
             )}
             data-testid="scroll-gesture-transition"
@@ -692,7 +692,7 @@ export function SeekControlsPreview({
             className={cn(
               'absolute inset-0 grid place-items-center transition-[opacity,transform,filter] duration-300 ease-out motion-reduce:transition-none',
               focusedMethod === 'drag'
-                ? 'scale-100 opacity-100 blur-0'
+                ? 'blur-0 scale-100 opacity-100'
                 : 'pointer-events-none scale-90 opacity-0 blur-sm'
             )}
             data-testid="drag-gesture-transition"
@@ -703,14 +703,14 @@ export function SeekControlsPreview({
 
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute top-3 left-3 z-50 font-semibold text-sm text-white leading-none [text-shadow:0_1px_3px_rgb(0_0_0_/_85%),0_0_8px_rgb(0_0_0_/_45%)]"
+          className="pointer-events-none absolute top-3 left-3 z-50 text-sm leading-none font-semibold text-white [text-shadow:0_1px_3px_rgb(0_0_0_/_85%),0_0_8px_rgb(0_0_0_/_45%)]"
           data-testid="focused-method-label"
         >
           {methodPreviewLabels[focusedMethod]}
         </span>
 
         <span
-          className="pointer-events-none absolute top-3 right-3 z-50 rounded-md bg-slate-950/50 px-2 py-1 font-semibold text-[10px] text-white shadow-sm backdrop-blur-md"
+          className="pointer-events-none absolute top-3 right-3 z-50 rounded-md bg-slate-950/50 px-2 py-1 text-[10px] font-semibold text-white shadow-sm backdrop-blur-md"
           data-testid="test-area-hint"
         >
           {focusedMethod === 'scroll'
@@ -738,9 +738,7 @@ export function SeekControlsPreview({
           <div
             className={cn(
               'absolute inset-y-0 left-0 w-[34%] overflow-visible backdrop-blur-sm backdrop-saturate-[1.4]',
-              colorizedTimeline
-                ? 'bg-brand-400'
-                : 'bg-white'
+              colorizedTimeline ? 'bg-brand-400' : 'bg-white'
             )}
             data-testid="timeline-progress"
             ref={progressRef}
@@ -767,7 +765,7 @@ export function SeekControlsPreview({
         className={cn(
           'pointer-events-none absolute z-50 block size-5 origin-top-left overflow-visible transition-[opacity,transform,filter] duration-300 ease-out motion-reduce:transition-none',
           focusedMethod === 'seekbar'
-            ? 'scale-100 opacity-100 blur-0'
+            ? 'blur-0 scale-100 opacity-100'
             : 'scale-90 opacity-0 blur-sm'
         )}
         data-registration-point="top-left"
@@ -784,7 +782,7 @@ export function SeekControlsPreview({
       {focusedMethod === 'scroll' ? (
         <button
           aria-label="Show next scroll input device"
-          className="absolute inset-0 z-60 cursor-pointer rounded-xl bg-transparent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:ring-inset"
+          className="absolute inset-0 z-60 cursor-pointer rounded-xl bg-transparent focus-visible:ring-2 focus-visible:ring-white/90 focus-visible:outline-none focus-visible:ring-inset"
           onClick={() =>
             setScrollDeviceIndex(
               (current) => (current + 1) % SCROLL_DEVICE_PHASE_COUNT

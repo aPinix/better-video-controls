@@ -8,22 +8,22 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+function Example({ onCommit }: { onCommit: (value: string) => void }) {
+  const [value, setValue] = useState('15');
+  return (
+    <AppNumberInput
+      label="Seconds"
+      max={30}
+      min={0.1}
+      onCommit={onCommit}
+      onValueChange={setValue}
+      value={value}
+    />
+  );
+}
 function setup() {
   const commit = vi.fn();
-  function Example() {
-    const [value, setValue] = useState('15');
-    return (
-      <AppNumberInput
-        label="Seconds"
-        max={30}
-        min={0.1}
-        onCommit={commit}
-        onValueChange={setValue}
-        value={value}
-      />
-    );
-  }
-  render(<Example />);
+  render(<Example onCommit={commit} />);
   return {
     commit,
     input: screen.getByLabelText('Seconds') as HTMLInputElement,

@@ -13,12 +13,12 @@ import {
 import type { ThumbnailTimeDisplay } from '@/helpers/thumbnail-time';
 import type { YouTubeControl } from '@/helpers/youtube-control-icons';
 import { cn } from '@/lib/utils';
-import { ExtraFeaturePreview } from './extra-feature-preview';
+import { AutoSkipPreview } from './auto-skip-preview';
 import { BookmarksPreview } from './bookmarks-preview';
 import { BoostVolumePreview } from './boost-volume-preview';
-import { AutoSkipPreview } from './auto-skip-preview';
-import { PlaybackSpeedPreview } from './playback-speed-preview';
+import { ExtraFeaturePreview } from './extra-feature-preview';
 import { LoopSectionsPreview } from './loop-sections-preview';
+import { PlaybackSpeedPreview } from './playback-speed-preview';
 import './mini-player-preview.css';
 import './video-filters-preview.css';
 import './screenshot-preview.css';
@@ -162,8 +162,8 @@ function ScreenshotPreview({ format }: { format: ScreenshotFormat }) {
       <PreviewVideo videoRef={videoRef} />
       <div
         className="screenshot-preview-flash absolute inset-0 bg-white"
-        onAnimationStart={capture}
         onAnimationIteration={capture}
+        onAnimationStart={capture}
       />
       <div className="screenshot-preview-frame absolute inset-4 overflow-hidden rounded-md border-2 border-white shadow-lg">
         <canvas className="size-full object-cover" ref={snapshotRef} />
@@ -336,8 +336,8 @@ export function FeaturePreview({
                     key={title}
                   >
                     <PreviewVideo
-                      still
                       className={index === 1 ? 'scale-125' : undefined}
+                      still
                     />
                     <PlayIcon className="absolute top-1/2 left-1/2 size-4 -translate-x-1/2 -translate-y-1/2 fill-white/80 text-white drop-shadow" />
                     <span className="absolute inset-x-0 bottom-0 bg-black/65 px-1.5 py-0.5 text-[7px]">

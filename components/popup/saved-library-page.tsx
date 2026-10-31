@@ -116,7 +116,7 @@ export function SavedLibraryPage({
             {detail && selectedGroup && (
               <a
                 aria-label={`Open video: ${selectedGroup.title}`}
-                className="group focus-visible:ring-brand mb-3 flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2"
+                className="group mb-3 flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand"
                 href={selectedGroup.url}
                 rel="noopener noreferrer"
                 target="_blank"
@@ -143,7 +143,7 @@ export function SavedLibraryPage({
             )}
             {library.status && (
               <div
-                className="bg-brand-50 text-brand-800 dark:bg-brand-950 dark:text-brand-200 mb-2 flex items-center gap-2 rounded-lg px-3 py-2 text-xs"
+                className="mb-2 flex items-center gap-2 rounded-lg bg-brand-50 px-3 py-2 text-xs text-brand-800 dark:bg-brand-950 dark:text-brand-200"
                 role="status"
               >
                 <span className="min-w-0 flex-1 break-words">

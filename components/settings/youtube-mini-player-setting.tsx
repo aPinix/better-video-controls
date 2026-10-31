@@ -92,11 +92,11 @@ export function YouTubeMiniPlayerSetting({
         ),
         BottomSlot: (
           <SettingsExpansion
-            open={settings.miniPlayer}
             error={error || resetError}
+            open={settings.miniPlayer}
           >
             <SubOptionsCard>
-              <p className="mb-2 text-slate-500 text-xs dark:text-slate-400">
+              <p className="mb-2 text-xs text-slate-500 dark:text-slate-400">
                 Drag to move and resize from the corner. Your layout is saved on
                 this device.
               </p>

@@ -12,7 +12,7 @@ export function I18nSettings() {
   return (
     <Card>
       <div className="space-y-1.5 p-6 pb-3">
-        <h3 className="text-left font-semibold text-base">
+        <h3 className="text-left text-base font-semibold">
           {t('i18nSettings')}
         </h3>
       </div>

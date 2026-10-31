@@ -22,10 +22,10 @@ function Fixture({ initial = 0 }: { initial?: number }) {
   useCarouselIndicator(carousel, indicator);
   return (
     <>
-      <div ref={carousel} data-testid="carousel">
+      <div data-testid="carousel" ref={carousel}>
         <div data-testid="nested" />
       </div>
-      <span ref={indicator} data-testid="indicator" />
+      <span data-testid="indicator" ref={indicator} />
     </>
   );
 }

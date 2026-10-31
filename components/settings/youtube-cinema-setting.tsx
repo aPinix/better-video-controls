@@ -44,13 +44,13 @@ export function YouTubeCinemaSetting({
         ),
         BottomSlot: (
           <SettingsExpansion
-            open={settings.youtubeCinemaEnabled}
             error={error || dimmingPreview.error}
+            open={settings.youtubeCinemaEnabled}
           >
             <SubOptionsCard className="space-y-1">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-slate-700 text-xs dark:text-slate-300">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Page dimming
                   </span>
                   <SliderResetButton
@@ -64,7 +64,7 @@ export function YouTubeCinemaSetting({
                     }
                   />
                 </div>
-                <span className="font-semibold text-brand text-xs tabular-nums dark:text-brand-300">
+                <span className="text-xs font-semibold text-brand tabular-nums dark:text-brand-300">
                   {settings.dimming}%
                 </span>
               </div>
@@ -103,7 +103,7 @@ export function YouTubeCinemaSetting({
                 <span>100%</span>
               </div>
               <fieldset className="mt-3 space-y-2 border-0 p-0">
-                <legend className="font-medium text-slate-700 text-xs dark:text-slate-300">
+                <legend className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Color
                   <span className="ml-1 font-normal text-slate-400 dark:text-slate-500">
                     ({selectionLabel})
@@ -116,7 +116,7 @@ export function YouTubeCinemaSetting({
                       aria-pressed={
                         !customSelected && settings.cinemaColor === color
                       }
-                      className="size-7 shrink-0 rounded-full border border-black/15 outline-none ring-offset-2 ring-offset-slate-50 hover:ring-2 hover:ring-brand/40 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 aria-pressed:ring-2 aria-pressed:ring-brand dark:border-white/20 dark:ring-offset-slate-900"
+                      className="size-7 shrink-0 rounded-full border border-black/15 ring-offset-2 ring-offset-slate-50 outline-none hover:ring-2 hover:ring-brand/40 focus-visible:ring-2 focus-visible:ring-brand disabled:opacity-50 aria-pressed:ring-2 aria-pressed:ring-brand dark:border-white/20 dark:ring-offset-slate-900"
                       disabled={unavailable}
                       key={color}
                       onClick={() => {

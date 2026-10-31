@@ -38,11 +38,11 @@ export function YouTubeBoostSetting({
           />
         ),
         BottomSlot: (
-          <SettingsExpansion open={settings.youtubeBoostEnabled} error={error}>
+          <SettingsExpansion error={error} open={settings.youtubeBoostEnabled}>
             <SubOptionsCard>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-medium text-slate-700 text-xs dark:text-slate-300">
+                  <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                     Boost level
                   </span>
                   <SliderResetButton
@@ -53,7 +53,7 @@ export function YouTubeBoostSetting({
                 </div>
                 <span
                   className={cn(
-                    'min-w-10 text-right font-semibold text-xs tabular-nums',
+                    'min-w-10 text-right text-xs font-semibold tabular-nums',
                     highBoost
                       ? 'text-amber-600 dark:text-amber-300'
                       : 'text-brand dark:text-brand-300'
@@ -92,13 +92,13 @@ export function YouTubeBoostSetting({
                 <span>{MAX_VOLUME_BOOST}×</span>
               </div>
               <p
-                className="mt-2 text-amber-700 text-xs leading-snug empty:hidden dark:text-amber-300"
+                className="mt-2 text-xs leading-snug text-amber-700 empty:hidden dark:text-amber-300"
                 role="status"
               >
                 {highBoost ? BOOST_DISTORTION_WARNING : ''}
               </p>
               <div className="mt-3 flex items-center justify-between gap-3">
-                <span className="font-medium text-slate-700 text-xs dark:text-slate-300">
+                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
                   Automatically boost the volume
                 </span>
                 <AppSwitch
@@ -117,7 +117,7 @@ export function YouTubeBoostSetting({
       icon={Volume2Icon}
       iconIsToggled={settings.youtubeBoostEnabled}
       title={
-        <YouTubeFeatureTitle feature="boost" boostLevel={value}>
+        <YouTubeFeatureTitle boostLevel={value} feature="boost">
           Boost Volume
         </YouTubeFeatureTitle>
       }

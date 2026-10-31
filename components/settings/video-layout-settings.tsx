@@ -60,13 +60,13 @@ export function VideoLayoutSettings({
     <div className="flex w-full flex-col gap-4">
       <section
         aria-labelledby="active-video-area-heading"
-        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'space-y-3 ml-11')}
+        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'ml-11 space-y-3')}
         data-slot="settings-sub-options"
       >
         <div>
           <div className="flex items-center gap-1.5">
             <h4
-              className="font-semibold text-slate-800 text-sm dark:text-slate-100"
+              className="text-sm font-semibold text-slate-800 dark:text-slate-100"
               id="active-video-area-heading"
             >
               Active Video Area
@@ -77,7 +77,7 @@ export function VideoLayoutSettings({
               onClick={onActionAreaReset}
             />
           </div>
-          <p className="mt-0.5 text-slate-500 text-xs dark:text-slate-400">
+          <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
             Where Scroll and Drag gestures respond
           </p>
         </div>
@@ -102,7 +102,7 @@ export function VideoLayoutSettings({
           <div className="min-h-0 overflow-hidden">
             <div className="space-y-1 pt-1">
               <div className="flex items-center gap-1.5">
-                <span className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Area Size
                 </span>
                 <SliderResetButton
@@ -128,11 +128,11 @@ export function VideoLayoutSettings({
 
       <section
         aria-labelledby="timeline-appearance-heading"
-        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'space-y-3 ml-11')}
+        className={cn(SUB_OPTIONS_CARD_CLASS_NAME, 'ml-11 space-y-3')}
         data-slot="settings-sub-options"
       >
         <h4
-          className="font-semibold text-slate-800 text-sm dark:text-slate-100"
+          className="text-sm font-semibold text-slate-800 dark:text-slate-100"
           id="timeline-appearance-heading"
         >
           Timeline Appearance
@@ -140,7 +140,7 @@ export function VideoLayoutSettings({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <span className="font-medium text-slate-700 text-sm dark:text-slate-300">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Position
             </span>
             <SliderResetButton
@@ -163,7 +163,7 @@ export function VideoLayoutSettings({
 
         <div className="space-y-1">
           <div className="flex items-center gap-1.5">
-            <span className="font-medium text-slate-700 text-sm dark:text-slate-300">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Height
             </span>
             <SliderResetButton

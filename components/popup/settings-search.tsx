@@ -129,7 +129,7 @@ export function SettingsSearch({
       {query && (
         <>
           <span
-            className="text-muted-foreground pointer-events-none absolute right-9 text-xs"
+            className="pointer-events-none absolute right-9 text-xs text-muted-foreground"
             role="status"
           >
             {count ? `${count} found` : 'No matches'}

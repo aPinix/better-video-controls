@@ -1,8 +1,8 @@
 import { cinemaPresets } from './player-cinema-presets';
 import {
-  DEFAULT_PLAYER_TOOLS,
   BOOST_DISTORTION_WARNING,
   BOOST_DISTORTION_WARNING_LEVEL,
+  DEFAULT_PLAYER_TOOLS,
   MAX_VOLUME_BOOST,
   type PlayerToolsSettings,
 } from './player-tools-settings';

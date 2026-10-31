@@ -6,8 +6,8 @@ import {
   getViewportOverlayHost,
   removeEmptyOverlayHost,
 } from '@/helpers/overlay-portal';
-import type { ContentSettingsT } from '@/types/content';
 import { isVideoBlockedByDialog } from '@/helpers/page-dialogs';
+import type { ContentSettingsT } from '@/types/content';
 
 export type SocialPlaybackSetting =
   | 'instagramPlaybackSpeed'
@@ -268,7 +268,10 @@ export function setupSocialPageControls(
       doc.querySelectorAll<HTMLVideoElement>('video:not(.mfs-thumbnail-video)')
     ).reduce<HTMLVideoElement | null>(
       (best, candidate) =>
-        !isVideoBlockedByDialog(candidate) && area(candidate) > (best ? area(best) : 0) ? candidate : best,
+        !isVideoBlockedByDialog(candidate) &&
+        area(candidate) > (best ? area(best) : 0)
+          ? candidate
+          : best,
       null
     );
     const blockedByDialog = isVideoBlockedByDialog(video);
@@ -278,8 +281,13 @@ export function setupSocialPageControls(
       return;
     }
     const rect = video.getBoundingClientRect();
-    const popup = site === 'tiktok' ? video.closest('[role="dialog"], [aria-modal="true"]') : null;
-    const sound = popup?.querySelector<HTMLElement>('[data-e2e="browse-sound"]');
+    const popup =
+      site === 'tiktok'
+        ? video.closest('[role="dialog"], [aria-modal="true"]')
+        : null;
+    const sound = popup?.querySelector<HTMLElement>(
+      '[data-e2e="browse-sound"]'
+    );
     const soundHost = sound?.parentElement;
     if (sound && soundHost && sound.getBoundingClientRect().width > 0) {
       // The mini-player and volume buttons have separate absolute wrappers.

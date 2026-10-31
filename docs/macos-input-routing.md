@@ -18,13 +18,13 @@ state, a separately installed native companion is required.
 
 ## Focus-state matrix
 
-| State | Wheel over visible page | Pointer movement | Page signals |
-| --- | --- | --- | --- |
-| Active tab in the focused Chrome window | Delivered | Delivered | `document.hasFocus()` is true and visibility is normally `visible` |
-| Active tab in a non-key Chrome window while Chrome is frontmost | Expected to be delivered | Expected to be delivered; verify against the target Chrome release | `document.hasFocus()` is false while visibility can remain `visible` |
-| Visible Chrome window while another application is frontmost | Delivered on macOS to the window beneath the pointer | Normal Chrome content tracking stops | `document.hasFocus()` is false while visibility can remain `visible` |
-| Background tab | No direct pointer or wheel input | No | Usually `hidden`; a tab being active in its window is separate from window focus |
-| Minimized or otherwise hidden Chrome window | No usable page input | No | Visibility becomes `hidden` |
+| State                                                           | Wheel over visible page                              | Pointer movement                                                   | Page signals                                                                     |
+| --------------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| Active tab in the focused Chrome window                         | Delivered                                            | Delivered                                                          | `document.hasFocus()` is true and visibility is normally `visible`               |
+| Active tab in a non-key Chrome window while Chrome is frontmost | Expected to be delivered                             | Expected to be delivered; verify against the target Chrome release | `document.hasFocus()` is false while visibility can remain `visible`             |
+| Visible Chrome window while another application is frontmost    | Delivered on macOS to the window beneath the pointer | Normal Chrome content tracking stops                               | `document.hasFocus()` is false while visibility can remain `visible`             |
+| Background tab                                                  | No direct pointer or wheel input                     | No                                                                 | Usually `hidden`; a tab being active in its window is separate from window focus |
+| Minimized or otherwise hidden Chrome window                     | No usable page input                                 | No                                                                 | Visibility becomes `hidden`                                                      |
 
 Apple documents that `NSScrollWheel` events go to the window beneath the
 pointer whether the window is active or inactive. Chromium's macOS content

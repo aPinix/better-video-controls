@@ -23,8 +23,8 @@ import { SectionTitle } from '@/components/popup/section-title';
 import { SettingsSearch } from '@/components/popup/settings-search';
 import { ShowOnHoverSetting } from '@/components/popup/show-on-hover-setting';
 import { SiteAccessView } from '@/components/popup/site-access-view';
-import { usePopupViewState } from '@/components/popup/use-popup-view-memory';
 import { useCarouselIndicator } from '@/components/popup/use-carousel-indicator';
+import { usePopupViewState } from '@/components/popup/use-popup-view-memory';
 import { useYouTubeLibraryPage } from '@/components/popup/use-youtube-library-page';
 import { ViewTitle } from '@/components/popup/view-title';
 import { ArrowSeekSettings } from '@/components/settings/arrow-seek-settings';
@@ -139,7 +139,7 @@ function ResetDefaultsButton({
         <TooltipTrigger
           render={
             <Button
-              className="h-7 px-3 font-medium text-slate-600 text-xs transition-all hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-300"
+              className="h-7 px-3 text-xs font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/50 dark:hover:text-slate-300"
               onClick={onClick}
               size="sm"
               variant="ghost"
@@ -191,7 +191,7 @@ function PopupHeader() {
       <div className="flex h-full items-center gap-3">
         <a
           aria-label="View Better Video Controls on Chrome Web Store"
-          className="shrink-0 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+          className="shrink-0 transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           href={EXT_URL}
           rel="noopener noreferrer"
           target="_blank"
@@ -205,7 +205,7 @@ function PopupHeader() {
         </a>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center leading-none">
-          <span className="truncate font-bold text-slate-900 text-sm dark:text-white">
+          <span className="truncate text-sm font-bold text-slate-900 dark:text-white">
             Better Video Controls
           </span>
           {version ? (
@@ -967,7 +967,7 @@ export function PopupContent() {
 
         <main
           className={cn(
-            'scrollbar-none relative flex min-h-0 flex-1 snap-x snap-mandatory overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden',
+            'relative flex min-h-0 flex-1 snap-x snap-mandatory scrollbar-none overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth motion-reduce:scroll-auto [&::-webkit-scrollbar]:hidden',
             youtubeLibrary.hasLibrary && 'overflow-x-hidden'
           )}
           onScroll={(event) => {
@@ -1021,7 +1021,7 @@ export function PopupContent() {
           >
             <div
               className={cn(
-                'scrollbar-none relative flex min-h-0 flex-1 overflow-y-hidden [&::-webkit-scrollbar]:hidden',
+                'relative flex min-h-0 flex-1 scrollbar-none overflow-y-hidden [&::-webkit-scrollbar]:hidden',
                 youtubeLibrary.hasLibrary
                   ? 'snap-x snap-mandatory overflow-x-auto overscroll-x-contain'
                   : 'overflow-x-clip'
@@ -1070,7 +1070,7 @@ export function PopupContent() {
                               <>
                                 <Button
                                   aria-label="Configure extension toggle shortcut"
-                                  className="h-7 min-w-22 max-w-36 rounded-lg border-slate-200 bg-slate-50 px-2.5 font-mono text-[11px] text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950/50 dark:hover:text-brand-300"
+                                  className="h-7 max-w-36 min-w-22 rounded-lg border-slate-200 bg-slate-50 px-2.5 font-mono text-[11px] text-slate-600 hover:border-brand-200 hover:bg-brand-50 hover:text-brand-500 dark:border-slate-600 dark:bg-slate-900/60 dark:text-slate-300 dark:hover:border-brand-700 dark:hover:bg-brand-950/50 dark:hover:text-brand-300"
                                   onClick={() => {
                                     chrome.tabs.create({
                                       url: 'chrome://extensions/shortcuts',
@@ -1090,7 +1090,7 @@ export function PopupContent() {
                               </>
                             ),
                             BottomSlot: (
-                              <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-slate-500 text-xs leading-relaxed dark:bg-slate-900/40 dark:text-slate-400">
+                              <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-xs leading-relaxed text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">
                                 Hold{' '}
                                 <AppKbd aria-label="Shift key">⇧ Shift</AppKbd>{' '}
                                 to temporarily hide extension controls. Release
@@ -1186,19 +1186,19 @@ export function PopupContent() {
                       >
                         <ArrowSeekSettings disabled={!isEnabled} />
                         <PlayPauseSettings
+                          disabled={!isEnabled}
                           enabled={isPlayPauseEnabled}
-                          middleClickEnabled={isMiddleClickPlayPauseEnabled}
-                          wheelEnabled={isPlayPauseWheelEnabled}
                           kKeyEnabled={isKKeyPlayPauseEnabled}
-                          onKKeyEnabledChange={handleKKeyPlayPauseEnabledChange}
+                          middleClickEnabled={isMiddleClickPlayPauseEnabled}
                           onEnabledChange={handlePlayPauseEnabledChange}
+                          onKKeyEnabledChange={handleKKeyPlayPauseEnabledChange}
                           onMiddleClickEnabledChange={
                             handleMiddleClickPlayPauseEnabledChange
                           }
                           onWheelEnabledChange={
                             handlePlayPauseWheelEnabledChange
                           }
-                          disabled={!isEnabled}
+                          wheelEnabled={isPlayPauseWheelEnabled}
                         />
                       </CardListItemWrapper>
                     </div>
@@ -1235,8 +1235,8 @@ export function PopupContent() {
                             <span className="inline-flex items-center gap-1.5">
                               Minimal Player
                               <ExtraFeaturePreviewTooltip
-                                featureName="Minimal Player"
                                 colorizedTimeline={colorizedTimeline}
+                                featureName="Minimal Player"
                               />
                               <AppBetaBadge
                                 featureName="Minimal Player"
@@ -1394,7 +1394,7 @@ export function PopupContent() {
         <div
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute top-0 right-2.5 left-0 z-30 bg-linear-to-b from-slate-100/80 via-slate-100/60 to-transparent [-webkit-backdrop-filter:saturate(180%)_blur(20px)] [backdrop-filter:saturate(180%)_blur(20px)] [mask-image:linear-gradient(to_bottom,black_0%,black_calc(100%_-_2.25rem),transparent_100%)] dark:from-slate-900/80 dark:via-slate-900/60',
+            'pointer-events-none absolute top-0 right-2.5 left-0 z-30 bg-linear-to-b from-slate-100/80 via-slate-100/60 to-transparent [mask-image:linear-gradient(to_bottom,black_0%,black_calc(100%_-_2.25rem),transparent_100%)] [backdrop-filter:saturate(180%)_blur(20px)] [-webkit-backdrop-filter:saturate(180%)_blur(20px)] dark:from-slate-900/80 dark:via-slate-900/60',
             youtubeLibrary.hasLibrary && showSettingsView ? 'h-49' : 'h-24'
           )}
           data-testid="top-gradient-blur"
@@ -1402,10 +1402,10 @@ export function PopupContent() {
         <div
           aria-hidden="true"
           className={cn(
-            'pointer-events-none absolute right-2.5 bottom-0 left-0 z-40 bg-linear-to-t from-slate-100/80 via-slate-100/60 to-transparent [-webkit-backdrop-filter:saturate(180%)_blur(20px)] [backdrop-filter:saturate(180%)_blur(20px)] dark:from-slate-900/80 dark:via-slate-900/60',
+            'pointer-events-none absolute right-2.5 bottom-0 left-0 z-40 bg-linear-to-t from-slate-100/80 via-slate-100/60 to-transparent [backdrop-filter:saturate(180%)_blur(20px)] [-webkit-backdrop-filter:saturate(180%)_blur(20px)] dark:from-slate-900/80 dark:via-slate-900/60',
             !showPreferences
-              ? 'mask-[linear-gradient(to_top,black_0%,black_70%,transparent_100%)] h-36'
-              : 'mask-[linear-gradient(to_top,black_0%,black_58%,transparent_100%)] h-24'
+              ? 'h-36 mask-[linear-gradient(to_top,black_0%,black_70%,transparent_100%)]'
+              : 'h-24 mask-[linear-gradient(to_top,black_0%,black_58%,transparent_100%)]'
           )}
           data-testid="bottom-gradient-blur"
         />
@@ -1463,7 +1463,7 @@ export function PopupContent() {
               <button
                 aria-current={activeView === id ? 'page' : undefined}
                 className={cn(
-                  'relative z-10 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full font-semibold text-2xs transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2',
+                  'relative z-10 flex min-w-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-full text-2xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand',
                   activeView === id
                     ? 'text-brand dark:text-brand-200'
                     : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'

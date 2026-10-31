@@ -35,7 +35,7 @@ export function AppNumberInput({
     <div className="relative">
       <AppInputText
         aria-label={label}
-        className="pr-14 pl-1 text-center text-sm tabular-nums [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        className="[appearance:textfield] pr-14 pl-1 text-center text-sm tabular-nums [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         disabled={disabled}
         id={id}
         max={max}

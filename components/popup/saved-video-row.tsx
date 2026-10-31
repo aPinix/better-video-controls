@@ -18,7 +18,7 @@ export function SavedVideoRow({
     >
       <button
         aria-label={`Open saves for ${group.title}`}
-        className="group focus-visible:ring-brand flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2"
+        className="group flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand"
         onClick={(event) => onSelect(event.detail > 0)}
         type="button"
       >
@@ -28,7 +28,7 @@ export function SavedVideoRow({
           showTimestamp={false}
         />
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="group-hover:text-brand dark:group-hover:text-brand-300 line-clamp-2 text-xs leading-snug font-semibold text-slate-900 dark:text-slate-100">
+          <span className="line-clamp-2 text-xs leading-snug font-semibold text-slate-900 group-hover:text-brand dark:text-slate-100 dark:group-hover:text-brand-300">
             {group.title}
           </span>
           <span

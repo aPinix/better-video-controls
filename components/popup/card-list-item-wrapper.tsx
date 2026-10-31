@@ -20,7 +20,7 @@ export const CardListItemWrapper = ({
       className={cn(
         'flex flex-col gap-4',
         hasMultipleRows &&
-          'gap-0 [&>.card-list-item:first-child]:rounded-t-xl [&>.card-list-item:last-child]:rounded-b-xl [&>.card-list-item]:rounded-none [&>.card-list-item]:border-0',
+          'gap-0 [&>.card-list-item]:rounded-none [&>.card-list-item]:border-0 [&>.card-list-item:first-child]:rounded-t-xl [&>.card-list-item:last-child]:rounded-b-xl',
         className
       )}
     >

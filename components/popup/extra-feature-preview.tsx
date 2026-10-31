@@ -161,7 +161,7 @@ export function ExtraFeaturePreview({
           <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px]" />
         )}
         {featureName === 'Timeline Show on Hover' && (
-          <MousePointer2Icon className="feature-preview-hover-cursor absolute top-22.5 left-62.25 size-10 fill-black stroke-[1.5] stroke-white drop-shadow-md" />
+          <MousePointer2Icon className="feature-preview-hover-cursor absolute top-22.5 left-62.25 size-10 fill-black stroke-white stroke-[1.5] drop-shadow-md" />
         )}
       </div>
       {(thumbnail || chaptered) && (

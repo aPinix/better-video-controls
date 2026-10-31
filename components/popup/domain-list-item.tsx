@@ -241,7 +241,7 @@ export function DomainListItem({
       <button
         aria-label={`Move ${rule.domain}. Hold Alt and press an arrow key to reorder.`}
         className={cn(
-          'flex h-full min-w-0 cursor-grab touch-none items-center justify-center self-stretch overflow-hidden rounded-sm text-slate-400 outline-none transition-[transform,opacity] duration-250 ease-in-out hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-inset active:cursor-grabbing motion-reduce:transition-none dark:text-slate-500 dark:hover:text-slate-300',
+          'flex h-full min-w-0 cursor-grab touch-none items-center justify-center self-stretch overflow-hidden rounded-sm text-slate-400 transition-[transform,opacity] duration-250 ease-in-out outline-none hover:text-slate-600 focus-visible:ring-2 focus-visible:ring-brand/35 focus-visible:ring-inset active:cursor-grabbing motion-reduce:transition-none dark:text-slate-500 dark:hover:text-slate-300',
           (sortingDisabled || isEditing || isRemoving) &&
             'cursor-not-allowed opacity-35',
           showDragHandle
@@ -276,7 +276,7 @@ export function DomainListItem({
               render={
                 <button
                   aria-label={`Edit ${rule.domain}`}
-                  className="absolute inset-0 z-10 flex size-6 cursor-pointer items-center justify-center rounded-full bg-sky-500/15 text-sky-500 opacity-0 outline-none transition-[color,background-color,transform,opacity] duration-150 hover:scale-105 hover:bg-sky-500/25 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sky-500/35 group-hover/domain-edit:opacity-100 dark:bg-sky-500/15 dark:hover:bg-sky-500/25"
+                  className="absolute inset-0 z-10 flex size-6 cursor-pointer items-center justify-center rounded-full bg-sky-500/15 text-sky-500 opacity-0 transition-[color,background-color,transform,opacity] duration-150 outline-none group-hover/domain-edit:opacity-100 hover:scale-105 hover:bg-sky-500/25 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-sky-500/35 dark:bg-sky-500/15 dark:hover:bg-sky-500/25"
                   onClick={startEditing}
                   type="button"
                 >
@@ -301,7 +301,7 @@ export function DomainListItem({
             <AppInputText
               aria-invalid={isEditInvalid}
               aria-label={`Domain name for ${rule.domain}`}
-              className="h-7 bg-transparent px-1 font-medium text-sm dark:bg-transparent"
+              className="h-7 bg-transparent px-1 text-sm font-medium dark:bg-transparent"
               onBlur={() => {
                 if (editValue === rule.domain) cancelEditing();
                 else commitEditing();
@@ -323,7 +323,7 @@ export function DomainListItem({
         ) : (
           <button
             aria-label={`Domain ${rule.domain}. Double-click to edit.`}
-            className="min-w-0 cursor-text select-none truncate rounded-sm text-left font-medium text-slate-900 text-sm leading-tight outline-none focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-white"
+            className="min-w-0 cursor-text truncate rounded-sm text-left text-sm leading-tight font-medium text-slate-900 outline-none select-none focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-white"
             onDoubleClick={startEditing}
             onKeyDown={(event) => {
               if (event.key !== 'Enter' && event.key !== ' ') return;
@@ -338,13 +338,13 @@ export function DomainListItem({
         )}
         {createdDate ? (
           <time
-            className="truncate text-[10px] text-slate-400 leading-tight dark:text-slate-500"
+            className="truncate text-[10px] leading-tight text-slate-400 dark:text-slate-500"
             dateTime={createdDate.toISOString()}
           >
             Created {createdDateFormatter.format(createdDate)}
           </time>
         ) : (
-          <span className="truncate text-[10px] text-slate-400 leading-tight dark:text-slate-500">
+          <span className="truncate text-[10px] leading-tight text-slate-400 dark:text-slate-500">
             Created previously
           </span>
         )}
@@ -359,7 +359,7 @@ export function DomainListItem({
 
       <Button
         aria-label={`Delete ${rule.domain}`}
-        className="size-7 rounded-md p-0 text-slate-400 opacity-40 transition-[color,background-color,opacity] duration-150 hover:bg-red-50 hover:text-red-600 hover:opacity-100 focus-visible:bg-red-50 focus-visible:text-red-600 focus-visible:opacity-100 dark:text-slate-500 dark:focus-visible:bg-red-950/30 dark:focus-visible:text-red-300 dark:hover:bg-red-950/30 dark:hover:text-red-300"
+        className="size-7 rounded-md p-0 text-slate-400 opacity-40 transition-[color,background-color,opacity] duration-150 hover:bg-red-50 hover:text-red-600 hover:opacity-100 focus-visible:bg-red-50 focus-visible:text-red-600 focus-visible:opacity-100 dark:text-slate-500 dark:hover:bg-red-950/30 dark:hover:text-red-300 dark:focus-visible:bg-red-950/30 dark:focus-visible:text-red-300"
         disabled={isRemoving}
         onClick={() => onRemove(rule.domain)}
         title={`Delete ${rule.domain}`}

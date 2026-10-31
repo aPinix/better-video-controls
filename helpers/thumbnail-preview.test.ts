@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // @vitest-environment-options {"url":"https://example.com/player/"}
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
 
 import {
   createSeekbarThumbnailPreviewElement,
@@ -256,7 +256,9 @@ describe('seekbar thumbnail preview controller', () => {
       const timeline = document.createElement('div');
       timeline.style.opacity = '1';
       const preview = createSeekbarThumbnailPreviewElement(document);
-      preview.querySelector('video')!.load = vi.fn();
+      const decoder = preview.querySelector('video');
+      assert.exists(decoder);
+      decoder.load = vi.fn();
       wrapper.append(timeline, preview);
       player.append(video, wrapper);
       document.body.append(player);
@@ -320,7 +322,9 @@ describe('seekbar thumbnail preview controller', () => {
     const timeline = document.createElement('div');
     timeline.style.opacity = '1';
     const preview = createSeekbarThumbnailPreviewElement(document);
-    preview.querySelector('video')!.load = vi.fn();
+    const decoder = preview.querySelector('video');
+    assert.exists(decoder);
+    decoder.load = vi.fn();
     wrapper.append(timeline, preview);
     document.body.append(video, wrapper);
     wrapper.getBoundingClientRect = () => rect(0, 0, 300, 200);
@@ -337,8 +341,10 @@ describe('seekbar thumbnail preview controller', () => {
     });
     const loader = preview.querySelector<HTMLImageElement>(
       '.mfs-thumbnail-loader'
-    )!;
-    const image = preview.querySelector<HTMLElement>('.mfs-thumbnail-image')!;
+    );
+    const image = preview.querySelector<HTMLElement>('.mfs-thumbnail-image');
+    assert.exists(loader);
+    assert.exists(image);
     controller.updateAtPoint(60, 192);
     loader.dispatchEvent(new Event('load'));
     expect(preview.dataset.mfsImageVisible).toBe('true');
@@ -364,7 +370,9 @@ describe('seekbar thumbnail preview controller', () => {
     const timeline = document.createElement('div');
     timeline.style.opacity = '1';
     const preview = createSeekbarThumbnailPreviewElement(document);
-    preview.querySelector('video')!.load = vi.fn();
+    const decoder = preview.querySelector('video');
+    assert.exists(decoder);
+    decoder.load = vi.fn();
     Object.defineProperty(preview, 'offsetWidth', { value: 48 });
     wrapper.append(timeline, preview);
     document.body.append(video, wrapper);
@@ -624,7 +632,9 @@ describe('seekbar thumbnail preview controller', () => {
       const timeline = document.createElement('div');
       timeline.style.opacity = '1';
       const preview = createSeekbarThumbnailPreviewElement(document);
-      preview.querySelector('video')!.load = vi.fn();
+      const decoder = preview.querySelector('video');
+      assert.exists(decoder);
+      decoder.load = vi.fn();
       wrapper.append(video, timeline, preview);
       document.body.append(wrapper);
       wrapper.getBoundingClientRect = () => rect(100, 50, 800, 450);

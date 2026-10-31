@@ -1,5 +1,4 @@
 import { EXT_URL } from '@/config/variables.config';
-import { PAGE_DIALOG_SELECTOR, visiblePageDialogs } from '@/helpers/page-dialogs';
 import { DOMUtils } from '@/helpers/dom-utils';
 import {
   getProgressColor,
@@ -22,6 +21,10 @@ import {
   VOLUME_EDGE_GAP_PX,
 } from '@/helpers/media-overlay-styles';
 import { getDocumentOverlayHost } from '@/helpers/overlay-portal';
+import {
+  PAGE_DIALOG_SELECTOR,
+  visiblePageDialogs,
+} from '@/helpers/page-dialogs';
 import { PlayerTools } from '@/helpers/player-tools';
 import {
   DEFAULT_SCROLL_SPEED_FACTOR,
@@ -223,7 +226,8 @@ export class OverlayCreator {
     this.updateMinimalPlayerBypassState();
 
     // Both timeline editors use Shift for editing gestures, not UI bypass.
-    if (SHIFT_KEY_CODES.has(event.code) && this.isTimelineEditorActive()) return;
+    if (SHIFT_KEY_CODES.has(event.code) && this.isTimelineEditorActive())
+      return;
 
     // Keep configured wheel modifiers available so their gesture reaches the
     // existing overlay instead of suspending it first. Track them so a real
@@ -488,7 +492,8 @@ export class OverlayCreator {
         ? this.createYouTubeChapterTooltipElement(ownerDocument)
         : undefined;
     const thumbnailPreview =
-      (isYouTubeHostname(ownerDocument.location.hostname) || isSocialThumbnailHost(ownerDocument.location.hostname)) &&
+      (isYouTubeHostname(ownerDocument.location.hostname) ||
+        isSocialThumbnailHost(ownerDocument.location.hostname)) &&
       !DOMUtils.isYouTubeHoverPreview(video)
         ? createSeekbarThumbnailPreviewElement(ownerDocument)
         : undefined;
@@ -712,7 +717,10 @@ export class OverlayCreator {
     scrubTimeline.addEventListener('mfs-loop-layout', updateEditorLayout);
     const playerTools = !DOMUtils.isYouTubeHoverPreview(video)
       ? new PlayerTools(video, scrubTimeline, deferredSeek, (time) => {
-          if (time === null) { thumbnailPreviewController?.hide(); return; }
+          if (time === null) {
+            thumbnailPreviewController?.hide();
+            return;
+          }
           const rect = scrubTimeline.getBoundingClientRect();
           thumbnailPreviewController?.updateAtPoint(
             rect.left + (time / video.duration) * rect.width,
@@ -1256,8 +1264,7 @@ ${MEDIA_OVERLAY_STYLES}
       );
     }
 
-    const isPageDialogOpen =
-      timeline.dataset.mfsDialogBlocked === 'true';
+    const isPageDialogOpen = timeline.dataset.mfsDialogBlocked === 'true';
     timeline.style.pointerEvents =
       isInteractive && !isPageDialogOpen ? 'auto' : 'none';
     timeline.style.cursor = isInteractive ? 'pointer' : '';
@@ -1291,11 +1298,13 @@ ${MEDIA_OVERLAY_STYLES}
     const wrapperRect = wrapper.getBoundingClientRect();
     const configuredHeightInPixels =
       unit === '%' ? (wrapperRect.height * height) / 100 : height;
-    const heightInPixels = timeline.dataset.mfsLoopEditing === 'true' ? 32 :
-      isInteractive &&
-      configuredHeightInPixels < MIN_INTERACTIVE_TIMELINE_HEIGHT_PX
-        ? Math.min(MIN_INTERACTIVE_TIMELINE_HEIGHT_PX, wrapperRect.height)
-        : configuredHeightInPixels;
+    const heightInPixels =
+      timeline.dataset.mfsLoopEditing === 'true'
+        ? 32
+        : isInteractive &&
+            configuredHeightInPixels < MIN_INTERACTIVE_TIMELINE_HEIGHT_PX
+          ? Math.min(MIN_INTERACTIVE_TIMELINE_HEIGHT_PX, wrapperRect.height)
+          : configuredHeightInPixels;
 
     this.updateTimelineCornerClipping(
       video,
@@ -1310,7 +1319,12 @@ ${MEDIA_OVERLAY_STYLES}
         wrapper.appendChild(thumbnailPreview);
       }
 
-      const heightValue = timeline.dataset.mfsLoopEditing === 'true' ? '32px' : unit === '%' ? `${height}%` : `${height}px`;
+      const heightValue =
+        timeline.dataset.mfsLoopEditing === 'true'
+          ? '32px'
+          : unit === '%'
+            ? `${height}%`
+            : `${height}px`;
       timeline.style.position = 'absolute';
       timeline.style.left = '0px';
       timeline.style.width = '100%';
@@ -3087,7 +3101,8 @@ ${MEDIA_OVERLAY_STYLES}
         video.paused &&
         feedbackElement?.dataset.mfsPlaybackFeedback === 'pause' &&
         feedbackTimeout !== null
-      ) return;
+      )
+        return;
       const shouldShowPause =
         getIsHovering() && this.shouldShowPausedPlaybackUi(video);
 
@@ -3231,24 +3246,52 @@ ${MEDIA_OVERLAY_STYLES}
     let middlePress: { x: number; y: number; startedAt: number } | null = null;
     const canUseVideoSurface = (event: MouseEvent): boolean => {
       if (
-        event.altKey || event.ctrlKey || event.metaKey || event.shiftKey ||
-        this.isKeyboardSuspended || this.isMinimalPlayerBypassActive ||
-        !video.isConnected || video.readyState < 1 ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        this.isKeyboardSuspended ||
+        this.isMinimalPlayerBypassActive ||
+        !video.isConnected ||
+        video.readyState < 1 ||
         DOMUtils.isYouTubeHoverPreview(video) ||
         isExtensionControlEvent(event) ||
         isModalEvent(event) ||
-        event.composedPath().some((target) =>
-          target instanceof ownerWindow.Element && target !== video &&
-          target.matches('a[href], button, input, select, textarea, summary, [role="link"], [role="slider"], [contenteditable="true"]')
-        )
-      ) return false;
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof ownerWindow.Element &&
+              target !== video &&
+              target.matches(
+                'a[href], button, input, select, textarea, summary, [role="link"], [role="slider"], [contenteditable="true"]'
+              )
+          )
+      )
+        return false;
       const path = event.composedPath();
-      if (path.some((target) => target instanceof ownerWindow.HTMLVideoElement && target !== video)) return false;
-      if (!path.includes(video) && !path.includes(scrubOverlay) && !isOwnedByPlayer(event)) return false;
+      if (
+        path.some(
+          (target) =>
+            target instanceof ownerWindow.HTMLVideoElement && target !== video
+        )
+      )
+        return false;
+      if (
+        !path.includes(video) &&
+        !path.includes(scrubOverlay) &&
+        !isOwnedByPlayer(event)
+      )
+        return false;
       const rect = video.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0 &&
-        event.clientX >= rect.left && event.clientX <= rect.right &&
-        event.clientY >= rect.top && event.clientY <= rect.bottom;
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
     };
     const handleMiddleDown = (event: MouseEvent): void => {
       middlePress = null;
@@ -3256,24 +3299,36 @@ ${MEDIA_OVERLAY_STYLES}
         event.button !== 1 ||
         !this.settingsManager.isMiddleClickPlayPauseEnabled() ||
         !canUseVideoSurface(event)
-      ) return;
+      )
+        return;
       // Cancel browser autoscroll without changing left-button gestures.
       event.preventDefault();
       event.stopImmediatePropagation();
-      middlePress = { x: event.clientX, y: event.clientY, startedAt: ownerWindow.performance.now() };
+      middlePress = {
+        x: event.clientX,
+        y: event.clientY,
+        startedAt: ownerWindow.performance.now(),
+      };
     };
     const handleMiddleClick = (event: MouseEvent): void => {
       const press = middlePress;
       middlePress = null;
       if (
-        !press || event.button !== 1 ||
+        !press ||
+        event.button !== 1 ||
         !this.settingsManager.isMiddleClickPlayPauseEnabled() ||
         !canUseVideoSurface(event)
-      ) return;
+      )
+        return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6) return;
-      if (ownerWindow.performance.now() - press.startedAt >= PLAYER_LONG_PRESS_DELAY_MS) return;
+      if (Math.hypot(event.clientX - press.x, event.clientY - press.y) > 6)
+        return;
+      if (
+        ownerWindow.performance.now() - press.startedAt >=
+        PLAYER_LONG_PRESS_DELAY_MS
+      )
+        return;
       clearScheduledPlaybackToggle();
       setPlayback(video.paused, false);
     };
@@ -3284,13 +3339,17 @@ ${MEDIA_OVERLAY_STYLES}
       if (event.button !== 0) return;
       if (event.type === 'pointerdown' || primaryPressStartedAt === null) {
         primaryPressWasLong = false;
-        primaryPressStartedAt = canUseVideoSurface(event) ? ownerWindow.performance.now() : null;
+        primaryPressStartedAt = canUseVideoSurface(event)
+          ? ownerWindow.performance.now()
+          : null;
       }
       if (primaryPressStartedAt !== null) clearScheduledPlaybackToggle();
     };
     const finishPrimaryPress = (event: MouseEvent): void => {
       if (event.button !== 0 || primaryPressStartedAt === null) return;
-      primaryPressWasLong = ownerWindow.performance.now() - primaryPressStartedAt >= PLAYER_LONG_PRESS_DELAY_MS;
+      primaryPressWasLong =
+        ownerWindow.performance.now() - primaryPressStartedAt >=
+        PLAYER_LONG_PRESS_DELAY_MS;
       primaryPressStartedAt = null;
     };
     const cancelPrimaryPress = (): void => {
@@ -3298,8 +3357,18 @@ ${MEDIA_OVERLAY_STYLES}
       primaryPressWasLong = false;
     };
     const suppressLongPressClick = (event: MouseEvent): boolean => {
-      const longPress = primaryPressWasLong || (primaryPressStartedAt !== null && ownerWindow.performance.now() - primaryPressStartedAt >= PLAYER_LONG_PRESS_DELAY_MS);
-      if (!longPress || event.button !== 0 || event.detail === 0 || !canUseVideoSurface(event)) return false;
+      const longPress =
+        primaryPressWasLong ||
+        (primaryPressStartedAt !== null &&
+          ownerWindow.performance.now() - primaryPressStartedAt >=
+            PLAYER_LONG_PRESS_DELAY_MS);
+      if (
+        !longPress ||
+        event.button !== 0 ||
+        event.detail === 0 ||
+        !canUseVideoSurface(event)
+      )
+        return false;
       cancelPrimaryPress();
       clearScheduledPlaybackToggle();
       event.preventDefault();
@@ -3368,22 +3437,72 @@ ${MEDIA_OVERLAY_STYLES}
     };
 
     const handleKKey = (event: KeyboardEvent): void => {
-      if (event.key.toLowerCase() !== 'k' || event.defaultPrevented || event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || !this.settingsManager.isKKeyPlayPauseEnabled?.()) return;
-      if (event.composedPath().some(target => target instanceof ownerWindow.HTMLElement && (target.matches('input,textarea,select,button,[role="textbox"],dialog,[role="dialog"]') || target.isContentEditable))) return;
+      if (
+        event.key.toLowerCase() !== 'k' ||
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        !this.settingsManager.isKKeyPlayPauseEnabled?.()
+      )
+        return;
+      if (
+        event
+          .composedPath()
+          .some(
+            (target) =>
+              target instanceof ownerWindow.HTMLElement &&
+              (target.matches(
+                'input,textarea,select,button,[role="textbox"],dialog,[role="dialog"]'
+              ) ||
+                target.isContentEditable)
+          )
+      )
+        return;
       let selected: HTMLVideoElement | undefined;
       let best = -1;
       this.videoStateManager.forEach((state, candidate) => {
         const rect = candidate.getBoundingClientRect();
-        if (candidate.ownerDocument !== ownerDocument || !candidate.isConnected || candidate.readyState < 1 || DOMUtils.isYouTubeHoverPreview(candidate) || candidate.closest('.ad-showing') || rect.width <= 0 || rect.height <= 0 || rect.bottom <= 0 || rect.top >= ownerWindow.innerHeight || rect.right <= 0 || rect.left >= ownerWindow.innerWidth) return;
+        if (
+          candidate.ownerDocument !== ownerDocument ||
+          !candidate.isConnected ||
+          candidate.readyState < 1 ||
+          DOMUtils.isYouTubeHoverPreview(candidate) ||
+          candidate.closest('.ad-showing') ||
+          rect.width <= 0 ||
+          rect.height <= 0 ||
+          rect.bottom <= 0 ||
+          rect.top >= ownerWindow.innerHeight ||
+          rect.right <= 0 ||
+          rect.left >= ownerWindow.innerWidth
+        )
+          return;
         const player = this.findPlayerControlsContainer(candidate);
-        const focused = candidate === ownerDocument.activeElement || (player && player !== ownerDocument.body && player !== ownerDocument.documentElement && player.contains(ownerDocument.activeElement));
-        const score = (focused ? 1e12 : 0) + (state.isHovering ? 1e10 : 0) + (!candidate.paused ? 1e8 : 0) + rect.width * rect.height;
-        if (score > best) { best = score; selected = candidate; }
+        const focused =
+          candidate === ownerDocument.activeElement ||
+          (player &&
+            player !== ownerDocument.body &&
+            player !== ownerDocument.documentElement &&
+            player.contains(ownerDocument.activeElement));
+        const score =
+          (focused ? 1e12 : 0) +
+          (state.isHovering ? 1e10 : 0) +
+          (!candidate.paused ? 1e8 : 0) +
+          rect.width * rect.height;
+        if (score > best) {
+          best = score;
+          selected = candidate;
+        }
       });
       if (selected !== video) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (!event.repeat) { clearScheduledPlaybackToggle(); setPlayback(video.paused, false); }
+      if (!event.repeat) {
+        clearScheduledPlaybackToggle();
+        setPlayback(video.paused, false);
+      }
     };
     ownerDocument.addEventListener('keydown', handleKKey, true);
     scrubOverlay.addEventListener('click', handleClick);
@@ -3414,11 +3533,23 @@ ${MEDIA_OVERLAY_STYLES}
         scrubOverlay.removeEventListener('dblclick', handleDoubleClick);
         ownerDocument.removeEventListener('mousedown', handleMiddleDown, true);
         ownerDocument.removeEventListener('auxclick', handleMiddleClick, true);
-        ownerDocument.removeEventListener('pointerdown', startPrimaryPress, true);
+        ownerDocument.removeEventListener(
+          'pointerdown',
+          startPrimaryPress,
+          true
+        );
         ownerDocument.removeEventListener('mousedown', startPrimaryPress, true);
-        ownerDocument.removeEventListener('pointerup', finishPrimaryPress, true);
+        ownerDocument.removeEventListener(
+          'pointerup',
+          finishPrimaryPress,
+          true
+        );
         ownerDocument.removeEventListener('mouseup', finishPrimaryPress, true);
-        ownerDocument.removeEventListener('pointercancel', cancelPrimaryPress, true);
+        ownerDocument.removeEventListener(
+          'pointercancel',
+          cancelPrimaryPress,
+          true
+        );
         ownerWindow.removeEventListener('blur', cancelPrimaryPress);
         ownerDocument.removeEventListener(
           'click',
@@ -4235,8 +4366,7 @@ ${MEDIA_OVERLAY_STYLES}
       !this.isMinimalPlayerBypassActive &&
       video.dataset.mfsPip !== 'true';
     const canHandleScrollSeeking = (): boolean =>
-      canHandleWheelInput() &&
-      this.settingsManager.isScrollSeekingEnabled();
+      canHandleWheelInput() && this.settingsManager.isScrollSeekingEnabled();
 
     const clearSeekCommitTimeout = (): void => {
       if (seekCommitTimeout === undefined) return;
@@ -4695,7 +4825,6 @@ ${MEDIA_OVERLAY_STYLES}
     this.dialogGuardedDocuments.add(ownerDocument);
   }
 
-
   private updateDocumentDialogGuard(ownerDocument: Document): void {
     const dialogs = visiblePageDialogs(ownerDocument);
     const isDialogOpen = dialogs.length > 0;
@@ -4720,7 +4849,14 @@ ${MEDIA_OVERLAY_STYLES}
       }
 
       const blocked = dialogs.some((dialog) => !dialog.contains(video));
-      for (const element of [state.wrapper, state.timeline, state.mediaControls, state.seekSpeedLabel, state.youtubeChapterTooltip, state.thumbnailPreview]) {
+      for (const element of [
+        state.wrapper,
+        state.timeline,
+        state.mediaControls,
+        state.seekSpeedLabel,
+        state.youtubeChapterTooltip,
+        state.thumbnailPreview,
+      ]) {
         if (blocked) element?.setAttribute('data-mfs-dialog-blocked', 'true');
         else element?.removeAttribute('data-mfs-dialog-blocked');
       }

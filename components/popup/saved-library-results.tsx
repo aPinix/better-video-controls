@@ -68,7 +68,7 @@ export function SavedLibraryResults({
   if (!library.items.length)
     return (
       <div className="flex flex-col items-center px-5 py-8 text-center">
-        <span className="bg-brand-100 text-brand dark:bg-brand-900/50 dark:text-brand-300 mb-4 flex size-12 items-center justify-center rounded-2xl">
+        <span className="mb-4 flex size-12 items-center justify-center rounded-2xl bg-brand-100 text-brand dark:bg-brand-900/50 dark:text-brand-300">
           <BookmarkIcon aria-hidden="true" className="size-5" />
         </span>
         <h2 className="text-sm font-semibold text-slate-900 dark:text-slate-100">

@@ -24,7 +24,7 @@ export function YouTubeFiltersSetting({
           />
         ),
         BottomSlot: error ? (
-          <p className="text-red-600 text-xs" role="alert">
+          <p className="text-xs text-red-600" role="alert">
             {error}
           </p>
         ) : undefined,

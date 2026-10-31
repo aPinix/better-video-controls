@@ -29,8 +29,8 @@ export function BookmarksPreview() {
 
   return (
     <div
-      aria-label="Bookmarks feature preview"
       aria-description="A cursor hovers over two sky-blue bookmarks to show their names, then clicks each to play from that point."
+      aria-label="Bookmarks feature preview"
       className="relative h-33.75 w-60 overflow-hidden bg-slate-950 text-white"
       role="img"
     >
@@ -79,15 +79,15 @@ export function BookmarksPreview() {
             >
               <span className="absolute inset-y-0 w-1.5 -translate-x-1/2 rounded-full bg-sky-400 shadow-[0_0_5px_#38bdf855]" />
               <span
-                className={`bookmarks-preview-pill bookmarks-preview-pill-${phase} absolute bottom-7 flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-sky-300/30 bg-black/85 px-2 py-1 text-[9px] shadow-lg`}
+                className={`bookmarks-preview-pill bookmarks-preview-pill-${phase} absolute bottom-7 flex -translate-x-1/2 items-center gap-1 rounded-full border border-sky-300/30 bg-black/85 px-2 py-1 text-[9px] whitespace-nowrap shadow-lg`}
               >
                 <BookmarkIcon className="size-2.5 fill-sky-400 text-sky-300" />
                 {name} · {formatTime(duration * position)}
               </span>
               <span
                 className={`bookmarks-preview-click bookmarks-preview-click-${phase} absolute top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-sky-200`}
-                onAnimationStart={() => jump(position)}
                 onAnimationIteration={() => jump(position)}
+                onAnimationStart={() => jump(position)}
               />
             </div>
           ))}

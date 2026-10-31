@@ -164,23 +164,32 @@ it('places popup controls above native bottom buttons, ignoring an offscreen dia
   const soundHost = document.createElement('div');
   const sound = document.createElement('button');
   sound.dataset.e2e = 'browse-sound';
-  sound.getBoundingClientRect = soundHost.getBoundingClientRect = () => new DOMRect(600, 610, 40, 40);
+  sound.getBoundingClientRect = soundHost.getBoundingClientRect = () =>
+    new DOMRect(600, 610, 40, 40);
   pip.getBoundingClientRect = () => new DOMRect(552, 610, 40, 40);
   soundHost.append(sound);
   native.append(pip, soundHost);
   popup.append(video, native);
   const hidden = document.createElement('div');
   hidden.setAttribute('role', 'dialog');
-  hidden.getBoundingClientRect = () => new DOMRect(0, window.innerHeight, 550, 64);
+  hidden.getBoundingClientRect = () =>
+    new DOMRect(0, window.innerHeight, 550, 64);
   document.body.append(popup, hidden);
-  const controller = setupSocialPageControls(video, 'tiktok', () => ({tiktokShowPlaybackSpeed: true, tiktokShowAutoSkip: true}));
+  const controller = setupSocialPageControls(video, 'tiktok', () => ({
+    tiktokShowPlaybackSpeed: true,
+    tiktokShowAutoSkip: true,
+  }));
   try {
-    const toolbar = soundHost.querySelector<HTMLElement>('.mfs-social-page-controls');
+    const toolbar = soundHost.querySelector<HTMLElement>(
+      '.mfs-social-page-controls'
+    );
     expect(toolbar).not.toBeNull();
     expect(toolbar?.style.flexDirection).toBe('row');
     expect(toolbar?.style.right).toBe('0px');
     expect(toolbar?.style.bottom).toBe('calc(100% + 12px)');
-    expect(toolbar?.querySelector<HTMLElement>('[role="menu"]')?.style.bottom).toBe('54px');
+    expect(
+      toolbar?.querySelector<HTMLElement>('[role="menu"]')?.style.bottom
+    ).toBe('54px');
   } finally {
     controller.cleanup();
   }

@@ -66,7 +66,7 @@ export function YouTubePipPreview({
             </p>
             <button
               aria-label="Preview bringing video back"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border border-white/25 bg-white/10 px-2 py-1 font-medium text-[8px] transition-colors hover:border-white/50 hover:bg-white/20 active:bg-white/30"
+              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/25 bg-white/10 px-2 py-1 text-[8px] font-medium whitespace-nowrap transition-colors hover:border-white/50 hover:bg-white/20 active:bg-white/30"
               onClick={() => setPosition('page')}
               type="button"
             >
@@ -151,7 +151,7 @@ export function YouTubePipPreview({
                 : 'Preview moving PiP'
           }
           className={cn(
-            'flex items-center gap-1 rounded px-1.5 py-1 font-medium text-[10px] text-brand-600 hover:bg-brand-100 active:bg-brand-200 dark:text-brand-300 dark:hover:bg-brand-900',
+            'flex items-center gap-1 rounded px-1.5 py-1 text-[10px] font-medium text-brand-600 hover:bg-brand-100 active:bg-brand-200 dark:text-brand-300 dark:hover:bg-brand-900',
             'focus-visible:outline-2 focus-visible:outline-brand'
           )}
           onClick={() =>

@@ -117,7 +117,9 @@ describe('SiteAccessView', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: 'Domains' })
     ).toBeTruthy();
-    expect(screen.getByText('Choose where Better Video Controls runs')).toBeTruthy();
+    expect(
+      screen.getByText('Choose where Better Video Controls runs')
+    ).toBeTruthy();
   });
 
   it('puts history after the website settings title and search in the bottom toolbar', () => {

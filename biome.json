@@ -13,6 +13,7 @@
       "!.history",
       "!.output",
       "!.wxt",
+      "!!marketing",
       "!components/ui"
     ]
   },
@@ -47,6 +48,19 @@
       "quoteStyle": "single"
     }
   },
+  "tailwind": {
+    "stylesheet": "./styles/globals.css",
+    "attributes": [
+      "class",
+      "className",
+      "thumbClassName",
+      "trackClassName",
+      "titleClassName",
+      "tw"
+    ],
+    "mergeFunctions": ["cn", "clsx", "tw"],
+    "variantFunctions": ["cva", "tv"]
+  },
   "html": {
     "formatter": {
       "enabled": true
@@ -64,13 +78,9 @@
         "noArrayIndexKey": "off"
       },
       "nursery": {
-        "useSortedClasses": {
+        "useTailwindSortedClasses": {
           "level": "error",
-          "fix": "safe",
-          "options": {
-            "attributes": ["class", ".*class.*"],
-            "functions": ["cn", "clsx", "cva"]
-          }
+          "fix": "safe"
         }
       }
     },

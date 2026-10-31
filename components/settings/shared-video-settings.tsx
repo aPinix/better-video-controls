@@ -38,7 +38,7 @@ function PlatformLabel({
   icon: ElementType;
 }) {
   return (
-    <span className="inline-flex items-center gap-2 font-medium text-slate-700 text-xs dark:text-slate-200">
+    <span className="inline-flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-200">
       <Icon className="size-4 shrink-0" />
       {name}
     </span>
@@ -197,9 +197,7 @@ export function SharedVideoSettings({
                         <span>0.25×</span>
                         <span>2×</span>
                       </div>
-                      <div
-                        className={visibilityClassName}
-                      >
+                      <div className={visibilityClassName}>
                         <span aria-hidden="true">Show on videos</span>
                         <AppSwitch
                           aria-label={`Show ${name} playback speed on page`}
@@ -239,9 +237,7 @@ export function SharedVideoSettings({
                       disabled={!extensionEnabled}
                       key={name}
                     >
-                      <div
-                        className="flex items-center justify-between gap-3"
-                      >
+                      <div className="flex items-center justify-between gap-3">
                         <span aria-hidden="true">
                           <PlatformLabel icon={icon} name={name} />
                         </span>

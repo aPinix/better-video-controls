@@ -132,7 +132,7 @@ export function SavedMediaItem({
         <a
           aria-disabled={pending || undefined}
           aria-label={`Play ${isLoop ? 'loop' : 'bookmark'}: ${item.name}`}
-          className="group focus-visible:ring-brand flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+          className="group flex min-w-0 flex-1 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2"
           href={savedItemLink(item)}
           onClick={(event) => {
             if (

@@ -69,8 +69,10 @@ const createSettingsManager = ({
       isSeekbarThumbnailPreviewEnabled,
     getFastScrollHotkey: () => 'alt',
     getSlowScrollHotkey: () => 'alt+shift',
-    isPlayPauseWheelEnabled: () => isPlayPauseEnabled && isPlayPauseWheelEnabled,
-    isMiddleClickPlayPauseEnabled: () => isPlayPauseEnabled && isMiddleClickPlayPauseEnabled,
+    isPlayPauseWheelEnabled: () =>
+      isPlayPauseEnabled && isPlayPauseWheelEnabled,
+    isMiddleClickPlayPauseEnabled: () =>
+      isPlayPauseEnabled && isMiddleClickPlayPauseEnabled,
     updateSetting: () => {},
   }) as unknown as SettingsManager;
 
@@ -180,41 +182,66 @@ afterEach(() => {
 });
 
 describe('OverlayCreator keyboard handling', () => {
-  it.each(['ShiftLeft', 'ShiftRight'])('keeps timeline editing visible and active while %s is held', (code) => {
-    const states = new VideoStateManager();
-    const creator = new OverlayCreator(createSettingsManager(), states, () => {});
-    const { video, state } = createVideoState();
-    state.timeline.dataset.mfsLoopEditing = 'true';
-    state.cancelTimelineSeeking = vi.fn();
-    states.set(video, state);
-    const methods = creator as unknown as {
-      handleKeyDown: (event: KeyboardEvent) => void;
-      handleKeyUp: (event: KeyboardEvent) => void;
-    };
-    methods.handleKeyDown(new KeyboardEvent('keydown', { code, key: 'Shift', shiftKey: true }));
-    expect(document.documentElement.dataset.mfsMinimalPlayerBypass).toBeUndefined();
-    expect(document.documentElement.classList.contains('mfs-disabled')).toBe(false);
-    expect(document.getElementById('mfs-fast-hide')).toBeNull();
-    expect(state.timeline.style.display).toBe('');
-    expect(state.cancelTimelineSeeking).not.toHaveBeenCalled();
-    methods.handleKeyUp(new KeyboardEvent('keyup', { code, key: 'Shift' }));
-    expect(state.timeline.style.display).toBe('');
-  });
+  it.each(['ShiftLeft', 'ShiftRight'])(
+    'keeps timeline editing visible and active while %s is held',
+    (code) => {
+      const states = new VideoStateManager();
+      const creator = new OverlayCreator(
+        createSettingsManager(),
+        states,
+        () => {}
+      );
+      const { video, state } = createVideoState();
+      state.timeline.dataset.mfsLoopEditing = 'true';
+      state.cancelTimelineSeeking = vi.fn();
+      states.set(video, state);
+      const methods = creator as unknown as {
+        handleKeyDown: (event: KeyboardEvent) => void;
+        handleKeyUp: (event: KeyboardEvent) => void;
+      };
+      methods.handleKeyDown(
+        new KeyboardEvent('keydown', { code, key: 'Shift', shiftKey: true })
+      );
+      expect(
+        document.documentElement.dataset.mfsMinimalPlayerBypass
+      ).toBeUndefined();
+      expect(document.documentElement.classList.contains('mfs-disabled')).toBe(
+        false
+      );
+      expect(document.getElementById('mfs-fast-hide')).toBeNull();
+      expect(state.timeline.style.display).toBe('');
+      expect(state.cancelTimelineSeeking).not.toHaveBeenCalled();
+      methods.handleKeyUp(new KeyboardEvent('keyup', { code, key: 'Shift' }));
+      expect(state.timeline.style.display).toBe('');
+    }
+  );
   it('restores the editor when opened with Shift already held and resumes bypass after editing ends', () => {
     const states = new VideoStateManager();
-    const creator = new OverlayCreator(createSettingsManager(), states, () => {});
+    const creator = new OverlayCreator(
+      createSettingsManager(),
+      states,
+      () => {}
+    );
     const { video, state } = createVideoState();
     states.set(video, state);
     const methods = creator as unknown as {
       handleKeyDown: (event: KeyboardEvent) => void;
       updateMinimalPlayerBypassState: () => void;
     };
-    methods.handleKeyDown(new KeyboardEvent('keydown', { code: 'ShiftLeft', key: 'Shift', shiftKey: true }));
+    methods.handleKeyDown(
+      new KeyboardEvent('keydown', {
+        code: 'ShiftLeft',
+        key: 'Shift',
+        shiftKey: true,
+      })
+    );
     expect(state.timeline.style.display).toBe('none');
     state.timeline.dataset.mfsLoopEditing = 'true';
     methods.updateMinimalPlayerBypassState();
     expect(state.timeline.style.display).toBe('');
-    expect(document.documentElement.classList.contains('mfs-disabled')).toBe(false);
+    expect(document.documentElement.classList.contains('mfs-disabled')).toBe(
+      false
+    );
     expect(document.getElementById('mfs-fast-hide')).toBeNull();
     state.timeline.dataset.mfsLoopEditing = 'false';
     methods.updateMinimalPlayerBypassState();
@@ -582,7 +609,11 @@ describe('OverlayCreator keyboard handling', () => {
 describe('OverlayCreator page dialog guard', () => {
   it('keeps popup player layers active while hiding the background player', () => {
     const manager = new VideoStateManager();
-    const creator = new OverlayCreator(createSettingsManager({ isTimelineSeekingEnabled: true }), manager, () => {});
+    const creator = new OverlayCreator(
+      createSettingsManager({ isTimelineSeekingEnabled: true }),
+      manager,
+      () => {}
+    );
     const background = createVideoState();
     const foreground = createVideoState();
     const popup = document.createElement('div');
@@ -592,7 +623,11 @@ describe('OverlayCreator page dialog guard', () => {
     popup.append(foreground.video, foreground.state.wrapper);
     manager.set(background.video, background.state);
     manager.set(foreground.video, foreground.state);
-    (creator as unknown as {updateDocumentDialogGuard: (doc: Document) => void}).updateDocumentDialogGuard(document);
+    (
+      creator as unknown as {
+        updateDocumentDialogGuard: (doc: Document) => void;
+      }
+    ).updateDocumentDialogGuard(document);
     expect(background.state.wrapper.dataset.mfsDialogBlocked).toBe('true');
     expect(foreground.state.wrapper.dataset.mfsDialogBlocked).toBeUndefined();
     expect(foreground.state.wrapper.style.visibility).toBe('');
@@ -1011,7 +1046,10 @@ describe('OverlayCreator scroll gesture seeking', () => {
     getIsSettingInitialScroll = () => false,
     isScrollSeekingEnabled = true,
     hideVideoControls = false,
-    playbackSettings: { isPlayPauseEnabled?: boolean; isPlayPauseWheelEnabled?: boolean } = {}
+    playbackSettings: {
+      isPlayPauseEnabled?: boolean;
+      isPlayPauseWheelEnabled?: boolean;
+    } = {}
   ) => {
     const settingsManager = createSettingsManager({
       hideVideoControls,
@@ -1343,23 +1381,43 @@ describe('OverlayCreator scroll gesture seeking', () => {
     { parent: true, child: true },
     { parent: false, child: true },
     { parent: true, child: false },
-  ])('runs wheel playback independently of seeking and respects playback toggles (parent: $parent, child: $child)', ({ parent, child }) => {
-    for (const target of ['overlay', 'video'] as const) {
-      const { cleanup, overlay, video, soughtTimes } = setupScrollSeeking(() => false, false, false, { isPlayPauseEnabled: parent, isPlayPauseWheelEnabled: child });
-      overlay.getBoundingClientRect = () => new DOMRect(0, 0, 200, 100);
-      const play = vi.fn(async () => {});
-      Object.defineProperties(video, { paused: { configurable: true, value: true }, play: { configurable: true, value: play } });
-      const primaryKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? { metaKey: true } : { ctrlKey: true };
-      const wheel = new WheelEvent('wheel', { ...primaryKey, deltaX: -20, clientX: 50, clientY: 60, bubbles: true, cancelable: true });
-      (target === 'overlay' ? overlay : video).dispatchEvent(wheel);
-      expect(wheel.defaultPrevented).toBe(parent && child);
-      expect(play).toHaveBeenCalledTimes(parent && child ? 1 : 0);
-      expect(overlay.scrollLeft).toBe(0);
-      expect(soughtTimes).toEqual([]);
-      cleanup();
-      video.parentElement?.removeChild(video);
+  ])(
+    'runs wheel playback independently of seeking and respects playback toggles (parent: $parent, child: $child)',
+    ({ parent, child }) => {
+      for (const target of ['overlay', 'video'] as const) {
+        const { cleanup, overlay, video, soughtTimes } = setupScrollSeeking(
+          () => false,
+          false,
+          false,
+          { isPlayPauseEnabled: parent, isPlayPauseWheelEnabled: child }
+        );
+        overlay.getBoundingClientRect = () => new DOMRect(0, 0, 200, 100);
+        const play = vi.fn(async () => {});
+        Object.defineProperties(video, {
+          paused: { configurable: true, value: true },
+          play: { configurable: true, value: play },
+        });
+        const primaryKey = /Mac|iPhone|iPad|iPod/i.test(navigator.platform)
+          ? { metaKey: true }
+          : { ctrlKey: true };
+        const wheel = new WheelEvent('wheel', {
+          ...primaryKey,
+          deltaX: -20,
+          clientX: 50,
+          clientY: 60,
+          bubbles: true,
+          cancelable: true,
+        });
+        (target === 'overlay' ? overlay : video).dispatchEvent(wheel);
+        expect(wheel.defaultPrevented).toBe(parent && child);
+        expect(play).toHaveBeenCalledTimes(parent && child ? 1 : 0);
+        expect(overlay.scrollLeft).toBe(0);
+        expect(soughtTimes).toEqual([]);
+        cleanup();
+        video.parentElement?.removeChild(video);
+      }
     }
-  });
+  );
 
   it('removes native horizontal scrolling while another video-surface method remains enabled', () => {
     let isScrollSeekingEnabled = false;
@@ -2399,7 +2457,11 @@ describe('OverlayCreator timeline seeking', () => {
   };
 
   it.each([
-    'pointerup', 'pointercancel', 'lostpointercapture', 'cleanup', 'cancel',
+    'pointerup',
+    'pointercancel',
+    'lostpointercapture',
+    'cleanup',
+    'cancel',
   ])(
     'tracks a real timeline drag separately from wheel scrubbing until %s',
     (finish) => {
@@ -2412,9 +2474,10 @@ describe('OverlayCreator timeline seeking', () => {
       expect(state.isTimelineDragging).toBe(true);
       if (finish === 'cleanup') controller.cleanup();
       else if (finish === 'cancel') controller.cancel();
-      else state.timeline.dispatchEvent(
-        createPointerEvent(finish, { clientX: 60, clientY: 80 })
-      );
+      else
+        state.timeline.dispatchEvent(
+          createPointerEvent(finish, { clientX: 60, clientY: 80 })
+        );
       expect(state.isTimelineDragging).toBe(false);
       controller.cleanup();
     }
@@ -3089,25 +3152,57 @@ describe('OverlayCreator timeline seeking', () => {
   it('toggles once with K, respects typing and live disabling, and cleans up the override', () => {
     let enabled = true;
     const manager = new VideoStateManager();
-    const settings = { ...createSettingsManager(), isKKeyPlayPauseEnabled: () => enabled } as SettingsManager;
+    const settings = {
+      ...createSettingsManager(),
+      isKKeyPlayPauseEnabled: () => enabled,
+    } as SettingsManager;
     const creator = new OverlayCreator(settings, manager, () => {});
     const { video, state } = createVideoState();
     manager.set(video, state);
     video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
     let paused = true;
-    const play = vi.fn(async () => { paused = false; });
-    const pause = vi.fn(() => { paused = true; });
-    Object.defineProperties(video, { readyState: { value: 4 }, paused: { get: () => paused }, play: { value: play }, pause: { value: pause } });
-    const methods = creator as unknown as { setupPlayerClickHandling: (overlay: HTMLDivElement, video: HTMLVideoElement, debug: boolean) => { cleanup: () => void } };
-    const controller = methods.setupPlayerClickHandling(state.overlay, video, false);
-    const key = (target: HTMLElement, repeat = false) => { const event = new KeyboardEvent('keydown', { key: 'k', bubbles: true, cancelable: true, repeat }); target.dispatchEvent(event); return event; };
+    const play = vi.fn(async () => {
+      paused = false;
+    });
+    const pause = vi.fn(() => {
+      paused = true;
+    });
+    Object.defineProperties(video, {
+      readyState: { value: 4 },
+      paused: { get: () => paused },
+      play: { value: play },
+      pause: { value: pause },
+    });
+    const methods = creator as unknown as {
+      setupPlayerClickHandling: (
+        overlay: HTMLDivElement,
+        video: HTMLVideoElement,
+        debug: boolean
+      ) => { cleanup: () => void };
+    };
+    const controller = methods.setupPlayerClickHandling(
+      state.overlay,
+      video,
+      false
+    );
+    const key = (target: HTMLElement, repeat = false) => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'k',
+        bubbles: true,
+        cancelable: true,
+        repeat,
+      });
+      target.dispatchEvent(event);
+      return event;
+    };
     expect(key(video).defaultPrevented).toBe(true);
     expect(play).toHaveBeenCalledOnce();
     key(video, true);
     expect(pause).not.toHaveBeenCalled();
     key(video);
     expect(pause).toHaveBeenCalledOnce();
-    const input = document.createElement('input'); document.body.append(input);
+    const input = document.createElement('input');
+    document.body.append(input);
     expect(key(input).defaultPrevented).toBe(false);
     enabled = false;
     expect(key(video).defaultPrevented).toBe(false);
@@ -3117,80 +3212,121 @@ describe('OverlayCreator timeline seeking', () => {
     expect(play).toHaveBeenCalledOnce();
   });
 
-  it.each([false, true])('middle-click toggles playback once with Minimal Player %s and restores native events on cleanup', (hideVideoControls) => {
-    vi.useFakeTimers();
-    let middleClickEnabled = true;
-    const settings = { ...createSettingsManager({ hideVideoControls }), isMiddleClickPlayPauseEnabled: () => middleClickEnabled } as SettingsManager;
-    const creator = new OverlayCreator(settings, new VideoStateManager(), () => {});
-    const { video, state } = createVideoState();
-    video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
-    let paused = true;
-    const play = vi.fn(async () => {
-      paused = false;
-      video.dispatchEvent(new Event('play'));
-    });
-    const pause = vi.fn(() => {
-      paused = true;
-      video.dispatchEvent(new Event('pause'));
-    });
-    Object.defineProperties(video, {
-      readyState: { value: 4, configurable: true },
-      paused: { get: () => paused, configurable: true },
-      play: { value: play, configurable: true },
-      pause: { value: pause, configurable: true },
-    });
-    const methods = creator as unknown as { setupPlayerClickHandling: (overlay: HTMLDivElement, video: HTMLVideoElement, debug: boolean, getIsHovering?: () => boolean) => { cleanup: () => void; sync: () => void } };
-    const controller = methods.setupPlayerClickHandling(state.overlay, video, false, () => true);
-    const click = (target: HTMLElement, options: MouseEventInit = {}) => {
-      const down = new MouseEvent('mousedown', { bubbles: true, cancelable: true, button: 1, clientX: 50, clientY: 60, ...options });
-      const aux = new MouseEvent('auxclick', { bubbles: true, cancelable: true, button: 1, clientX: 50, clientY: 60, ...options });
-      target.dispatchEvent(down);
-      target.dispatchEvent(aux);
-      return { down, aux };
-    };
-    try {
-      const first = click(video);
-      expect(first.down.defaultPrevented).toBe(true);
-      expect(first.aux.defaultPrevented).toBe(true);
-      expect(play).toHaveBeenCalledOnce();
-      click(video);
-      expect(pause).toHaveBeenCalledOnce();
-      const pauseFeedback = () => state.wrapper.querySelector('[data-mfs-playback-feedback="pause"]');
-      expect(pauseFeedback()).not.toBeNull();
-      controller.sync();
-      vi.advanceTimersByTime(649);
-      controller.sync();
-      expect(pauseFeedback()).not.toBeNull();
-      vi.advanceTimersByTime(1);
-      expect(pauseFeedback()).toBeNull();
-      middleClickEnabled = false;
-      const disabled = click(video);
-      expect(disabled.down.defaultPrevented).toBe(false);
-      expect(disabled.aux.defaultPrevented).toBe(false);
-      expect(play).toHaveBeenCalledOnce();
-      expect(pause).toHaveBeenCalledOnce();
-      middleClickEnabled = true;
-      expect(click(video, { button: 2 }).aux.defaultPrevented).toBe(false);
-      expect(click(video, { ctrlKey: true }).down.defaultPrevented).toBe(false);
-      expect(click(video, { clientX: 250 }).down.defaultPrevented).toBe(false);
-      const link = document.createElement('a');
-      link.href = '#related';
-      video.before(link);
-      link.append(video);
-      expect(click(video).down.defaultPrevented).toBe(false);
-      link.replaceWith(video);
-      // Focusable videos still own the middle-click gesture.
-      video.tabIndex = 0;
-      click(video);
-      expect(play).toHaveBeenCalledTimes(2);
-      controller.cleanup();
-      expect(click(video).down.defaultPrevented).toBe(false);
-      expect(play).toHaveBeenCalledTimes(2);
-      expect(pause).toHaveBeenCalledOnce();
-    } finally {
-      controller.cleanup();
+  it.each([false, true])(
+    'middle-click toggles playback once with Minimal Player %s and restores native events on cleanup',
+    (hideVideoControls) => {
+      vi.useFakeTimers();
+      let middleClickEnabled = true;
+      const settings = {
+        ...createSettingsManager({ hideVideoControls }),
+        isMiddleClickPlayPauseEnabled: () => middleClickEnabled,
+      } as SettingsManager;
+      const creator = new OverlayCreator(
+        settings,
+        new VideoStateManager(),
+        () => {}
+      );
+      const { video, state } = createVideoState();
+      video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
+      let paused = true;
+      const play = vi.fn(async () => {
+        paused = false;
+        video.dispatchEvent(new Event('play'));
+      });
+      const pause = vi.fn(() => {
+        paused = true;
+        video.dispatchEvent(new Event('pause'));
+      });
+      Object.defineProperties(video, {
+        readyState: { value: 4, configurable: true },
+        paused: { get: () => paused, configurable: true },
+        play: { value: play, configurable: true },
+        pause: { value: pause, configurable: true },
+      });
+      const methods = creator as unknown as {
+        setupPlayerClickHandling: (
+          overlay: HTMLDivElement,
+          video: HTMLVideoElement,
+          debug: boolean,
+          getIsHovering?: () => boolean
+        ) => { cleanup: () => void; sync: () => void };
+      };
+      const controller = methods.setupPlayerClickHandling(
+        state.overlay,
+        video,
+        false,
+        () => true
+      );
+      const click = (target: HTMLElement, options: MouseEventInit = {}) => {
+        const down = new MouseEvent('mousedown', {
+          bubbles: true,
+          cancelable: true,
+          button: 1,
+          clientX: 50,
+          clientY: 60,
+          ...options,
+        });
+        const aux = new MouseEvent('auxclick', {
+          bubbles: true,
+          cancelable: true,
+          button: 1,
+          clientX: 50,
+          clientY: 60,
+          ...options,
+        });
+        target.dispatchEvent(down);
+        target.dispatchEvent(aux);
+        return { down, aux };
+      };
+      try {
+        const first = click(video);
+        expect(first.down.defaultPrevented).toBe(true);
+        expect(first.aux.defaultPrevented).toBe(true);
+        expect(play).toHaveBeenCalledOnce();
+        click(video);
+        expect(pause).toHaveBeenCalledOnce();
+        const pauseFeedback = () =>
+          state.wrapper.querySelector('[data-mfs-playback-feedback="pause"]');
+        expect(pauseFeedback()).not.toBeNull();
+        controller.sync();
+        vi.advanceTimersByTime(649);
+        controller.sync();
+        expect(pauseFeedback()).not.toBeNull();
+        vi.advanceTimersByTime(1);
+        expect(pauseFeedback()).toBeNull();
+        middleClickEnabled = false;
+        const disabled = click(video);
+        expect(disabled.down.defaultPrevented).toBe(false);
+        expect(disabled.aux.defaultPrevented).toBe(false);
+        expect(play).toHaveBeenCalledOnce();
+        expect(pause).toHaveBeenCalledOnce();
+        middleClickEnabled = true;
+        expect(click(video, { button: 2 }).aux.defaultPrevented).toBe(false);
+        expect(click(video, { ctrlKey: true }).down.defaultPrevented).toBe(
+          false
+        );
+        expect(click(video, { clientX: 250 }).down.defaultPrevented).toBe(
+          false
+        );
+        const link = document.createElement('a');
+        link.href = '#related';
+        video.before(link);
+        link.append(video);
+        expect(click(video).down.defaultPrevented).toBe(false);
+        link.replaceWith(video);
+        // Focusable videos still own the middle-click gesture.
+        video.tabIndex = 0;
+        click(video);
+        expect(play).toHaveBeenCalledTimes(2);
+        controller.cleanup();
+        expect(click(video).down.defaultPrevented).toBe(false);
+        expect(play).toHaveBeenCalledTimes(2);
+        expect(pause).toHaveBeenCalledOnce();
+      } finally {
+        controller.cleanup();
+      }
     }
-  });
+  );
 
   it.each([
     { minimal: false, surface: 'video' },
@@ -3198,59 +3334,94 @@ describe('OverlayCreator timeline seeking', () => {
     { minimal: false, surface: 'site layer' },
     { minimal: true, surface: 'site layer' },
     { minimal: true, surface: 'overlay' },
-  ])('preserves native hold-to-speed-up without a release toggle (minimal: $minimal, surface: $surface)', ({ minimal, surface }) => {
-    vi.useFakeTimers();
-    let now = 0;
-    const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
-    const creator = new OverlayCreator(createSettingsManager({ hideVideoControls: minimal }), new VideoStateManager(), () => {});
-    const { video, state } = createVideoState();
-    const player = document.createElement('div');
-    player.id = 'movie_player';
-    player.append(video, state.wrapper);
-    document.body.append(player);
-    video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
-    const siteLayer = document.createElement('div');
-    state.wrapper.append(siteLayer);
-    const target = surface === 'video' ? video : surface === 'overlay' ? state.overlay : siteLayer;
-    const play = vi.fn(async () => {});
-    const pause = vi.fn();
-    Object.defineProperties(video, {
-      readyState: { value: 4, configurable: true },
-      paused: { value: false, configurable: true },
-      play: { value: play, configurable: true },
-      pause: { value: pause, configurable: true },
-    });
-    const nativeDown = vi.fn(() => { setTimeout(() => { video.playbackRate = 2; }, 500); });
-    const nativeUp = vi.fn(() => { video.playbackRate = 1; });
-    const nativeClick = vi.fn(() => pause());
-    target.addEventListener('pointerdown', nativeDown);
-    target.addEventListener('pointerup', nativeUp);
-    target.addEventListener('click', nativeClick);
-    const methods = creator as unknown as { setupPlayerClickHandling: (overlay: HTMLDivElement, video: HTMLVideoElement, debug: boolean) => { cleanup: () => void } };
-    const controller = methods.setupPlayerClickHandling(state.overlay, video, false);
-    try {
-      const down = createPointerEvent('pointerdown', { clientX: 50 });
-      target.dispatchEvent(down);
-      vi.advanceTimersByTime(600);
-      now = 600;
-      expect(nativeDown).toHaveBeenCalledOnce();
-      expect(down.defaultPrevented).toBe(false);
-      expect(video.playbackRate).toBe(2);
-      target.dispatchEvent(createPointerEvent('pointerup', { clientX: 50 }));
-      expect(nativeUp).toHaveBeenCalledOnce();
-      expect(video.playbackRate).toBe(1);
-      const releaseClick = new MouseEvent('click', { bubbles: true, cancelable: true, button: 0, detail: 1, clientX: 50, clientY: 60 });
-      target.dispatchEvent(releaseClick);
-      vi.advanceTimersByTime(500);
-      expect(releaseClick.defaultPrevented).toBe(true);
-      expect(play).not.toHaveBeenCalled();
-      expect(pause).not.toHaveBeenCalled();
-      expect(nativeClick).not.toHaveBeenCalled();
-    } finally {
-      controller.cleanup();
-      clock.mockRestore();
+  ])(
+    'preserves native hold-to-speed-up without a release toggle (minimal: $minimal, surface: $surface)',
+    ({ minimal, surface }) => {
+      vi.useFakeTimers();
+      let now = 0;
+      const clock = vi.spyOn(performance, 'now').mockImplementation(() => now);
+      const creator = new OverlayCreator(
+        createSettingsManager({ hideVideoControls: minimal }),
+        new VideoStateManager(),
+        () => {}
+      );
+      const { video, state } = createVideoState();
+      const player = document.createElement('div');
+      player.id = 'movie_player';
+      player.append(video, state.wrapper);
+      document.body.append(player);
+      video.getBoundingClientRect = state.wrapper.getBoundingClientRect;
+      const siteLayer = document.createElement('div');
+      state.wrapper.append(siteLayer);
+      const target =
+        surface === 'video'
+          ? video
+          : surface === 'overlay'
+            ? state.overlay
+            : siteLayer;
+      const play = vi.fn(async () => {});
+      const pause = vi.fn();
+      Object.defineProperties(video, {
+        readyState: { value: 4, configurable: true },
+        paused: { value: false, configurable: true },
+        play: { value: play, configurable: true },
+        pause: { value: pause, configurable: true },
+      });
+      const nativeDown = vi.fn(() => {
+        setTimeout(() => {
+          video.playbackRate = 2;
+        }, 500);
+      });
+      const nativeUp = vi.fn(() => {
+        video.playbackRate = 1;
+      });
+      const nativeClick = vi.fn(() => pause());
+      target.addEventListener('pointerdown', nativeDown);
+      target.addEventListener('pointerup', nativeUp);
+      target.addEventListener('click', nativeClick);
+      const methods = creator as unknown as {
+        setupPlayerClickHandling: (
+          overlay: HTMLDivElement,
+          video: HTMLVideoElement,
+          debug: boolean
+        ) => { cleanup: () => void };
+      };
+      const controller = methods.setupPlayerClickHandling(
+        state.overlay,
+        video,
+        false
+      );
+      try {
+        const down = createPointerEvent('pointerdown', { clientX: 50 });
+        target.dispatchEvent(down);
+        vi.advanceTimersByTime(600);
+        now = 600;
+        expect(nativeDown).toHaveBeenCalledOnce();
+        expect(down.defaultPrevented).toBe(false);
+        expect(video.playbackRate).toBe(2);
+        target.dispatchEvent(createPointerEvent('pointerup', { clientX: 50 }));
+        expect(nativeUp).toHaveBeenCalledOnce();
+        expect(video.playbackRate).toBe(1);
+        const releaseClick = new MouseEvent('click', {
+          bubbles: true,
+          cancelable: true,
+          button: 0,
+          detail: 1,
+          clientX: 50,
+          clientY: 60,
+        });
+        target.dispatchEvent(releaseClick);
+        vi.advanceTimersByTime(500);
+        expect(releaseClick.defaultPrevented).toBe(true);
+        expect(play).not.toHaveBeenCalled();
+        expect(pause).not.toHaveBeenCalled();
+        expect(nativeClick).not.toHaveBeenCalled();
+      } finally {
+        controller.cleanup();
+        clock.mockRestore();
+      }
     }
-  });
+  );
 
   it('toggles playback when the hidden-controls overlay is clicked', () => {
     vi.useFakeTimers();

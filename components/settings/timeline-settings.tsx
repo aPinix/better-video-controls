@@ -55,7 +55,7 @@ export function TimelineSettings({
 
       {/* Position */}
       <div className="flex items-center justify-between">
-        <span className="w-17.5 flex-none font-medium text-slate-700 text-sm dark:text-slate-300">
+        <span className="w-17.5 flex-none text-sm font-medium text-slate-700 dark:text-slate-300">
           Position
         </span>
         <AppSegment
@@ -75,7 +75,7 @@ export function TimelineSettings({
       {/* Height */}
       <div className="space-y-1">
         <div className="flex items-center gap-1.5">
-          <span className="font-medium text-slate-700 text-sm dark:text-slate-300">
+          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Height
           </span>
           <SliderResetButton

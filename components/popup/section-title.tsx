@@ -22,7 +22,7 @@ export const SectionTitle = ({
           <Icon className="h-4 w-4 text-slate-400 dark:text-slate-500" />
         ) : null}
         <h3
-          className="font-semibold text-slate-800 text-sm dark:text-slate-100"
+          className="text-sm font-semibold text-slate-800 dark:text-slate-100"
           id={id}
         >
           {title}

@@ -208,9 +208,7 @@ describe('player actions', () => {
         );
         expect(
           (download.mock.contexts[0] as HTMLAnchorElement | undefined)?.download
-        ).toMatch(
-          new RegExp(`\\.${extension}$`)
-        );
+        ).toMatch(new RegExp(`\\.${extension}$`));
       } finally {
         vi.clearAllTimers();
         vi.useRealTimers();

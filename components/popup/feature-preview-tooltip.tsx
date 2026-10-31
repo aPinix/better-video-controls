@@ -1,5 +1,5 @@
-import type { ThumbnailTimeDisplay } from '@/helpers/thumbnail-time';
 import type { ScreenshotFormat } from '@/helpers/player-tools-settings';
+import type { ThumbnailTimeDisplay } from '@/helpers/thumbnail-time';
 import { PreviewTooltip } from './extra-feature-preview-tooltip';
 import {
   FEATURE_PREVIEW_DETAILS,
@@ -22,8 +22,8 @@ export function FeaturePreviewTooltip({
   return (
     <PreviewTooltip title={title}>
       <FeaturePreview
-        feature={feature}
         boostLevel={boostLevel}
+        feature={feature}
         screenshotFormat={screenshotFormat}
         thumbnailTimeDisplay={thumbnailTimeDisplay}
       />

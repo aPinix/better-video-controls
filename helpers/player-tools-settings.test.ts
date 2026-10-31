@@ -18,7 +18,9 @@ it('defaults arrows to five seconds and J/L to ten while preserving custom inter
 it('caps saved boosts at 5 times while retaining the 2 times default', () => {
   expect(DEFAULT_PLAYER_TOOLS.youtubeBoost).toBe(2);
   for (const youtubeBoost of [2, 3, 4, 5])
-    expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(youtubeBoost);
+    expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(
+      youtubeBoost
+    );
   for (const youtubeBoost of [6, 7, 10])
     expect(normalizePlayerTools({ youtubeBoost }).youtubeBoost).toBe(5);
   for (const youtubeBoost of [undefined, null, '5', 2.5, -1])

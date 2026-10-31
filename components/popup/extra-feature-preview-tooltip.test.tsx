@@ -102,7 +102,9 @@ describe('ExtraFeaturePreviewTooltip', () => {
   it('opens the off/on site comparison for Minimal Player', async () => {
     const user = userEvent.setup();
     render(<ExtraFeaturePreviewTooltip featureName="Minimal Player" />);
-    await user.hover(screen.getByRole('button', { name: 'Preview Minimal Player' }));
+    await user.hover(
+      screen.getByRole('button', { name: 'Preview Minimal Player' })
+    );
     await screen.findByLabelText('Minimal Player preview');
     expect(screen.getByText('Minimal Player off')).toBeTruthy();
     expect(screen.getByText('Minimal Player on')).toBeTruthy();

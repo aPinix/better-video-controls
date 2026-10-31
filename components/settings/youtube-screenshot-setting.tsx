@@ -1,5 +1,5 @@
-import { AppSwitch } from '@/components/app/app-switch';
 import { AppSegment } from '@/components/app/app-segment';
+import { AppSwitch } from '@/components/app/app-switch';
 import { CardListItem } from '@/components/popup/card-list-item';
 import { YouTubeScreenshotIcon } from '@/components/youtube-screenshot-icon';
 import { cn } from '@/lib/utils';
@@ -31,13 +31,13 @@ export function YouTubeScreenshotSetting({
         ),
         BottomSlot: (
           <SettingsExpansion
-            open={settings.youtubeScreenshotEnabled}
             error={error}
+            open={settings.youtubeScreenshotEnabled}
           >
             <div
               className={cn(
                 SUB_OPTIONS_CARD_CLASS_NAME,
-                'space-y-3 text-slate-600 text-xs dark:text-slate-300'
+                'space-y-3 text-xs text-slate-600 dark:text-slate-300'
               )}
               data-slot="settings-sub-options"
             >

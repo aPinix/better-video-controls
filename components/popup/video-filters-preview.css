@@ -1,48 +1,78 @@
 /* Apply real filters to one playing video so playback stays continuous. */
 .video-filters-preview-video {
-  animation: video-filters-preview-live 7.2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  animation: video-filters-preview-live 7.2s cubic-bezier(0.77, 0, 0.175, 1)
+    infinite;
 }
 
 .video-filters-preview-brightness {
-  animation: video-filters-preview-brightness 7.2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  animation: video-filters-preview-brightness 7.2s
+    cubic-bezier(0.77, 0, 0.175, 1) infinite;
 }
 
 .video-filters-preview-contrast {
-  animation: video-filters-preview-contrast 7.2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  animation: video-filters-preview-contrast 7.2s cubic-bezier(0.77, 0, 0.175, 1)
+    infinite;
 }
 
 .video-filters-preview-color {
-  animation: video-filters-preview-color 7.2s cubic-bezier(0.77, 0, 0.175, 1) infinite;
+  animation: video-filters-preview-color 7.2s cubic-bezier(0.77, 0, 0.175, 1)
+    infinite;
 }
 
 @keyframes video-filters-preview-live {
-  0%, 100% {
+  0%,
+  100% {
     filter: brightness(1) contrast(1) saturate(1);
   }
-  20%, 30% {
+  20%,
+  30% {
     filter: brightness(1.35) contrast(1) saturate(1);
   }
-  50%, 60% {
+  50%,
+  60% {
     filter: brightness(1) contrast(1.6) saturate(1);
   }
-  80%, 90% {
+  80%,
+  90% {
     filter: brightness(1) contrast(1) saturate(2);
   }
 }
 
 @keyframes video-filters-preview-brightness {
-  0%, 50%, 100% { transform: scaleX(0.5); }
-  20%, 30% { transform: scaleX(0.85); }
+  0%,
+  50%,
+  100% {
+    transform: scaleX(0.5);
+  }
+  20%,
+  30% {
+    transform: scaleX(0.85);
+  }
 }
 
 @keyframes video-filters-preview-contrast {
-  0%, 30%, 80%, 100% { transform: scaleX(0.5); }
-  50%, 60% { transform: scaleX(0.85); }
+  0%,
+  30%,
+  80%,
+  100% {
+    transform: scaleX(0.5);
+  }
+  50%,
+  60% {
+    transform: scaleX(0.85);
+  }
 }
 
 @keyframes video-filters-preview-color {
-  0%, 60%, 100% { transform: scaleX(0.5); }
-  80%, 90% { transform: scaleX(0.9); }
+  0%,
+  60%,
+  100% {
+    transform: scaleX(0.5);
+  }
+  80%,
+  90% {
+    transform: scaleX(0.9);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

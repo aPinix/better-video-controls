@@ -1,11 +1,16 @@
 <div style="display: flex; align-items: center;">
-  <img src="public/icon/48.png" alt="App Icon" width="48" style="margin-right: 12px;" />
+  <img
+    src="public/icon/48.png"
+    alt="App Icon"
+    width="48"
+    style="margin-right: 12px;"
+  >
   <h1 style="margin: 0;">Better Video Controls</h1>
 </div>
 
-<br />
+<br>
 
-<img src="repo-images/apinix-media-flow-seek-screenshot-01.png" alt="App Icon" style="width: 100%;" />
+<img src="repo-images/apinix-media-flow-seek-screenshot-01.png" alt="App Icon" style="width: 100%;">
 
 > **Control videos on YouTube, Instagram, TikTok, and more. Scroll horizontally to seek instantly, even while another window is active.**
 
@@ -15,19 +20,28 @@ popular social platforms and other HTML5 video sites.
 
 <p align="left">
   <a href="https://github.com/aPinix/chrome-extension-media-flow-seek">
-    <img src="https://img.shields.io/badge/version-1.0.0-blue.svg" alt="Version" />
+    <img
+      src="https://img.shields.io/badge/version-1.0.0-blue.svg"
+      alt="Version"
+    >
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License" />
+    <img src="https://img.shields.io/badge/license-MIT-green.svg" alt="License">
   </a>
   <a href="https://wxt.dev">
-    <img src="https://img.shields.io/badge/built%20with-WXT-orange.svg" alt="WXT" />
+    <img
+      src="https://img.shields.io/badge/built%20with-WXT-orange.svg"
+      alt="WXT"
+    >
   </a>
   <a href="https://reactjs.org">
-    <img src="https://img.shields.io/badge/React-19-61DAFB.svg" alt="React" />
+    <img src="https://img.shields.io/badge/React-19-61DAFB.svg" alt="React">
   </a>
   <a href="https://www.typescriptlang.org">
-    <img src="https://img.shields.io/badge/TypeScript-5.8-3178C6.svg" alt="TypeScript" />
+    <img
+      src="https://img.shields.io/badge/TypeScript-5.8-3178C6.svg"
+      alt="TypeScript"
+    >
   </a>
 </p>
 

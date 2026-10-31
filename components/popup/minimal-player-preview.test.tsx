@@ -17,7 +17,13 @@ it('compares four platforms and then other sites before restarting', () => {
   expect(getByText('Minimal Player off')).toBeTruthy();
   expect(getByText('Minimal Player on')).toBeTruthy();
   expect(getByText('YouTube')).toBeTruthy();
-  for (const site of ['Vimeo', 'Instagram', 'TikTok', 'Other sites', 'YouTube']) {
+  for (const site of [
+    'Vimeo',
+    'Instagram',
+    'TikTok',
+    'Other sites',
+    'YouTube',
+  ]) {
     act(() => vi.advanceTimersByTime(4000));
     expect(getByText(site)).toBeTruthy();
     expect(container.querySelectorAll('video')).toHaveLength(2);

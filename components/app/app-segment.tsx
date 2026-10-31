@@ -75,7 +75,7 @@ export function AppSegment<T extends string>({
         return (
           <label
             className={cn(
-              'relative z-10 flex min-w-0 cursor-pointer items-center justify-center rounded-full px-2 font-medium text-xs transition-colors duration-300 has-focus-visible:outline-2 has-focus-visible:outline-brand has-focus-visible:outline-offset-2',
+              'relative z-10 flex min-w-0 cursor-pointer items-center justify-center rounded-full px-2 text-xs font-medium transition-colors duration-300 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-brand',
               disabled && 'cursor-default opacity-50',
               isSelected
                 ? 'text-white'

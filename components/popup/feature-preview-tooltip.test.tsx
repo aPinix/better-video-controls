@@ -22,14 +22,14 @@ describe('FeaturePreviewTooltip', () => {
   it('updates the boost preview maximum when the selected setting changes', async () => {
     const user = userEvent.setup();
     const { rerender } = render(
-      <FeaturePreviewTooltip feature="boost" boostLevel={5} />
+      <FeaturePreviewTooltip boostLevel={5} feature="boost" />
     );
     await user.hover(
       screen.getByRole('button', { name: 'Preview Boost Volume' })
     );
     const popup = await screen.findByLabelText('Boost Volume preview');
     expect(within(popup).getByText('500%')).toBeTruthy();
-    rerender(<FeaturePreviewTooltip feature="boost" boostLevel={2} />);
+    rerender(<FeaturePreviewTooltip boostLevel={2} feature="boost" />);
     expect(within(popup).getByText('200%')).toBeTruthy();
     expect(within(popup).queryByText('500%')).toBeNull();
   });

@@ -68,12 +68,12 @@ export function PreviewTooltip({
 
   return (
     <TooltipProvider>
-      <Tooltip open={open} triggerId={triggerId} onOpenChange={setOpen}>
+      <Tooltip onOpenChange={setOpen} open={open} triggerId={triggerId}>
         <TooltipTrigger
           render={
             <button
               aria-label={`Preview ${title}`}
-              className="cursor-help rounded-full text-slate-400 outline-none transition-colors hover:text-brand focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-slate-500 dark:hover:text-brand-300"
+              className="cursor-help rounded-full text-slate-400 transition-colors outline-none hover:text-brand focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-slate-500 dark:hover:text-brand-300"
               id={triggerId}
               ref={triggerRef}
               type="button"

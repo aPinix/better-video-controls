@@ -670,9 +670,15 @@ describe('YouTube advanced controls and shortcuts', () => {
     for (const level of [2, 3, 4, 5, 2]) {
       input.value = String(level);
       input.dispatchEvent(new Event('input'));
-      expect(warning?.textContent?.includes('High boost may distort the sound')).toBe(level >= 3);
-      expect(input.style.getPropertyValue('--track').includes('#fbbf24')).toBe(level >= 3);
-      expect(input.getAttribute('aria-valuetext')?.includes('may distort')).toBe(level >= 3);
+      expect(
+        warning?.textContent?.includes('High boost may distort the sound')
+      ).toBe(level >= 3);
+      expect(input.style.getPropertyValue('--track').includes('#fbbf24')).toBe(
+        level >= 3
+      );
+      expect(
+        input.getAttribute('aria-valuetext')?.includes('may distort')
+      ).toBe(level >= 3);
     }
   });
   it('previews active boost and Cinema sliders before the drag is committed', async () => {

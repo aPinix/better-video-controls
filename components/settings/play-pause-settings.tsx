@@ -32,10 +32,6 @@ export function PlayPauseSettings({
   return (
     <CardListItem
       classNameContentBottom="mt-0"
-      title="Play / Pause"
-      description="Control playback with mouse gestures"
-      icon={PlayIcon}
-      iconIsToggled={enabled}
       components={{
         RightSlot: (
           <AppSwitch
@@ -49,23 +45,23 @@ export function PlayPauseSettings({
           <SettingsExpansion open={enabled}>
             <SubOptionsCard className="space-y-4">
               <div className="flex items-center justify-between gap-3">
-                <span className="inline-flex items-center gap-1 text-slate-700 text-sm dark:text-slate-300">
+                <span className="inline-flex items-center gap-1 text-sm text-slate-700 dark:text-slate-300">
                   Keyboard shortcut <AppKbd>K</AppKbd>
                 </span>
                 <AppSwitch
                   aria-label="Enable K key play pause"
                   checked={kKeyEnabled}
                   disabled={disabled || !enabled}
-                  size="sm"
                   onCheckedChange={(next) => onKKeyEnabledChange(next)}
+                  size="sm"
                 />
               </div>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     Middle-click
                   </div>
-                  <p className="text-slate-500 text-xs dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Click the mouse wheel on the video to play or pause
                   </p>
                 </div>
@@ -79,10 +75,10 @@ export function PlayPauseSettings({
               </div>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="font-medium text-slate-700 text-sm dark:text-slate-300">
+                  <div className="text-sm font-medium text-slate-700 dark:text-slate-300">
                     {modifier} + Scroll
                   </div>
-                  <p className="text-slate-500 text-xs dark:text-slate-400">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
                     Hold{' '}
                     <AppKbd aria-label={`${modifier} + Scroll Left`}>
                       {key} + Scroll Left
@@ -106,6 +102,10 @@ export function PlayPauseSettings({
           </SettingsExpansion>
         ),
       }}
+      description="Control playback with mouse gestures"
+      icon={PlayIcon}
+      iconIsToggled={enabled}
+      title="Play / Pause"
     />
   );
 }

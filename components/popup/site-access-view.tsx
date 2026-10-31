@@ -265,7 +265,7 @@ export function SiteAccessView({
                 <AppSwitch
                   aria-label="Run Better Video Controls by default on websites"
                   checked={globalDefaultOn}
-                  className="data-checked:border-lime-500 data-unchecked:border-rose-500 data-checked:bg-lime-500 data-unchecked:bg-rose-500 group-has-[:focus-visible]/field-label:data-checked:border-lime-500 group-has-[:focus-visible]/field-label:data-unchecked:border-rose-500 dark:data-unchecked:border-rose-400 dark:data-unchecked:bg-rose-400"
+                  className="data-checked:border-lime-500 data-checked:bg-lime-500 group-has-[:focus-visible]/field-label:data-checked:border-lime-500 data-unchecked:border-rose-500 data-unchecked:bg-rose-500 group-has-[:focus-visible]/field-label:data-unchecked:border-rose-500 dark:data-unchecked:border-rose-400 dark:data-unchecked:bg-rose-400"
                   onCheckedChange={(checked) =>
                     onDomainRulesChange(setGlobalDefault(domainRules, checked))
                   }

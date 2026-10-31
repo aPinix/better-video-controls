@@ -35,7 +35,8 @@ export function MinimalPlayerPreview({
   useEffect(() => {
     if (reducedMotion) return;
     const timer = setInterval(
-      () => setSiteIndex((index) => (index + 1) % MINIMAL_PLAYER_EXAMPLES.length),
+      () =>
+        setSiteIndex((index) => (index + 1) % MINIMAL_PLAYER_EXAMPLES.length),
       4000
     );
     return () => clearInterval(timer);
@@ -45,10 +46,10 @@ export function MinimalPlayerPreview({
 
   return (
     <div
+      aria-description="Compare the site's original controls on the left with the uncluttered Minimal Player on the right. Examples cycle through YouTube, Vimeo, Instagram, TikTok, and other sites."
+      aria-label="Minimal Player feature preview"
       className="relative h-33.75 w-60 overflow-hidden bg-slate-950 text-white"
       role="img"
-      aria-label="Minimal Player feature preview"
-      aria-description="Compare the site's original controls on the left with the uncluttered Minimal Player on the right. Examples cycle through YouTube, Vimeo, Instagram, TikTok, and other sites."
     >
       <style>{MEDIA_OVERLAY_STYLES}</style>
       <div aria-hidden="true" className="absolute inset-0">
@@ -61,8 +62,8 @@ export function MinimalPlayerPreview({
           <div className="ml-1 flex gap-1">
             {MINIMAL_PLAYER_EXAMPLES.map((example, index) => (
               <span
-                key={example.name}
                 className="size-1 rounded-full"
+                key={example.name}
                 style={{
                   backgroundColor:
                     index === siteIndex ? site.color : '#ffffff40',
@@ -118,8 +119,8 @@ export function MinimalPlayerPreview({
                         style={TIMELINE_TRACK_STYLE}
                       >
                         <div
-                          data-testid="feature-preview-progress"
                           className="h-full origin-left"
+                          data-testid="feature-preview-progress"
                           style={{
                             ...TIMELINE_PROGRESS_STYLE,
                             background: colorizedTimeline
@@ -149,7 +150,11 @@ export function MinimalPlayerPreview({
                           />
                         </div>
                         <span className="mfs-volume-mute">
-                          <svg className="mfs-volume-icon" viewBox="0 0 24 24">
+                          <svg
+                            aria-hidden="true"
+                            className="mfs-volume-icon"
+                            viewBox="0 0 24 24"
+                          >
                             {VOLUME_ICON_PATHS.map(({ className, d }) => (
                               <path
                                 className={className}
@@ -177,7 +182,7 @@ export function MinimalPlayerPreview({
                       </div>
                     </>
                   ) : (
-                    <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/90 to-black/30 px-1 pb-1 pt-3">
+                    <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/90 to-black/30 px-1 pt-3 pb-1">
                       <div className="mb-1 h-0.5 bg-white/30">
                         <div
                           className="h-full origin-left"

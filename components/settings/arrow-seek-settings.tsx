@@ -103,7 +103,7 @@ export function ArrowSeekSettings({
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
-          <span className="inline-flex items-center gap-1 text-slate-700 text-sm dark:text-slate-300">
+          <span className="inline-flex items-center gap-1 text-sm text-slate-700 dark:text-slate-300">
             {letters ? (
               <>
                 Letter keys <AppKbd>J</AppKbd> <AppKbd>L</AppKbd>
@@ -120,7 +120,6 @@ export function ArrowSeekSettings({
             }
             checked={active}
             disabled={!ready || disabled || !enabled}
-            size="sm"
             onCheckedChange={(next) => {
               if (letters) {
                 setJl(next);
@@ -130,12 +129,13 @@ export function ArrowSeekSettings({
                 persist({ arrowKeysEnabled: next });
               }
             }}
+            size="sm"
           />
         </div>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1.5">
             <label
-              className="text-slate-500 text-xs dark:text-slate-400"
+              className="text-xs text-slate-500 dark:text-slate-400"
               htmlFor={inputId}
             >
               Seek interval (secs)
@@ -171,10 +171,6 @@ export function ArrowSeekSettings({
   return (
     <CardListItem
       classNameContentBottom="mt-0"
-      title="Arrow Key Seeking Override"
-      description="Override player seeking shortcuts on all websites"
-      icon={KeyboardIcon}
-      iconIsToggled={enabled}
       components={{
         RightSlot: (
           <AppSwitch
@@ -188,7 +184,7 @@ export function ArrowSeekSettings({
           />
         ),
         BottomSlot: (
-          <SettingsExpansion open={enabled} error={error}>
+          <SettingsExpansion error={error} open={enabled}>
             <SubOptionsCard className="space-y-4">
               {interval(false)}
               {interval(true)}
@@ -196,6 +192,10 @@ export function ArrowSeekSettings({
           </SettingsExpansion>
         ),
       }}
+      description="Override player seeking shortcuts on all websites"
+      icon={KeyboardIcon}
+      iconIsToggled={enabled}
+      title="Arrow Key Seeking Override"
     />
   );
 }

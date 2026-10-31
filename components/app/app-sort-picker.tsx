@@ -162,7 +162,7 @@ export function AppSortPicker<T extends string>({
                     aria-hidden={!isExpanded || undefined}
                     aria-label={option.label}
                     className={cn(
-                      'focus-visible:ring-brand/35 absolute top-0 right-0 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[transform,opacity,background-color,color] duration-300 ease-out outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 motion-reduce:transition-none dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
+                      'absolute top-0 right-0 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[transform,opacity,background-color,color] duration-300 ease-out outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-brand/35 motion-reduce:transition-none dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
                       isExpanded
                         ? 'pointer-events-auto opacity-100'
                         : 'pointer-events-none opacity-0'
@@ -197,7 +197,7 @@ export function AppSortPicker<T extends string>({
                 aria-expanded={isExpanded}
                 aria-label={`${label}: ${selectedOption.label}`}
                 className={cn(
-                  'focus-visible:ring-brand/35 absolute top-0 right-0 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[background-color,color] duration-200 outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
+                  'absolute top-0 right-0 z-10 flex size-7 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-[background-color,color] duration-200 outline-none hover:bg-slate-200/70 hover:text-slate-800 focus-visible:ring-2 focus-visible:ring-brand/35 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-100',
                   isExpanded &&
                     'bg-slate-200/70 text-slate-800 dark:bg-slate-700 dark:text-slate-100'
                 )}

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, assert, describe, expect, it, vi } from 'vitest';
 import { setupInstagramAudioControl } from './instagram-audio-control';
 
 afterEach(() => document.body.replaceChildren());
@@ -21,9 +21,9 @@ describe('Instagram native audio control', () => {
       controller.sync(false);
       controller.sync(false);
       expect(click).toHaveBeenCalledOnce();
-      button
-        .querySelector('svg')!
-        .setAttribute('aria-label', 'Audio is playing');
+      const icon = button.querySelector('svg');
+      assert.exists(icon);
+      icon.setAttribute('aria-label', 'Audio is playing');
       await Promise.resolve();
       expect(click).toHaveBeenCalledOnce();
       controller.sync(true);
@@ -40,11 +40,12 @@ describe('Instagram native audio control', () => {
       '<video></video><button><svg aria-label="Audio is muted"></svg></button>';
     document.body.append(first, second);
     const siblingClick = vi.fn();
-    second.querySelector('button')!.addEventListener('click', siblingClick);
-    const controller = setupInstagramAudioControl(
-      first.querySelector('video')!,
-      () => {}
-    );
+    const siblingButton = second.querySelector('button');
+    const video = first.querySelector('video');
+    assert.exists(siblingButton);
+    assert.exists(video);
+    siblingButton.addEventListener('click', siblingClick);
+    const controller = setupInstagramAudioControl(video, () => {});
     try {
       controller.sync(false);
       expect(siblingClick).not.toHaveBeenCalled();
@@ -58,10 +59,7 @@ describe('Instagram native audio control', () => {
     );
     const playerClick = vi.fn();
     first.addEventListener('click', playerClick);
-    const next = setupInstagramAudioControl(
-      first.querySelector('video')!,
-      () => {}
-    );
+    const next = setupInstagramAudioControl(video, () => {});
     try {
       next.sync(false);
       expect(playerClick).not.toHaveBeenCalled();
